@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getReport, checkProvisionalBenchmarks } from '../api/estimates';
+import { getReport, checkProvisionalBenchmarks, getEstimateById } from '../api/estimates';
+import { getSeason } from '../api/seasons';
 import { getGuidesFor } from '../api/guides';
 import { Money } from '../components/ui/Money';
 import { CATEGORIES } from '../lib/categories';
@@ -17,19 +18,33 @@ export function EstimateReport() {
 
   const seasonId = reportLines?.[0]?.season_id;
 
+  const { data: rawEstimate, isLoading: isEstimateLoading } = useQuery({
+    queryKey: ['estimate_raw', estimateId],
+    queryFn: () => getEstimateById(Number(estimateId)),
+    enabled: !!estimateId && (!reportLines || reportLines.length === 0) && !isError,
+  });
+
+  const rawSeasonId = seasonId || rawEstimate?.season_id;
+
+  const { data: season } = useQuery({
+    queryKey: ['season', rawSeasonId],
+    queryFn: () => getSeason(rawSeasonId!),
+    enabled: !!rawSeasonId && (!reportLines || reportLines.length === 0),
+  });
+
   const { data: isProvisional } = useQuery({
-    queryKey: ['provisional_check', seasonId],
-    queryFn: () => checkProvisionalBenchmarks(seasonId!),
-    enabled: !!seasonId,
+    queryKey: ['provisional_check', rawSeasonId],
+    queryFn: () => checkProvisionalBenchmarks(rawSeasonId!),
+    enabled: !!rawSeasonId,
   });
 
   const { data: matchedGuides } = useQuery({
-    queryKey: ['matchedGuides', seasonId],
-    queryFn: () => getGuidesFor(seasonId!),
-    enabled: !!seasonId,
+    queryKey: ['matchedGuides', rawSeasonId],
+    queryFn: () => getGuidesFor(rawSeasonId!),
+    enabled: !!rawSeasonId,
   });
 
-  if (isLoading) {
+  if (isLoading || isEstimateLoading) {
     return (
       <div className="flex-1 p-6 md:p-12 animate-pulse">
         <div className="w-32 h-6 bg-gray-200 rounded mb-8"></div>
@@ -39,10 +54,10 @@ export function EstimateReport() {
     );
   }
 
-  if (isError || !reportLines || reportLines.length === 0) {
+  if (isError) {
     return (
       <div className="p-12 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Report not found</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Error Loading Report</h2>
         <p className="text-gray-500 mb-6">We couldn't load this estimate or a network error occurred.</p>
         <div className="flex justify-center space-x-4">
           <button 
@@ -51,10 +66,42 @@ export function EstimateReport() {
           >
             Retry
           </button>
-          <Link to="/" className="px-6 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
+          <Link to="/" className="px-6 py-2 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
             Back to Dashboard
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Handle the empty state correctly
+  if (!reportLines || reportLines.length === 0) {
+    if (!rawEstimate) {
+      return (
+        <div className="p-12 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Report not found</h2>
+          <p className="text-gray-500 mb-6">This estimate might have been deleted.</p>
+          <Link to="/" className="px-6 py-2 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+            Back to Dashboard
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-6 lg:px-8 animate-fade-in text-center mt-12">
+        <div className="w-24 h-24 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 tracking-tight">Need More Data</h2>
+        <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-xl mx-auto">
+          We don't have enough benchmark data for {season?.crop_name || 'this crop'} yet, and you haven't recorded historical costs. Record actual costs for this season, and FarmPilot will use them for future estimates!
+        </p>
+        <Link to={`/season/${rawEstimate.season_id}`} className="px-8 py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 transition-colors inline-block shadow-lg shadow-emerald-900/20">
+          Back to Season
+        </Link>
       </div>
     );
   }

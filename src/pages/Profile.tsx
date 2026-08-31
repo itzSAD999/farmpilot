@@ -7,6 +7,8 @@ import { useFarm } from '../hooks/useFarm';
 import type { Profile as ProfileType } from '../api/auth';
 import { useTheme } from '../hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
+import { GhanaMap } from '../components/domain/GhanaMap';
+import { GHANA_DISTRICTS } from '../lib/districts';
 
 export function Profile() {
   const { user, signOut } = useAuth();
@@ -72,10 +74,15 @@ export function Profile() {
   };
 
   const handleSaveFarm = async (field: string) => {
+    if (field === 'farm_location') {
+      await farmMutation.mutateAsync({
+        region: formData.farm_region,
+        district: formData.farm_district
+      });
+      return;
+    }
     const apiFieldMap: any = {
       'farm_name': 'name',
-      'farm_region': 'region',
-      'farm_district': 'district',
       'farm_area': 'total_area_acres'
     };
     await farmMutation.mutateAsync({
@@ -245,39 +252,64 @@ export function Profile() {
               </SettingRow>
 
               <SettingRow
-                label="Region"
-                value={String(farm.region || 'Not set')}
-                isEditing={editingField === 'farm_region'}
-                onEdit={() => setEditingField('farm_region')}
+                label="Location (Region & District)"
+                value={farm.region && farm.district ? `${farm.district}, ${farm.region}` : 'Not set'}
+                isEditing={editingField === 'farm_location'}
+                onEdit={() => setEditingField('farm_location')}
                 onCancel={() => setEditingField(null)}
-                onSave={() => handleSaveFarm('farm_region')}
+                onSave={() => handleSaveFarm('farm_location')}
                 isLoading={farmMutation.isPending}
               >
-                <input
-                  type="text"
-                  value={formData.farm_region}
-                  onChange={(e) => setFormData({ ...formData, farm_region: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                  autoFocus
-                />
-              </SettingRow>
+                <div className="space-y-6">
+                  <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-white/10">
+                    <GhanaMap 
+                      selectedRegion={formData.farm_region} 
+                      onSelect={(r) => {
+                        const changed = r !== formData.farm_region;
+                        setFormData({ 
+                          ...formData, 
+                          farm_region: r, 
+                          ...(changed ? { farm_district: '' } : {}) 
+                        });
+                      }} 
+                    />
+                  </div>
+                  
+                  <div className="relative z-[80] space-y-4 isolate">
+                    <div className="relative">
+                      <select
+                        value={formData.farm_region}
+                        onChange={(e) => {
+                          setFormData({ ...formData, farm_region: e.target.value, farm_district: '' });
+                        }}
+                        className="w-full appearance-none text-center text-base font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                      >
+                        <option value="">Select region</option>
+                        {Object.keys(GHANA_DISTRICTS).map((region) => (
+                          <option key={region} value={region}>{region}</option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
 
-              <SettingRow
-                label="District"
-                value={String(farm.district || 'Not set')}
-                isEditing={editingField === 'farm_district'}
-                onEdit={() => setEditingField('farm_district')}
-                onCancel={() => setEditingField(null)}
-                onSave={() => handleSaveFarm('farm_district')}
-                isLoading={farmMutation.isPending}
-              >
-                <input
-                  type="text"
-                  value={formData.farm_district}
-                  onChange={(e) => setFormData({ ...formData, farm_district: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                  autoFocus
-                />
+                    <div className="relative">
+                      <select
+                        value={formData.farm_district}
+                        onChange={(e) => {
+                          setFormData({ ...formData, farm_district: e.target.value });
+                        }}
+                        disabled={!formData.farm_region}
+                        className="w-full appearance-none text-center text-base font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Select district</option>
+                        {formData.farm_region && GHANA_DISTRICTS[formData.farm_region as keyof typeof GHANA_DISTRICTS]?.map((district) => (
+                          <option key={district} value={district}>{district}</option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                  </div>
+                </div>
               </SettingRow>
 
               <SettingRow

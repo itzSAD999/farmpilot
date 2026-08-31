@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listGuides, getFlaggedCategoriesForFarm } from '../api/guides';
@@ -6,6 +6,58 @@ import { useFarm } from '../hooks/useFarm';
 import { listSeasons } from '../api/seasons';
 import { CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
+import { generateWeeklyTip } from '../api/ai';
+
+function AITipWidget({ flaggedCategories, farmDetails }: { flaggedCategories: string[], farmDetails: any }) {
+  const [tip, setTip] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadTip() {
+      try {
+        const fetchedTip = await generateWeeklyTip(flaggedCategories, farmDetails);
+        if (mounted) {
+          setTip(fetchedTip);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (mounted) {
+          setTip("Tip: Keep detailed records of all your expenses to identify areas where you can save money next season.");
+          setLoading(false);
+        }
+      }
+    }
+    loadTip();
+    return () => { mounted = false; };
+  }, [flaggedCategories, farmDetails]);
+
+  if (loading) {
+    return (
+      <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-[24px] p-6 mb-8 border border-emerald-100 dark:border-emerald-800/30 flex items-center gap-4">
+        <div className="w-10 h-10 bg-emerald-200 dark:bg-emerald-800 rounded-full flex items-center justify-center animate-pulse flex-shrink-0">
+          <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </div>
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-emerald-200/50 dark:bg-emerald-800/50 rounded w-1/4 animate-pulse"></div>
+          <div className="h-3 bg-emerald-200/50 dark:bg-emerald-800/50 rounded w-3/4 animate-pulse"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-[24px] p-6 mb-8 border border-emerald-100 dark:border-emerald-800/30 flex items-start gap-4">
+      <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-800/50 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+        <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mb-1">FarmPilot AI Tip</h3>
+        <p className="text-emerald-900 dark:text-emerald-100 font-medium text-sm leading-relaxed">{tip}</p>
+      </div>
+    </div>
+  );
+}
 
 export function GuideLibrary() {
   const { farm } = useFarm();
@@ -109,6 +161,9 @@ export function GuideLibrary() {
           </div>
         </div>
       </div>
+
+      {/* AI Tip Widget */}
+      {farm && <AITipWidget flaggedCategories={flaggedCategories || []} farmDetails={farm} />}
 
       {/* Search and Filter — always show */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">

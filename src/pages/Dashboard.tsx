@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useFarm } from '../hooks/useFarm';
@@ -9,6 +10,9 @@ import { Money } from '../components/ui/Money';
 export function Dashboard() {
   const { farm } = useFarm();
   const navigate = useNavigate();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'active' | 'closed'>('all');
   
   const estimateMutation = useMutation({
     mutationFn: generateEstimate,
@@ -37,6 +41,23 @@ export function Dashboard() {
 
   const isLoading = isLoadingSeasons || isLoadingSummary || isLoadingCrops;
   const isError = isErrorSeasons || isErrorSummary || isErrorCrops;
+
+  const filteredSeasons = seasons?.filter(season => {
+    // Filter by type
+    if (filterType === 'active' && season.is_complete) return false;
+    if (filterType === 'closed' && !season.is_complete) return false;
+    
+    // Filter by search query
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const matchName = season.crop_name.toLowerCase().includes(q);
+      const matchYear = season.year.toString().includes(q);
+      const matchWindow = season.season_window.toLowerCase().includes(q);
+      if (!matchName && !matchYear && !matchWindow) return false;
+    }
+    
+    return true;
+  });
 
   return (
     <div className="animate-fade-in-up pb-12 max-w-6xl mx-auto">
@@ -217,13 +238,37 @@ export function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 min-h-[250px]">
-                <div className="flex justify-between items-center mb-6">
-                   <h3 className="font-bold text-gray-900">Your Seasons</h3>
-                   <Link to="/season/new" className="text-xs font-bold border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">+ New</Link>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                  <h3 className="font-bold text-gray-900 text-xl">Your Seasons</h3>
+                  
+                  <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+                    <div className="relative">
+                      <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      <input 
+                        type="text" 
+                        placeholder="Search seasons..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm w-full sm:w-48 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                      />
+                    </div>
+                    
+                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                      {(['all', 'active', 'closed'] as const).map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setFilterType(type)}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-colors ${filterType === type ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Empty State 2: Seasons but no costs */}
-                {seasons && seasons.length > 0 && farmSummary && Number(farmSummary.total_recorded_pesewas) === 0 && (
+                {filteredSeasons && filteredSeasons.length > 0 && farmSummary && Number(farmSummary.total_recorded_pesewas) === 0 && (
                   <div className="bg-blue-50 border border-blue-100 text-blue-900 p-6 rounded-2xl mb-6">
                     <div className="flex items-start">
                       <svg className="w-5 h-5 text-blue-500 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -249,7 +294,20 @@ export function Dashboard() {
                 )}
 
                 <div className="space-y-4">
-                  {seasons?.map((season) => (
+                  {filteredSeasons && filteredSeasons.length === 0 && (
+                    <div className="text-center py-12 px-4 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50">
+                      <p className="text-gray-500 font-medium">No seasons match your current filters.</p>
+                      {(searchQuery || filterType !== 'all') && (
+                        <button 
+                          onClick={() => { setSearchQuery(''); setFilterType('all'); }}
+                          className="mt-3 text-sm text-emerald-600 font-bold hover:text-emerald-700"
+                        >
+                          Clear filters
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {filteredSeasons?.map((season) => (
                     <Link to={`/season/${season.id}`} key={season.id} className="block p-5 hover:bg-gray-50 rounded-2xl border border-gray-100 hover:border-emerald-200 cursor-pointer transition-all group shadow-sm hover:shadow-md">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-start space-x-4">

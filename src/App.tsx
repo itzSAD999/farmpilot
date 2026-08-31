@@ -11,6 +11,9 @@ import { SeasonDetail } from './pages/SeasonDetail';
 import { EstimateReport } from './pages/EstimateReport';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
+import { Profile } from './pages/Profile';
+import { Privacy } from './pages/Privacy';
+import { Terms } from './pages/Terms';
 
 export function App() {
   return (
@@ -21,6 +24,10 @@ export function App() {
         <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
 
+        {/* Public static routes */}
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+
         {/* Protected routes */}
         <Route
           path="/"
@@ -28,6 +35,16 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <Dashboard />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Profile />
               </AppShell>
             </ProtectedRoute>
           }

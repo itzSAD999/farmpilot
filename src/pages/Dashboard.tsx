@@ -116,7 +116,7 @@ export function Dashboard() {
           </button>
         </div>
       ) : !seasons || seasons.length === 0 ? (
-        <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] p-12 shadow-sm border border-gray-100 dark:border-white/10 flex flex-col items-center justify-center text-center mt-8">
+        <div className="bg-white dark:bg-white/5 rounded-[24px] p-12 shadow-sm border border-gray-100 dark:border-white/10 flex flex-col items-center justify-center text-center mt-8">
           <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-6">
             <svg className="w-12 h-12 text-[#1B5E20]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -132,7 +132,7 @@ export function Dashboard() {
       ) : (
         <>
           {farmSummary && (
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10 overflow-hidden relative group">
+            <div className="bg-white dark:bg-white/5 rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10 overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none transition-transform group-hover:scale-110"></div>
               
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-start justify-between gap-10">
@@ -194,7 +194,7 @@ export function Dashboard() {
 
           {/* Spend by Crop Overview */}
           {cropsSummary && cropsSummary.length > 0 && (
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10">
+            <div className="bg-white dark:bg-white/5 rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10">
               <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-white/10 pb-4">
                 <h3 className="font-bold text-gray-900 dark:text-gray-100 text-2xl">Spend by Crop</h3>
                 <Link to="/compare?tab=crops" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-bold py-2 px-4 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center">
@@ -205,31 +205,42 @@ export function Dashboard() {
               
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 <div className="w-full md:w-1/2 h-64 md:h-80 min-h-[256px] min-w-[256px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={cropsSummary.map(c => ({
-                          ...c,
-                          total_recorded_pesewas: Number(c.total_recorded_pesewas)
-                        }))}
-                        dataKey="total_recorded_pesewas"
-                        nameKey="crop_name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                      >
-                        {cropsSummary.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value: any) => [`GHS ${(Number(value) / 100).toFixed(2)}`, 'Spent']} 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {cropsSummary.some(c => Number(c.total_recorded_pesewas) > 0) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={cropsSummary
+                            .filter(c => Number(c.total_recorded_pesewas) > 0)
+                            .map(c => ({
+                              ...c,
+                              total_recorded_pesewas: Number(c.total_recorded_pesewas)
+                            }))}
+                          dataKey="total_recorded_pesewas"
+                          nameKey="crop_name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                        >
+                          {cropsSummary
+                            .filter(c => Number(c.total_recorded_pesewas) > 0)
+                            .map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: any) => [`GHS ${(Number(value) / 100).toFixed(2)}`, 'Spent']} 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
+                      <svg className="w-12 h-12 mb-3 text-gray-300 dark:text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+                      <p className="text-sm font-medium">No costs recorded yet.</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="w-full md:w-1/2">
@@ -265,7 +276,7 @@ export function Dashboard() {
           {/* Seasons List Area */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 dark:border-white/10 min-h-[250px]">
+              <div className="bg-white dark:bg-white/5 rounded-[24px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 dark:border-white/10 min-h-[250px]">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                   <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Your Seasons</h3>
                   
@@ -286,7 +297,7 @@ export function Dashboard() {
                         <button
                           key={type}
                           onClick={() => setFilterType(type)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-colors ${filterType === type ? 'bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-colors ${filterType === type ? 'bg-white dark:bg-white/5 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
                         >
                           {type}
                         </button>
@@ -392,10 +403,10 @@ export function Dashboard() {
                     </Link>
                   ))}
                   
-                  {filteredSeasons && filteredSeasons.length > 3 && (
+                  {filteredSeasons && filteredSeasons.length > 0 && (
                     <div className="pt-2">
                       <Link to="/seasons" className="flex items-center justify-center w-full py-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-2xl border border-gray-100 dark:border-white/10 text-emerald-700 dark:text-emerald-400 font-bold transition-colors shadow-sm group focus-visible:ring-2 focus-visible:ring-emerald-500 outline-none">
-                        View All {filteredSeasons.length} Seasons
+                        View All {filteredSeasons.length > 3 ? filteredSeasons.length : ''} Seasons
                         <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                       </Link>
                     </div>

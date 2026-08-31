@@ -141,7 +141,7 @@ export function Profile() {
         {/* Section: Account Settings */}
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-1">Account Settings</h2>
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+          <div className="bg-white dark:bg-white/5 rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
             
             <SettingRow
               label="Full Name"
@@ -224,7 +224,7 @@ export function Profile() {
         {farm && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-1">Farm Details</h2>
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+            <div className="bg-white dark:bg-white/5 rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
               
               <SettingRow
                 label="Farm Name"
@@ -308,7 +308,7 @@ export function Profile() {
         {/* Advanced Area */}
         <div className="pt-4 space-y-4">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-1">Account Actions</h2>
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden p-2 space-y-2">
+          <div className="bg-white dark:bg-white/5 rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden p-2 space-y-2">
             <button
               type="button"
               className="w-full py-4 px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-gray-100 rounded-2xl font-bold transition-colors"

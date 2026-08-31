@@ -150,7 +150,7 @@ export function Seasons() {
       </div>
 
       {hasNoSeasonsAtAll ? (
-        <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] p-12 border border-gray-100 dark:border-white/10 text-center shadow-sm">
+        <div className="bg-white dark:bg-white/5 rounded-[24px] p-12 border border-gray-100 dark:border-white/10 text-center shadow-sm">
           <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
           </div>
@@ -163,7 +163,7 @@ export function Seasons() {
       ) : (
         <>
           {/* Filter Bar (Desktop) & Mobile Toggle */}
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-[20px] p-4 border border-gray-100 dark:border-white/10 mb-6 shadow-sm flex flex-col xl:flex-row gap-4 xl:items-center">
+          <div className="bg-white dark:bg-white/5 rounded-[20px] p-4 border border-gray-100 dark:border-white/10 mb-6 shadow-sm flex flex-col xl:flex-row gap-4 xl:items-center">
             
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
@@ -323,7 +323,7 @@ export function Seasons() {
 
           {/* Season List */}
           {hasNoMatches ? (
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] p-12 border border-gray-100 dark:border-white/10 text-center shadow-sm">
+            <div className="bg-white dark:bg-white/5 rounded-[24px] p-12 border border-gray-100 dark:border-white/10 text-center shadow-sm">
               <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
@@ -352,7 +352,7 @@ export function Seasons() {
                 return (
                   <div 
                     key={season.id} 
-                    className={`bg-white dark:bg-[#1a1a1a] rounded-2xl border transition-all shadow-sm overflow-hidden flex flex-col md:flex-row md:items-center relative
+                    className={`bg-white dark:bg-white/5 rounded-2xl border transition-all shadow-sm overflow-hidden flex flex-col md:flex-row md:items-center relative
                       ${isSelected ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800'}`
                     }
                   >
@@ -495,7 +495,7 @@ export function Seasons() {
       {isFilterSheetOpen && (
         <div className="fixed inset-0 z-50 flex flex-col xl:hidden">
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onClick={() => setIsFilterSheetOpen(false)}></div>
-          <div className="relative mt-auto bg-white dark:bg-[#1a1a1a] rounded-t-3xl shadow-2xl w-full max-h-[85vh] flex flex-col animate-fade-in-up">
+          <div className="relative mt-auto bg-white dark:bg-white/5 rounded-t-3xl shadow-2xl w-full max-h-[85vh] flex flex-col animate-fade-in-up">
             <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-extrabold text-gray-900 dark:text-gray-100">Filters</h2>
               <button onClick={() => setIsFilterSheetOpen(false)} className="p-2 bg-gray-100 dark:bg-white/5 rounded-full text-gray-500 hover:text-gray-900 dark:hover:text-white">
@@ -599,7 +599,7 @@ export function Seasons() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-white/10 flex gap-3 bg-white dark:bg-[#1a1a1a] rounded-b-3xl">
+            <div className="p-4 border-t border-gray-100 dark:border-white/10 flex gap-3 bg-white dark:bg-white/5 rounded-b-3xl">
               <button 
                 onClick={() => { clearFilters(); setIsFilterSheetOpen(false); }}
                 className="flex-1 py-3.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-200 font-bold rounded-xl active:bg-gray-200 transition-colors"

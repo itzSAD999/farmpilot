@@ -5,11 +5,13 @@ import { updateFarm } from '../api/farms';
 import { useAuth } from '../hooks/useAuth';
 import { useFarm } from '../hooks/useFarm';
 import type { Profile as ProfileType } from '../api/auth';
+import { useTheme } from '../hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 
 export function Profile() {
   const { user, signOut } = useAuth();
   const { farm } = useFarm();
+  const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -19,6 +21,7 @@ export function Profile() {
   // Form State
   const [formData, setFormData] = useState<any>({
     full_name: '',
+    phone: '',
     language: 'en',
     farm_name: '',
     farm_region: '',
@@ -36,6 +39,7 @@ export function Profile() {
     if (profile || farm) {
       setFormData({
         full_name: profile?.full_name || '',
+        phone: profile?.phone || '',
         language: (profile?.preferred_language as any) || 'en',
         farm_name: farm?.name || '',
         farm_region: farm?.region || '',
@@ -158,6 +162,24 @@ export function Profile() {
             </SettingRow>
 
             <SettingRow
+              label="Phone Number"
+              value={profile?.phone || 'Not provided'}
+              isEditing={editingField === 'phone'}
+              onEdit={() => setEditingField('phone')}
+              onCancel={() => setEditingField(null)}
+              onSave={() => handleSaveProfile('phone')}
+              isLoading={profileMutation.isPending}
+            >
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                autoFocus
+              />
+            </SettingRow>
+
+            <SettingRow
               label="Language"
               value={getLanguageName(profile?.preferred_language || 'en')}
               isEditing={editingField === 'language'}
@@ -179,6 +201,21 @@ export function Profile() {
                 <option value="dag">Dagbani</option>
               </select>
             </SettingRow>
+
+            <div className="p-5 sm:p-6 transition-colors flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Appearance</p>
+                <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                  {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                </p>
+              </div>
+              <button
+                onClick={toggleTheme}
+                className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${theme === 'dark' ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-700'}`}
+              >
+                <span className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
 
           </div>
         </div>

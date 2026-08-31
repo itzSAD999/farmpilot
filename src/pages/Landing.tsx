@@ -2,6 +2,28 @@ import { Link, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
+function useScrollReveal() {
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-revealed');
+          observer.unobserve(entry.target); // Only reveal once
+        }
+      });
+    }, { 
+      threshold: 0.1,
+      rootMargin: "0px 0px -50px 0px"
+    });
+
+    document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+}
+
 // Reusable animated number component
 function AnimatedNumber({ 
   value, 
@@ -299,6 +321,7 @@ const BACKGROUND_VIDEOS = [
 ];
 
 export function Landing() {
+  useScrollReveal();
   const { user, isLoading } = useAuth();
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
@@ -391,7 +414,7 @@ export function Landing() {
       {/* Features Section - Premium Bento Grid */}
       <section id="features" className="relative w-full bg-black px-6 py-24 md:px-12 lg:py-32">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20 reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tighter mb-6 md:mb-0 text-white">
               Control every <br/> <span className="text-emerald-400">acre.</span>
             </h2>
@@ -404,7 +427,8 @@ export function Landing() {
             {/* Feature 1: Season Tracking (Large Span) */}
             <div 
               onClick={() => setSelectedFeature('season')}
-              className="cursor-pointer md:col-span-2 lg:col-span-2 lg:row-span-1 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+              className="reveal-on-scroll cursor-pointer md:col-span-2 lg:col-span-2 lg:row-span-1 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+              style={{ transitionDelay: '200ms' }}
             >
               <div className="absolute right-0 bottom-0 opacity-20 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
                 <svg className="w-64 h-64 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -436,7 +460,8 @@ export function Landing() {
             {/* Feature 2: Financials (Tall Span) */}
             <div 
               onClick={() => setSelectedFeature('financials')}
-              className="cursor-pointer md:col-span-2 lg:col-span-1 lg:row-span-2 bg-gradient-to-br from-emerald-900/20 to-black rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-emerald-500/50 transition-all duration-500 hover:shadow-[0_0_40px_rgba(16,185,129,0.1)] min-h-[400px]"
+              className="reveal-on-scroll cursor-pointer md:col-span-2 lg:col-span-1 lg:row-span-2 bg-gradient-to-br from-emerald-900/20 to-black rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-emerald-500/50 transition-all duration-500 hover:shadow-[0_0_40px_rgba(16,185,129,0.1)] min-h-[400px]"
+              style={{ transitionDelay: '300ms' }}
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-emerald-500/30 transition-colors duration-700"></div>
               
@@ -472,7 +497,8 @@ export function Landing() {
             {/* Feature 3: Offline-First */}
             <div 
               onClick={() => setSelectedFeature('offline')}
-              className="cursor-pointer md:col-span-1 lg:col-span-1 lg:row-span-1 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] min-h-[300px]"
+              className="reveal-on-scroll cursor-pointer md:col-span-1 lg:col-span-1 lg:row-span-1 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] min-h-[300px]"
+              style={{ transitionDelay: '400ms' }}
             >
               <div className="relative z-10 h-full flex flex-col justify-between">
                 <div>
@@ -498,7 +524,8 @@ export function Landing() {
             {/* Feature 4: Mathematical Precision */}
             <div 
               onClick={() => setSelectedFeature('precision')}
-              className="cursor-pointer md:col-span-1 lg:col-span-1 lg:row-span-1 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] min-h-[300px]"
+              className="reveal-on-scroll cursor-pointer md:col-span-1 lg:col-span-1 lg:row-span-1 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] min-h-[300px]"
+              style={{ transitionDelay: '500ms' }}
             >
               <div className="relative z-10 h-full flex flex-col justify-between">
                 <div>
@@ -528,7 +555,7 @@ export function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative w-full bg-[#111] px-6 py-24 md:px-12 md:py-32 flex flex-col items-center text-center">
+      <section className="relative w-full bg-[#111] px-6 py-24 md:px-12 md:py-32 flex flex-col items-center text-center reveal-on-scroll" style={{ transitionDelay: '200ms' }}>
         <h2 className="text-3xl md:text-5xl font-light tracking-tighter mb-8 text-white">
           Ready to optimize your harvest?
         </h2>

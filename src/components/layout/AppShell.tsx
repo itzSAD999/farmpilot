@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { Link } from 'react-router-dom';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { OfflineBanner } from './OfflineBanner';
 
@@ -25,12 +26,20 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex items-center">
             <img src="/logo.png" alt="FarmPilot Logo" className="h-8 w-auto object-contain" />
           </div>
-          <button
-            onClick={signOut}
-            className="min-h-[44px] min-w-[44px] text-sm font-bold text-[#1B5E20] px-3 py-2 rounded-xl bg-[#1B5E20]/10 hover:bg-[#1B5E20]/20 transition-colors"
-          >
-            Sign Out
-          </button>
+          <div className="flex space-x-2">
+            <Link
+              to="/profile"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            </Link>
+            <button
+              onClick={signOut}
+              className="min-h-[44px] min-w-[44px] text-sm font-bold text-[#1B5E20] px-3 py-2 rounded-xl bg-[#1B5E20]/10 hover:bg-[#1B5E20]/20 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -42,13 +51,19 @@ export function AppShell({ children }: AppShellProps) {
 
         <nav className="flex-1 px-4 space-y-1">
           <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Menu</div>
-          <a href="/" className="flex items-center px-3 py-3 bg-[#1B5E20]/10 text-[#1B5E20] rounded-xl font-bold group">
+          <Link to="/" className="flex items-center px-3 py-3 bg-[#1B5E20]/10 text-[#1B5E20] rounded-xl font-bold group">
             <svg className="w-5 h-5 mr-3 text-[#1B5E20]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
             Dashboard
-          </a>
-          {/* We can add more nav links here in the future (Calendar, Team, Settings) */}
+          </Link>
+          <Link to="/profile" className="flex items-center px-3 py-3 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-colors group">
+            <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Profile
+          </Link>
         </nav>
 
         <div className="p-4 mt-auto">

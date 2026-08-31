@@ -1,9 +1,15 @@
 import { supabase } from '../lib/supabase';
 import { phoneToSyntheticEmail } from '../lib/phone';
-import type { Database } from '../lib/database.types';
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
-
+export type Profile = {
+  id: string;
+  phone?: string | null;
+  email?: string | null;
+  full_name?: string | null;
+  preferred_language: 'en' | 'tw' | 'ee' | 'gaa' | 'dag';
+  auth_method: 'phone' | 'email';
+  created_at: string;
+};
 /**
  * Maps Supabase Auth errors to friendly, farmer-facing messages.
  */
@@ -182,7 +188,26 @@ export async function updateLanguage(lang: 'en' | 'tw' | 'dag') {
 
   const { error } = await supabase
     .from('profiles')
-    .update({ language: lang })
+    .update({ preferred_language: lang })
+    .eq('id', user.id);
+
+  if (error) {
+    throw handleAuthError(error);
+  }
+}
+
+
+
+/**
+ * Updates the current user's profile.
+ */
+export async function updateProfile(updates: Partial<Profile>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('You must be signed in to update your profile.');
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
     .eq('id', user.id);
 
   if (error) {

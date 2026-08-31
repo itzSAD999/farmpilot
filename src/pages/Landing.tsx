@@ -568,9 +568,12 @@ export function Landing() {
       </section>
 
       {/* Simple Footer */}
-      <footer className="w-full px-6 py-8 md:px-12 flex justify-between items-center border-t border-white/10 text-xs text-white/40 uppercase tracking-wider bg-black">
+      <footer className="w-full px-6 py-8 md:px-12 flex flex-col md:flex-row justify-between items-center border-t border-white/10 text-xs text-white/40 uppercase tracking-wider bg-black gap-4 md:gap-0">
         <p>© {new Date().getFullYear()} FarmPilot</p>
-        <p>Built for the future</p>
+        <div className="flex space-x-6">
+          <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+          <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+        </div>
       </footer>
     </div>
   );

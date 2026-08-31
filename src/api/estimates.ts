@@ -139,6 +139,23 @@ export async function getLatestEstimate(seasonId: number): Promise<EstimateSumma
 }
 
 /**
+ * Returns the estimate details by its ID.
+ */
+export async function getEstimateById(estimateId: number): Promise<EstimateSummary | null> {
+  const { data, error } = await supabase
+    .from('estimates')
+    .select('id, season_id, method, seasons_used, area_acres, total_pesewas, price_multiplier, created_at')
+    .eq('id', estimateId)
+    .maybeSingle();
+
+  if (error) {
+    throw handleEstimateError(error);
+  }
+
+  return data as EstimateSummary | null;
+}
+
+/**
  * Checks if any benchmark backing a season's crop is still marked as a PLACEHOLDER.
  */
 export async function checkProvisionalBenchmarks(seasonId: number): Promise<boolean> {

@@ -32,6 +32,8 @@ type CostFormData = z.infer<typeof costSchema>;
 
 interface AddCostFormProps {
   seasonId: number;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 const CategoryIcons: Record<string, React.ReactNode> = {
@@ -45,7 +47,7 @@ const CategoryIcons: Record<string, React.ReactNode> = {
   other: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>,
 };
 
-export function AddCostForm({ seasonId }: AddCostFormProps) {
+export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [entryMode, setEntryMode] = useState<'total' | 'rate'>('total');
   const queryClient = useQueryClient();
@@ -152,6 +154,7 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
       setStep(1); // Return to step 1 for the next item
       setValue('entry_mode', entryMode);
       setValue('date_incurred', new Date().toISOString().split('T')[0]);
+      onSuccess?.();
     },
   });
 
@@ -159,11 +162,29 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
     addMutation.mutate(data);
   };
 
+  const handleNextStep = (catId: CostCategory) => {
+    setValue('category', catId, { shouldValidate: true });
+    setStep(2);
+    // Scroll to top of the modal content
+    const modalContent = document.getElementById('cost-modal-content');
+    if (modalContent) modalContent.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-gray-100 animate-fade-in">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Record Cost</h2>
+    <div id="cost-modal-content" className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-gray-100 dark:border-white/5 animate-fade-in relative max-h-[90vh] overflow-y-auto">
+      {onCancel && (
+        <button 
+          onClick={onCancel}
+          className="absolute top-6 right-6 w-10 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors z-10"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
+      
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="pr-12">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Record Cost</h2>
           <p className="text-gray-500 font-medium text-sm mt-1">
             {step === 1 ? 'Select what type of cost you incurred.' : 'Enter the details for this cost.'}
           </p>
@@ -172,7 +193,7 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
           <button 
             type="button" 
             onClick={() => setStep(1)} 
-            className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors"
+            className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
             Change Category
@@ -201,14 +222,11 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => {
-                      setValue('category', cat.id, { shouldValidate: true });
-                      setStep(2);
-                    }}
+                    onClick={() => handleNextStep(cat.id as CostCategory)}
                     className={`relative p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
                       isSelected 
-                        ? 'border-emerald-500 bg-emerald-50 shadow-sm ring-1 ring-emerald-500' 
-                        : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 shadow-sm ring-1 ring-emerald-500' 
+                        : 'border-gray-100 dark:border-white/5 bg-white dark:bg-white/5 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-emerald-50/30 dark:hover:bg-emerald-500/10'
                     }`}
                   >
                     <div className={`mb-3 flex items-center justify-center w-10 h-10 rounded-full ${isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
@@ -387,7 +405,7 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
         <button
           type="submit"
           disabled={isSubmitting || addMutation.isPending}
-          className="w-full py-4 bg-[#0a0a0a] text-white rounded-xl font-bold text-lg hover:bg-gray-800 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl font-bold text-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-emerald-900/20"
         >
           {isSubmitting || addMutation.isPending ? 'Saving...' : 'Save Cost Item'}
         </button>

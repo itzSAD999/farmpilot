@@ -28,6 +28,7 @@ export function SeasonDetail() {
 
   const queryClient = useQueryClient();
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const { data: season, isLoading, isError } = useQuery({
@@ -119,107 +120,104 @@ export function SeasonDetail() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div>
-          <Link to="/" className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center mb-8 group">
-            <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
-            </span>
-            Dashboard
-          </Link>
+        {/* Header Block */}
+        <div className="bg-[#0a0a0a] rounded-[32px] p-8 md:p-12 text-white mb-8 relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/20 rounded-full blur-[100px] -mr-64 -mt-64"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
           
-          <div className="flex items-center space-x-3 mb-2">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">{season.crop_name}</h1>
-            {season.is_complete && (
-              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                Completed
-              </span>
-            )}
-          </div>
-          <p className="text-xl text-gray-500 font-medium capitalize">
-            {season.season_window} Season {season.year} <span className="mx-2 text-gray-300">•</span> {season.area_planted_acres} acres
-          </p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex items-center space-x-3">
-            <button 
-              disabled={!hasCosts || generateMutation.isPending || !isOnline}
-              onClick={() => {
-                setGenerateError(null);
-                generateMutation.mutate();
-              }}
-              title={!isOnline ? "You need internet to generate an estimate" : hasCosts ? "Generate an estimate based on your recorded costs" : "Record at least one cost first"}
-              className={`font-bold py-2.5 px-5 rounded-xl transition-all flex items-center ${hasCosts && isOnline ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md active:scale-95' : 'bg-white text-gray-500 border border-gray-200 cursor-not-allowed opacity-70'}`}
-            >
-              {generateMutation.isPending && (
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {generateMutation.isPending ? 'Generating...' : 'Generate Estimate'}
-            </button>
-            
-            {!season.is_complete && (
-              <button 
-                onClick={() => setIsCloseModalOpen(true)}
-                disabled={!isOnline}
-                className={`font-bold py-2.5 px-5 rounded-xl transition-colors ${isOnline ? 'bg-[#0a0a0a] text-white hover:bg-gray-800' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
-              >
-                Close Season
-              </button>
-            )}
-          </div>
-          
-          {/* Offline reason shown inline */}
-          {!isOnline && (
-            <p className="text-xs font-bold text-amber-600 flex items-center">
-              <svg className="w-4 h-4 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728" /></svg>
-              You need internet to generate an estimate.
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Cost List and Form Area */}
-        <div className="lg:col-span-2 space-y-8">
-          {!season.is_complete && <AddCostForm seasonId={seasonId} />}
-          <CostList seasonId={seasonId} />
-        </div>
-
-        {/* Sidebar Summary (1 column) */}
-        <div className="space-y-6">
-          <div className="bg-[#1B5E20] rounded-[24px] p-8 text-white relative overflow-hidden shadow-lg">
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-            <h3 className="text-emerald-100 font-bold uppercase tracking-widest text-xs mb-2 relative z-10">Total Costs</h3>
-            <p className="text-4xl font-light tracking-tight relative z-10">₵<Money pesewas={totalCostPesewas} /></p>
-          </div>
-
-          {season.is_complete && (
-            <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
-              <h3 className="text-gray-500 font-bold uppercase tracking-widest text-xs mb-4">Harvest Summary</h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-gray-500 font-medium mb-1">Yield</p>
-                  <p className="text-lg font-bold text-gray-900">{season.harvest_qty} {season.harvest_unit?.replace('_', ' ')}</p>
-                </div>
-                {season.revenue_pesewas != null && (
-                  <div>
-                    <p className="text-xs text-gray-500 font-medium mb-1">Revenue</p>
-                    <p className="text-lg font-bold text-emerald-600">₵<Money pesewas={season.revenue_pesewas} /></p>
-                  </div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <div>
+              <div className="flex items-center space-x-3 mb-3">
+                <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+                  {season.crop_name}
+                </h1>
+                {season.is_complete && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
+                    <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                    Completed
+                  </span>
                 )}
               </div>
+              <p className="text-gray-400 text-lg md:text-xl font-light">
+                <span className="capitalize">{season.season_window} Season</span> {season.year} • {season.area_planted_acres} acres
+              </p>
+              
+              <div className="mt-8 mb-4">
+                <p className="text-gray-500 font-medium mb-1 tracking-widest text-xs uppercase">Total Recorded Cost</p>
+                <div className="text-5xl md:text-7xl font-light tracking-tighter text-white">
+                  <span className="text-3xl font-medium text-emerald-500 mr-2 align-top">GHS</span>
+                  <Money pesewas={totalCostPesewas} />
+                </div>
+              </div>
             </div>
-          )}
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Generate Estimate Button */}
+              <button 
+                disabled={generateMutation.isPending || !isOnline}
+                onClick={() => {
+                  setGenerateError(null);
+                  generateMutation.mutate();
+                }}
+                title={!isOnline ? "You need internet to generate an estimate" : "Generate an estimate based on your crop and recorded costs"}
+                className={`font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center shadow-lg shadow-emerald-900/20 whitespace-nowrap ${isOnline ? 'bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95' : 'bg-white/10 text-gray-400 cursor-not-allowed'}`}
+              >
+                {generateMutation.isPending && (
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {generateMutation.isPending ? 'Generating...' : 'Generate Estimate'}
+              </button>
+
+              {/* Only show Add Cost button in header on desktop, mobile has FAB */}
+              {!season.is_complete && (
+                <button
+                  onClick={() => setIsCostModalOpen(true)}
+                  className="hidden md:flex px-6 py-4 bg-white text-emerald-900 hover:bg-emerald-50 font-bold rounded-xl transition-all shadow-lg shadow-black/10 items-center justify-center group whitespace-nowrap"
+                >
+                  <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                  Record Cost
+                </button>
+              )}
+              {!season.is_complete && (
+                <button 
+                  onClick={() => setIsCloseModalOpen(true)}
+                  disabled={!isOnline}
+                  className={`font-bold py-4 px-6 rounded-xl transition-all border border-white/10 hover:bg-white/5 ${isOnline ? 'text-white' : 'text-gray-500 cursor-not-allowed'}`}
+                >
+                  Close Season
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div className="grid grid-cols-1 gap-8">
+          <div className="col-span-1">
+            {!hasCosts ? (
+              <div className="bg-white dark:bg-[#121212] rounded-[32px] p-8 md:p-12 text-center border border-gray-100 dark:border-white/5 shadow-sm">
+                <div className="w-20 h-20 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No costs recorded yet</h3>
+                <p className="text-gray-500 mb-6 max-w-sm mx-auto">Track every pesewa you spend on this crop. Accurate records are the foundation of a profitable farm.</p>
+                {!season.is_complete && (
+                  <button 
+                    onClick={() => setIsCostModalOpen(true)}
+                    className="inline-flex items-center px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-sm"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                    Record First Cost
+                  </button>
+                )}
+              </div>
+            ) : (
+              <CostList seasonId={seasonId} />
+            )}
+          </div>
+        </div>
 
       {/* Close Season Dialog */}
       {isCloseModalOpen && (
@@ -241,7 +239,6 @@ export function SeasonDetail() {
                 </button>
               </div>
 
-              {/* Crucial Motivational Text */}
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-8">
                 <p className="text-blue-900 text-sm font-medium leading-relaxed">
                   Closing the season means we can use it next time. Your next estimate for this crop will be based on your own figures instead of standard rates.
@@ -249,8 +246,6 @@ export function SeasonDetail() {
               </div>
 
               <form onSubmit={handleSubmit(onCloseSubmit)} className="space-y-6">
-                
-                {/* Harvest Yield */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative group col-span-1">
                     <label htmlFor="harvest_qty" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Quantity</label>
@@ -282,7 +277,6 @@ export function SeasonDetail() {
                 </div>
                 {errors.harvest_qty && <p id="harvest_qty-error" className="text-sm text-red-500 font-medium -mt-4">{errors.harvest_qty.message}</p>}
                 
-                {/* Revenue */}
                 <div className="relative group">
                   <label htmlFor="revenue_cedis" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Revenue (Optional)</label>
                   <div className="relative">
@@ -321,6 +315,34 @@ export function SeasonDetail() {
           </div>
         </div>
       )}
+
+      {/* Cost Modal */}
+      {isCostModalOpen && !season.is_complete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in"
+            onClick={() => setIsCostModalOpen(false)}
+          ></div>
+          <div className="relative w-full max-w-2xl z-10 animate-fade-in-up">
+            <AddCostForm 
+              seasonId={seasonId} 
+              onSuccess={() => setIsCostModalOpen(false)}
+              onCancel={() => setIsCostModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile FAB */}
+      {!season.is_complete && (
+        <button
+          onClick={() => setIsCostModalOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-900/30 z-40 active:scale-95 transition-transform"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+        </button>
+      )}
+
     </div>
   );
 }

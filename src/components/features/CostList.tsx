@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listCosts, deleteCost } from '../../api/costs';
 import type { CostItem } from '../../api/costs';
 import { CATEGORIES } from '../../lib/categories';
+import { Money } from '../ui/Money';
 
 interface CostListProps {
   seasonId: number;
@@ -10,7 +11,7 @@ interface CostListProps {
 export function CostList({ seasonId }: CostListProps) {
   const queryClient = useQueryClient();
 
-  const { data: costs, isLoading } = useQuery<CostItem[]>({
+  const { data: costs, isLoading, isError } = useQuery<CostItem[]>({
     queryKey: ['seasonCosts', seasonId],
     queryFn: () => listCosts(seasonId),
   });
@@ -42,6 +43,16 @@ export function CostList({ seasonId }: CostListProps) {
         {[...Array(4)].map((_, i) => (
           <div key={i} className="h-20 bg-gray-100 rounded-2xl w-full"></div>
         ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-red-50 rounded-[32px] p-8 text-center border border-red-100 min-h-[300px] flex flex-col items-center justify-center">
+        <h2 className="text-xl font-bold text-red-900 mb-2">Unable to load costs</h2>
+        <p className="text-red-700">Please check your connection and try again.</p>
+        <button onClick={() => queryClient.invalidateQueries({ queryKey: ['seasonCosts', seasonId] })} className="mt-4 text-red-700 font-bold hover:underline">Retry</button>
       </div>
     );
   }
@@ -85,7 +96,7 @@ export function CostList({ seasonId }: CostListProps) {
             <div className="flex justify-between items-center mb-4 px-2 border-b border-gray-100 pb-4">
               <h3 className="text-lg font-bold text-gray-900">{categoryLabel}</h3>
               <span className="text-lg font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">
-                ₵{(subtotalPesewas / 100).toFixed(2)}
+                ₵<Money pesewas={subtotalPesewas} />
               </span>
             </div>
 
@@ -107,7 +118,7 @@ export function CostList({ seasonId }: CostListProps) {
                     
                     {(cost.quantity || cost.unit_cost_pesewas) ? (
                       <div className="inline-flex items-center text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded-md mt-1">
-                        {cost.quantity || '?'} {cost.unit || 'units'} × ₵{((cost.unit_cost_pesewas || 0) / 100).toFixed(2)}
+                        {cost.quantity || '?'} {cost.unit || 'units'} × ₵<Money pesewas={cost.unit_cost_pesewas || 0} />
                       </div>
                     ) : (
                       <div className="inline-flex items-center text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">
@@ -117,7 +128,7 @@ export function CostList({ seasonId }: CostListProps) {
                   </div>
                   
                   <div className="flex flex-col items-end pl-4">
-                    <span className="text-lg font-bold text-gray-900 mb-2">₵{(cost.amount_pesewas / 100).toFixed(2)}</span>
+                    <span className="text-lg font-bold text-gray-900 mb-2">₵<Money pesewas={cost.amount_pesewas} /></span>
                     <button 
                       onClick={() => {
                         if (confirm('Are you sure you want to delete this cost?')) {

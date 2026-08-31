@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createFarm } from '../api/farms';
 import { useAuth } from '../hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
@@ -45,6 +45,7 @@ export function FarmSetup() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -83,7 +84,11 @@ export function FarmSetup() {
         navigate('/', { replace: true });
       }, 2000);
     } catch (err: any) {
-      setServerError(err.message);
+      if (err.message?.includes('session has expired')) {
+        navigate('/signin', { state: { message: err.message, from: location } });
+      } else {
+        setServerError(err.message);
+      }
       setIsSubmitting(false);
     }
   };

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createSeason } from '../api/seasons';
 import { getCrops } from '../api/crops';
@@ -16,12 +16,13 @@ const seasonWindows = [
 
 export function SeasonNew() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { farm, isLoading: isFarmLoading } = useFarm();
   
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: crops, isLoading: isCropsLoading } = useQuery({
+  const { data: crops, isLoading: isCropsLoading, isError: isCropsError } = useQuery({
     queryKey: ['crops'],
     queryFn: getCrops,
   });
@@ -64,7 +65,11 @@ export function SeasonNew() {
       });
       navigate('/');
     } catch (err: any) {
-      setServerError(err.message);
+      if (err.message?.includes('session has expired')) {
+        navigate('/signin', { state: { message: err.message, from: location } });
+      } else {
+        setServerError(err.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -73,7 +78,17 @@ export function SeasonNew() {
   if (isFarmLoading || isCropsLoading) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
-        <span className="text-gray-500 font-medium">Loading...</span>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1B5E20]"></div>
+      </div>
+    );
+  }
+
+  if (isCropsError) {
+    return (
+      <div className="p-12 text-center">
+        <h2 className="text-2xl font-bold text-red-900 mb-2">Unable to load crops</h2>
+        <p className="text-red-700 mb-6">Please check your connection and try again.</p>
+        <button onClick={() => window.location.reload()} className="text-emerald-600 font-bold hover:underline">Reload</button>
       </div>
     );
   }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +9,7 @@ import { listCosts } from '../api/costs';
 import { generateEstimate } from '../api/estimates';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { CostList } from '../components/features/CostList';
+import { Money } from '../components/ui/Money';
 const closeSeasonSchema = z.object({
   harvest_qty: z.number({ message: 'Please enter a valid quantity.' }).positive('Quantity must be greater than zero.'),
   harvest_unit: z.enum(['bag_100kg', 'bag_50kg', 'metric_tonnes']),
@@ -21,6 +22,7 @@ export function SeasonDetail() {
   const { id } = useParams<{ id: string }>();
   const seasonId = Number(id);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const queryClient = useQueryClient();
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
@@ -44,7 +46,11 @@ export function SeasonDetail() {
       navigate(`/report/${estimateId}`);
     },
     onError: (error: any) => {
-      setGenerateError(error.message);
+      if (error.message?.includes('session has expired')) {
+        navigate('/signin', { state: { message: error.message, from: location } });
+      } else {
+        setGenerateError(error.message);
+      }
     }
   });
 
@@ -66,6 +72,13 @@ export function SeasonDetail() {
       setIsCloseModalOpen(false);
       reset();
     },
+    onError: (error: any) => {
+      if (error.message?.includes('session has expired')) {
+        navigate('/signin', { state: { message: error.message, from: location } });
+      } else {
+        setGenerateError(error.message);
+      }
+    }
   });
 
   const onCloseSubmit = (data: CloseSeasonFormData) => {
@@ -172,7 +185,7 @@ export function SeasonDetail() {
           <div className="bg-[#1B5E20] rounded-[24px] p-8 text-white relative overflow-hidden shadow-lg">
             <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
             <h3 className="text-emerald-100 font-bold uppercase tracking-widest text-xs mb-2 relative z-10">Total Costs</h3>
-            <p className="text-4xl font-light tracking-tight relative z-10">₵{(totalCostPesewas / 100).toFixed(2)}</p>
+            <p className="text-4xl font-light tracking-tight relative z-10">₵<Money pesewas={totalCostPesewas} /></p>
           </div>
 
           {season.is_complete && (
@@ -186,7 +199,7 @@ export function SeasonDetail() {
                 {season.revenue_pesewas != null && (
                   <div>
                     <p className="text-xs text-gray-500 font-medium mb-1">Revenue</p>
-                    <p className="text-lg font-bold text-emerald-600">₵{(season.revenue_pesewas / 100).toFixed(2)}</p>
+                    <p className="text-lg font-bold text-emerald-600">₵<Money pesewas={season.revenue_pesewas} /></p>
                   </div>
                 )}
               </div>

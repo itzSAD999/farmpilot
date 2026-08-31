@@ -5,7 +5,7 @@ import { useFarm } from '../hooks/useFarm';
 import { listSeasons } from '../api/seasons';
 import { getFarmSummary, getCropSummary } from '../api/dashboard';
 import { generateEstimate } from '../api/estimates';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Money } from '../components/ui/Money';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];

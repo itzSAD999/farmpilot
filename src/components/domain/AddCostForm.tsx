@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { addCost } from '../../api/costs';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
@@ -51,8 +50,6 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
   const [step, setStep] = useState<1 | 2>(1);
   const [entryMode, setEntryMode] = useState<'total' | 'rate'>('total');
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }, getValues } = useForm<CostFormData>({
     resolver: zodResolver(costSchema),

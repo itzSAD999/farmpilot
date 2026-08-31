@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,7 +23,6 @@ export function SeasonDetail() {
   const { id } = useParams<{ id: string }>();
   const seasonId = Number(id);
   const navigate = useNavigate();
-  const location = useLocation();
   const isOnline = useOnline();
 
   const queryClient = useQueryClient();

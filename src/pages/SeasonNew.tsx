@@ -16,7 +16,6 @@ const seasonWindows = [
 
 export function SeasonNew() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { farm, isLoading: isFarmLoading } = useFarm();
   const queryClient = useQueryClient();
   

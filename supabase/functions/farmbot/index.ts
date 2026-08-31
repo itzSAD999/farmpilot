@@ -1,4 +1,6 @@
+// @ts-ignore: Deno imports are not recognized by the root tsconfig
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -6,7 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+// @ts-ignore: Deno types are missing in Node environment
+serve(async (req: any) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -22,6 +25,7 @@ serve(async (req) => {
       });
     }
 
+    // @ts-ignore: Deno global is not recognized
     const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
     
     if (!OPENROUTER_API_KEY) {

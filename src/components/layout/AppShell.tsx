@@ -22,13 +22,8 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile Header */}
       <header className="md:hidden bg-white shadow-[0_4px_20px_rgb(0,0,0,0.03)] z-20 relative">
         <div className="px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-[#1B5E20] rounded-[10px] flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-              </svg>
-            </div>
-            <div className="font-bold text-gray-900 tracking-tight">FarmPilot</div>
+          <div className="flex items-center">
+            <img src="/logo.png" alt="FarmPilot Logo" className="h-8 w-auto object-contain" />
           </div>
           <button
             onClick={signOut}
@@ -41,13 +36,8 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white shadow-[4px_0_24px_rgb(0,0,0,0.02)] z-10 sticky top-0 h-screen overflow-y-auto">
-        <div className="p-6 flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-[#1B5E20] rounded-xl flex items-center justify-center shadow-sm">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-            </svg>
-          </div>
-          <span className="font-extrabold text-xl text-gray-900 tracking-tight">FarmPilot</span>
+        <div className="p-6 flex items-center mb-6">
+          <img src="/logo.png" alt="FarmPilot Logo" className="h-10 w-auto object-contain" />
         </div>
 
         <nav className="flex-1 px-4 space-y-1">

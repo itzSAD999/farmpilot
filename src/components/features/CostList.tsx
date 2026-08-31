@@ -104,7 +104,7 @@ export function CostList({ seasonId }: CostListProps) {
               {categoryCosts.map((cost) => (
                 <div key={cost.id} className="p-4 rounded-2xl border border-gray-100 hover:border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition-colors group flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
+                    <div className="flex items-center space-x-2 mb-1 flex-wrap gap-y-1">
                       <span className="text-sm font-bold text-gray-900">
                         {cost.description || categoryLabel}
                       </span>
@@ -114,6 +114,12 @@ export function CostList({ seasonId }: CostListProps) {
                           <span className="text-xs font-medium text-gray-500">{new Date(cost.date_incurred).toLocaleDateString()}</span>
                         </>
                       )}
+                      {cost.id < 0 && (
+                        <span className="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01" /></svg>
+                          Not yet synced
+                        </span>
+                      )}
                     </div>
                     
                     {(cost.quantity || cost.unit_cost_pesewas) ? (
@@ -121,7 +127,7 @@ export function CostList({ seasonId }: CostListProps) {
                         {cost.quantity || '?'} {cost.unit || 'units'} × ₵<Money pesewas={cost.unit_cost_pesewas || 0} />
                       </div>
                     ) : (
-                      <div className="inline-flex items-center text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">
+                      <div className="inline-flex items-center text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">
                         Total-only entry
                       </div>
                     )}
@@ -136,8 +142,9 @@ export function CostList({ seasonId }: CostListProps) {
                         }
                       }}
                       disabled={deleteMutation.isPending}
-                      className="text-gray-400 hover:text-red-500 transition-colors p-1 opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                      className="text-gray-500 hover:text-red-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 disabled:opacity-50"
                       title="Delete item"
+                      aria-label="Delete item"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>

@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { PwaInstallPrompt } from './PwaInstallPrompt';
+import { OfflineBanner } from './OfflineBanner';
 
 interface AppShellProps {
   children: ReactNode;
@@ -13,7 +15,9 @@ export function AppShell({ children }: AppShellProps) {
   const displayName = (profile?.full_name as string) || user?.phone || 'Farmer';
 
   return (
-    <div className="min-h-screen bg-[#F4F7F6] flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-[#F4F7F6] flex flex-col font-sans">
+      <OfflineBanner />
+      <div className="flex-1 flex flex-col md:flex-row">
       
       {/* Mobile Header */}
       <header className="md:hidden bg-white shadow-[0_4px_20px_rgb(0,0,0,0.03)] z-20 relative">
@@ -28,7 +32,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
           <button
             onClick={signOut}
-            className="text-sm font-bold text-[#1B5E20] px-3 py-2 rounded-xl bg-[#1B5E20]/10 hover:bg-[#1B5E20]/20 transition-colors"
+            className="min-h-[44px] min-w-[44px] text-sm font-bold text-[#1B5E20] px-3 py-2 rounded-xl bg-[#1B5E20]/10 hover:bg-[#1B5E20]/20 transition-colors"
           >
             Sign Out
           </button>
@@ -47,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
-          <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Menu</div>
+          <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Menu</div>
           <a href="/" className="flex items-center px-3 py-3 bg-[#1B5E20]/10 text-[#1B5E20] rounded-xl font-bold group">
             <svg className="w-5 h-5 mr-3 text-[#1B5E20]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -66,7 +70,7 @@ export function AppShell({ children }: AppShellProps) {
             <p className="text-xs font-medium text-gray-500 mb-4">{user?.phone || 'Farmer'}</p>
             <button
               onClick={signOut}
-              className="w-full py-2 bg-white text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+              className="min-h-[44px] w-full py-2 bg-white text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
             >
               Sign out
             </button>
@@ -78,6 +82,9 @@ export function AppShell({ children }: AppShellProps) {
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 overflow-y-auto">
         {children}
       </main>
+      
+      <PwaInstallPrompt />
+      </div>
     </div>
   );
 }

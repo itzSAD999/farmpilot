@@ -98,7 +98,7 @@ export function SeasonNew() {
   return (
     <div className="max-w-3xl mx-auto py-12 px-6 lg:px-8 animate-fade-in">
       <div className="mb-10">
-        <button onClick={() => navigate('/')} className="text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors flex items-center mb-8 group">
+        <button onClick={() => navigate('/')} className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center mb-8 group">
           <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
           </span>
@@ -118,10 +118,12 @@ export function SeasonNew() {
         
         {/* Crop Selection */}
         <div className="relative group">
-          <label htmlFor="crop_id" className="block text-sm uppercase tracking-widest text-gray-400 font-bold mb-3">Crop</label>
+          <label htmlFor="crop_id" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Crop</label>
           <div className="relative">
             <select
               id="crop_id"
+              aria-invalid={errors.crop_id ? 'true' : 'false'}
+              aria-describedby={errors.crop_id ? 'crop_id-error' : undefined}
               className={`w-full appearance-none text-2xl md:text-3xl font-bold text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors cursor-pointer ${
                 errors.crop_id ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
               }`}
@@ -135,33 +137,37 @@ export function SeasonNew() {
                 </option>
               ))}
             </select>
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-gray-600 transition-colors">
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 group-hover:text-gray-600 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
             </div>
           </div>
-          {errors.crop_id && <p className="mt-3 text-sm text-red-500 font-medium animate-fade-in">{errors.crop_id.message}</p>}
+          {errors.crop_id && <p id="crop_id-error" className="mt-3 text-sm text-red-500 font-medium animate-fade-in">{errors.crop_id.message}</p>}
         </div>
 
         {/* Year & Season Window (Side by side on desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="relative group">
-            <label htmlFor="year" className="block text-sm uppercase tracking-widest text-gray-400 font-bold mb-3">Year</label>
+            <label htmlFor="year" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Year</label>
             <input
               id="year"
               type="number"
+              aria-invalid={errors.year ? 'true' : 'false'}
+              aria-describedby={errors.year ? 'year-error' : undefined}
               className={`w-full text-2xl md:text-3xl font-bold text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors ${
                 errors.year ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
               }`}
               {...register('year', { valueAsNumber: true })}
             />
-            {errors.year && <p className="mt-3 text-sm text-red-500 font-medium animate-fade-in">{errors.year.message}</p>}
+            {errors.year && <p id="year-error" className="mt-3 text-sm text-red-500 font-medium animate-fade-in">{errors.year.message}</p>}
           </div>
 
           <div className="relative group">
-            <label htmlFor="season_window" className="block text-sm uppercase tracking-widest text-gray-400 font-bold mb-3">Season Window</label>
+            <label htmlFor="season_window" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Season Window</label>
             <div className="relative">
               <select
                 id="season_window"
+                aria-invalid={errors.season_window ? 'true' : 'false'}
+                aria-describedby={errors.season_window ? 'season_window-error' : undefined}
                 className={`w-full appearance-none text-2xl md:text-3xl font-bold text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors cursor-pointer ${
                   errors.season_window ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
                 }`}
@@ -175,11 +181,11 @@ export function SeasonNew() {
                   </option>
                 ))}
               </select>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-gray-600 transition-colors">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 group-hover:text-gray-600 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
               </div>
             </div>
-            {errors.season_window && <p className="mt-3 text-sm text-red-500 font-medium animate-fade-in">{errors.season_window.message}</p>}
+            {errors.season_window && <p id="season_window-error" className="mt-3 text-sm text-red-500 font-medium animate-fade-in">{errors.season_window.message}</p>}
             
             {/* Show description of selected window */}
             {!errors.season_window && watch('season_window') && (
@@ -193,13 +199,15 @@ export function SeasonNew() {
 
         {/* Area Planted */}
         <div className="relative group">
-          <label htmlFor="area_planted_acres" className="block text-sm uppercase tracking-widest text-gray-400 font-bold mb-3">Area Planted</label>
+          <label htmlFor="area_planted_acres" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Area Planted</label>
           <div className="relative flex items-end">
             <input
               id="area_planted_acres"
               type="number"
               step="0.1"
               placeholder="0.0"
+              aria-invalid={errors.area_planted_acres ? 'true' : 'false'}
+              aria-describedby={errors.area_planted_acres ? 'area_planted-error' : undefined}
               className={`w-full text-4xl md:text-5xl font-light text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors ${
                 errors.area_planted_acres ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
               }`}
@@ -210,7 +218,7 @@ export function SeasonNew() {
           
           <div className="flex justify-between items-center mt-4">
             {errors.area_planted_acres ? (
-              <p className="text-sm text-red-500 font-medium animate-fade-in">{errors.area_planted_acres.message}</p>
+              <p id="area_planted-error" className="text-sm text-red-500 font-medium animate-fade-in">{errors.area_planted_acres.message}</p>
             ) : (
               <p className="text-sm text-gray-500 font-medium animate-fade-in flex items-center">
                 <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
@@ -223,7 +231,7 @@ export function SeasonNew() {
               <button 
                 type="button"
                 onClick={() => resetField('area_planted_acres', { defaultValue: maxAcres })}
-                className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition-colors"
+                className="min-h-[44px] text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full hover:bg-emerald-100 transition-colors flex items-center justify-center"
               >
                 Use Full Farm
               </button>

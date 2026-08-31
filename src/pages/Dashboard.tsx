@@ -106,16 +106,16 @@ export function Dashboard() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     <div>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Recorded Spend</p>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Recorded Spend</p>
                       <p className="text-2xl font-bold text-gray-900 flex items-center">
-                        <span className="text-sm font-bold text-gray-400 mr-1">GHS</span>
+                        <span className="text-sm font-bold text-gray-500 mr-1">GHS</span>
                         <Money pesewas={Number(farmSummary.total_recorded_pesewas)} />
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Estimated Cost</p>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Estimated Cost</p>
                       <p className="text-2xl font-bold text-gray-900 flex items-center">
-                        <span className="text-sm font-bold text-gray-400 mr-1">GHS</span>
+                        <span className="text-sm font-bold text-gray-500 mr-1">GHS</span>
                         <Money pesewas={Number(farmSummary.total_estimated_pesewas)} />
                       </p>
                     </div>
@@ -138,7 +138,7 @@ export function Dashboard() {
               </div>
 
               <div className="mt-8 pt-6 border-t border-gray-100 flex items-start text-sm text-gray-500">
-                <svg className="w-5 h-5 text-gray-400 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-5 h-5 text-gray-500 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <p>Each crop is estimated separately because different crops need different inputs. These are the totals across your whole farm.</p>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function Dashboard() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-100 text-xs uppercase tracking-widest text-gray-400">
+                    <tr className="border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
                       <th className="pb-4 font-bold">Crop</th>
                       <th className="pb-4 font-bold">Seasons</th>
                       <th className="pb-4 font-bold">Total Acres</th>
@@ -195,15 +195,15 @@ export function Dashboard() {
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-sm border-t border-gray-100 pt-4">
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Seasons</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Seasons</span>
                         <span className="text-gray-900 font-medium">{crop.season_count}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Acres</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Acres</span>
                         <span className="text-gray-900 font-medium">{Number(crop.total_acres)}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Spent</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Spent</span>
                         <span className="text-gray-900 font-medium truncate"><Money pesewas={Number(crop.total_recorded_pesewas)} /></span>
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export function Dashboard() {
                         <div className="flex items-start space-x-4">
                           <div className={`w-12 h-12 rounded-xl shrink-0 ${season.is_complete ? 'bg-gray-100' : 'bg-emerald-50'} flex items-center justify-center group-hover:scale-105 transition-transform`}>
                             {season.is_complete ? (
-                              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                              <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                             ) : (
                               <svg className="w-6 h-6 text-[#1B5E20]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             )}
@@ -277,8 +277,8 @@ export function Dashboard() {
                         
                         <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                           <div className="text-left sm:text-right">
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-0.5">Recorded</p>
-                            <p className="text-lg font-bold text-gray-900"><span className="text-sm font-medium text-gray-400 mr-1">GHS</span><Money pesewas={season.total_cost_pesewas} /></p>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-0.5">Recorded</p>
+                            <p className="text-lg font-bold text-gray-900"><span className="text-sm font-medium text-gray-500 mr-1">GHS</span><Money pesewas={season.total_cost_pesewas} /></p>
                           </div>
                           
                           {/* Generate Estimate Shortcut */}

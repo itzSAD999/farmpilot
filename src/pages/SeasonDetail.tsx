@@ -10,6 +10,7 @@ import { generateEstimate } from '../api/estimates';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { CostList } from '../components/features/CostList';
 import { Money } from '../components/ui/Money';
+import { useOnline } from '../hooks/useOnline';
 const closeSeasonSchema = z.object({
   harvest_qty: z.number({ message: 'Please enter a valid quantity.' }).positive('Quantity must be greater than zero.'),
   harvest_unit: z.enum(['bag_100kg', 'bag_50kg', 'metric_tonnes']),
@@ -23,6 +24,7 @@ export function SeasonDetail() {
   const seasonId = Number(id);
   const navigate = useNavigate();
   const location = useLocation();
+  const isOnline = useOnline();
 
   const queryClient = useQueryClient();
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
@@ -120,7 +122,7 @@ export function SeasonDetail() {
       {/* Header */}
       <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <Link to="/" className="text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors flex items-center mb-8 group">
+          <Link to="/" className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center mb-8 group">
             <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
             </span>
@@ -141,32 +143,43 @@ export function SeasonDetail() {
           </p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <button 
-            disabled={!hasCosts || generateMutation.isPending}
-            onClick={() => {
-              setGenerateError(null);
-              generateMutation.mutate();
-            }}
-            title={hasCosts ? "Generate an estimate based on your recorded costs" : "Record at least one cost first"}
-            className={`font-bold py-2.5 px-5 rounded-xl transition-all flex items-center ${hasCosts ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md active:scale-95' : 'bg-white text-gray-400 border border-gray-200 cursor-not-allowed opacity-70'}`}
-          >
-            {generateMutation.isPending && (
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            )}
-            {generateMutation.isPending ? 'Generating...' : 'Generate Estimate'}
-          </button>
-          
-          {!season.is_complete && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex items-center space-x-3">
             <button 
-              onClick={() => setIsCloseModalOpen(true)}
-              className="bg-[#0a0a0a] text-white font-bold py-2.5 px-5 rounded-xl hover:bg-gray-800 transition-colors"
+              disabled={!hasCosts || generateMutation.isPending || !isOnline}
+              onClick={() => {
+                setGenerateError(null);
+                generateMutation.mutate();
+              }}
+              title={!isOnline ? "You need internet to generate an estimate" : hasCosts ? "Generate an estimate based on your recorded costs" : "Record at least one cost first"}
+              className={`font-bold py-2.5 px-5 rounded-xl transition-all flex items-center ${hasCosts && isOnline ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md active:scale-95' : 'bg-white text-gray-500 border border-gray-200 cursor-not-allowed opacity-70'}`}
             >
-              Close Season
+              {generateMutation.isPending && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {generateMutation.isPending ? 'Generating...' : 'Generate Estimate'}
             </button>
+            
+            {!season.is_complete && (
+              <button 
+                onClick={() => setIsCloseModalOpen(true)}
+                disabled={!isOnline}
+                className={`font-bold py-2.5 px-5 rounded-xl transition-colors ${isOnline ? 'bg-[#0a0a0a] text-white hover:bg-gray-800' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+              >
+                Close Season
+              </button>
+            )}
+          </div>
+          
+          {/* Offline reason shown inline */}
+          {!isOnline && (
+            <p className="text-xs font-bold text-amber-600 flex items-center">
+              <svg className="w-4 h-4 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728" /></svg>
+              You need internet to generate an estimate.
+            </p>
           )}
         </div>
       </div>
@@ -190,7 +203,7 @@ export function SeasonDetail() {
 
           {season.is_complete && (
             <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
-              <h3 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-4">Harvest Summary</h3>
+              <h3 className="text-gray-500 font-bold uppercase tracking-widest text-xs mb-4">Harvest Summary</h3>
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-gray-500 font-medium mb-1">Yield</p>
@@ -240,18 +253,24 @@ export function SeasonDetail() {
                 {/* Harvest Yield */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative group col-span-1">
-                    <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold mb-2">Quantity</label>
+                    <label htmlFor="harvest_qty" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Quantity</label>
                     <input
+                      id="harvest_qty"
                       type="number"
                       step="0.01"
                       placeholder="0.0"
+                      aria-invalid={errors.harvest_qty ? 'true' : 'false'}
+                      aria-describedby={errors.harvest_qty ? 'harvest_qty-error' : undefined}
                       className={`w-full text-2xl font-bold text-gray-900 bg-gray-50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all border ${errors.harvest_qty ? 'border-red-300' : 'border-transparent'}`}
                       {...register('harvest_qty', { valueAsNumber: true })}
                     />
                   </div>
                   <div className="relative group col-span-1">
-                    <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold mb-2">Unit</label>
+                    <label htmlFor="harvest_unit" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Unit</label>
                     <select
+                      id="harvest_unit"
+                      aria-invalid={errors.harvest_unit ? 'true' : 'false'}
+                      aria-describedby={errors.harvest_unit ? 'harvest_unit-error' : undefined}
                       className={`w-full appearance-none text-base font-bold text-gray-900 bg-gray-50 rounded-xl px-4 py-4 h-[58px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all border cursor-pointer ${errors.harvest_unit ? 'border-red-300' : 'border-transparent'}`}
                       {...register('harvest_unit')}
                     >
@@ -261,22 +280,25 @@ export function SeasonDetail() {
                     </select>
                   </div>
                 </div>
-                {errors.harvest_qty && <p className="text-sm text-red-500 font-medium -mt-4">{errors.harvest_qty.message}</p>}
+                {errors.harvest_qty && <p id="harvest_qty-error" className="text-sm text-red-500 font-medium -mt-4">{errors.harvest_qty.message}</p>}
                 
                 {/* Revenue */}
                 <div className="relative group">
-                  <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold mb-2">Revenue (Optional)</label>
+                  <label htmlFor="revenue_cedis" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Revenue (Optional)</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">₵</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">₵</span>
                     <input
+                      id="revenue_cedis"
                       type="number"
                       step="0.01"
                       placeholder="0.00"
+                      aria-invalid={errors.revenue_cedis ? 'true' : 'false'}
+                      aria-describedby={errors.revenue_cedis ? 'revenue_cedis-error' : undefined}
                       className={`w-full text-xl font-bold text-gray-900 bg-gray-50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all border ${errors.revenue_cedis ? 'border-red-300' : 'border-transparent'}`}
                       {...register('revenue_cedis', { valueAsNumber: true })}
                     />
                   </div>
-                  {errors.revenue_cedis && <p className="mt-2 text-sm text-red-500 font-medium">{errors.revenue_cedis.message}</p>}
+                  {errors.revenue_cedis && <p id="revenue_cedis-error" className="mt-2 text-sm text-red-500 font-medium">{errors.revenue_cedis.message}</p>}
                 </div>
 
                 {completeMutation.isError && (

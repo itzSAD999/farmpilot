@@ -72,7 +72,7 @@ export function EstimateReport() {
   return (
     <div className="max-w-6xl mx-auto py-12 px-6 lg:px-8 animate-fade-in pb-24 print:py-0 print:px-0 print:bg-white">
       {/* Back Link */}
-      <Link to={`/season/${meta.season_id}`} className="text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors flex items-center mb-8 group w-max print:hidden">
+      <Link to={`/season/${meta.season_id}`} className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center mb-8 group w-max print:hidden">
         <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors border border-gray-100">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
         </span>
@@ -102,7 +102,7 @@ export function EstimateReport() {
             </h1>
             
             <div className="mt-8 mb-4">
-              <p className="text-gray-400 font-medium mb-1 tracking-widest text-xs uppercase print:text-gray-600">Estimated cost for this season</p>
+              <p className="text-gray-500 font-medium mb-1 tracking-widest text-xs uppercase print:text-gray-600">Estimated cost for this season</p>
               <div className="text-6xl md:text-7xl font-light tracking-tighter text-white print:text-black">
                 <span className="text-3xl font-medium text-emerald-500 mr-2 align-top print:text-gray-800">GHS</span>
                 <Money pesewas={totalPesewas} />
@@ -132,7 +132,7 @@ export function EstimateReport() {
         {/* Cost Breakdown */}
         <div className={`lg:col-span-${flaggedLines.length > 0 ? '7' : '12'} print:col-span-12`}>
           <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 print:shadow-none print:border-none print:p-0">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-10 print:text-black">Where Your Money Goes</h2>
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-10 print:text-black">Where Your Money Goes</h2>
             
             <div className="space-y-8 print:space-y-4">
               {sortedLines.map((line) => {
@@ -143,9 +143,17 @@ export function EstimateReport() {
                   <div key={line.category} className="group print:break-inside-avoid">
                     <div className="flex justify-between items-end mb-3">
                       <div className="flex flex-col">
-                        <span className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors print:text-black">{readableCategory}</span>
+                        <span className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors print:text-black flex items-center">
+                          {readableCategory}
+                          {line.is_flagged && (
+                            <span className="ml-2 inline-flex items-center text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 print:border-black print:text-black print:bg-transparent">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                              High
+                            </span>
+                          )}
+                        </span>
                         <span className="text-sm text-gray-500 font-medium flex items-center print:text-gray-700">
-                          <span className="mr-1 text-xs text-gray-400 font-bold print:text-gray-600">GHS</span> 
+                          <span className="mr-1 text-xs text-gray-500 font-bold print:text-gray-600">GHS</span> 
                           <Money pesewas={line.estimated_pesewas} />
                         </span>
                       </div>
@@ -156,7 +164,7 @@ export function EstimateReport() {
                     {/* Progress Bar */}
                     <div className="h-4 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100/50 relative print:border-gray-400 print:bg-white print:h-3">
                       <div 
-                        className="absolute top-0 left-0 h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out print:bg-black" 
+                        className={`absolute top-0 left-0 h-full ${line.is_flagged ? 'bg-orange-500' : 'bg-emerald-500'} rounded-full transition-all duration-1000 ease-out print:bg-black`} 
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

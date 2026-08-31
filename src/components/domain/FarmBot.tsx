@@ -115,7 +115,7 @@ export function FarmBot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed inset-0 md:inset-auto md:bottom-8 md:right-8 md:w-[400px] md:h-[600px] bg-white dark:bg-[#1a1a1a] md:rounded-[24px] shadow-2xl z-50 flex flex-col overflow-hidden border border-gray-200 dark:border-white/10 animate-fade-in-up">
+        <div className="fixed inset-0 md:inset-auto md:bottom-8 md:right-8 md:w-[400px] md:h-[500px] bg-white dark:bg-[#1a1a1a] md:rounded-[24px] shadow-2xl z-50 flex flex-col overflow-hidden border border-gray-200 dark:border-white/10 animate-fade-in-up">
           {/* Header */}
           <div className="bg-[#1B5E20] p-4 text-white flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
@@ -195,6 +195,13 @@ export function FarmBot() {
             <div className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-2">
               FarmBot can make mistakes. Verify important advice.
             </div>
+            <button 
+              type="button" 
+              onClick={() => setIsOpen(false)}
+              className="mt-3 w-full py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-colors"
+            >
+              Close Chat
+            </button>
           </form>
         </div>
       )}

@@ -30,7 +30,7 @@ export function SeasonDetail() {
   const [isCostModalOpen, setIsCostModalOpen] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  const { data: season, isLoading, isError } = useQuery({
+  const { data: season, isLoading, isError, error: queryError } = useQuery({
     queryKey: ['season', seasonId],
     queryFn: () => getSeason(seasonId),
     enabled: !!seasonId,
@@ -99,11 +99,12 @@ export function SeasonDetail() {
   }
 
   if (isError || !season) {
+    const errorMessage = queryError ? (queryError as Error).message : "We couldn't load this season. This usually happens if your session has expired.";
     return (
       <div className="p-12 text-center mt-12 bg-red-50 rounded-[32px] border border-red-100 max-w-2xl mx-auto">
         <div className="text-6xl mb-4 opacity-50 inline-block bg-red-100 rounded-full p-6 text-red-500">⚠️</div>
         <h2 className="text-2xl font-bold text-red-900 mb-2">Season not found</h2>
-        <p className="text-red-700 mb-8 max-w-md mx-auto">We couldn't load this season. This usually happens if your session has expired.</p>
+        <p className="text-red-700 mb-8 max-w-md mx-auto">{errorMessage}</p>
         <div className="flex gap-4 justify-center">
           <Link to="/" className="text-emerald-600 font-bold hover:underline py-3">Back to Dashboard</Link>
           <button onClick={() => window.location.reload()} className="bg-red-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-red-700 transition-colors">

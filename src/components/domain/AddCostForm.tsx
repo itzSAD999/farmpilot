@@ -46,12 +46,13 @@ const CategoryIcons: Record<string, React.ReactNode> = {
 };
 
 export function AddCostForm({ seasonId }: AddCostFormProps) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [entryMode, setEntryMode] = useState<'total' | 'rate'>('total');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }, reset, getValues } = useForm<CostFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }, getValues } = useForm<CostFormData>({
     resolver: zodResolver(costSchema),
     defaultValues: {
       entry_mode: 'total',
@@ -147,8 +148,8 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
     onSuccess: () => {
       // Preserve category after save
       const currentCategory = getValues('category');
-      reset();
       setValue('category', currentCategory);
+      setStep(1); // Return to step 1 for the next item
       setValue('entry_mode', entryMode);
       setValue('date_incurred', new Date().toISOString().split('T')[0]);
     },
@@ -160,9 +161,23 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
 
   return (
     <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-gray-100 animate-fade-in">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Record Cost</h2>
-        <p className="text-gray-500 font-medium text-sm mt-1">Track everything you spend on this season.</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Record Cost</h2>
+          <p className="text-gray-500 font-medium text-sm mt-1">
+            {step === 1 ? 'Select what type of cost you incurred.' : 'Enter the details for this cost.'}
+          </p>
+        </div>
+        {step === 2 && (
+          <button 
+            type="button" 
+            onClick={() => setStep(1)} 
+            className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+            Change Category
+          </button>
+        )}
       </div>
 
       {addMutation.isError && !addMutation.error?.message?.includes('session has expired') && (
@@ -176,36 +191,42 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         
-        {/* CATEGORY GRID */}
-        <div>
-          <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-4">Category</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.values(CATEGORIES).map((cat) => {
-              const isSelected = watchCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setValue('category', cat.id, { shouldValidate: true })}
-                  className={`relative p-4 rounded-2xl border text-left transition-all ${
-                    isSelected 
-                      ? 'border-emerald-500 bg-emerald-50 shadow-sm ring-1 ring-emerald-500' 
-                      : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30'
-                  }`}
-                >
-                  <div className={`mb-3 flex items-center justify-center w-10 h-10 rounded-full ${isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                    {CategoryIcons[cat.id]}
-                  </div>
-                  <h4 className={`text-sm font-bold ${isSelected ? 'text-emerald-900' : 'text-gray-900'}`}>{cat.label}</h4>
-                  <p className={`text-xs mt-1 leading-tight ${isSelected ? 'text-emerald-700/80' : 'text-gray-500'}`}>{cat.description}</p>
-                </button>
-              );
-            })}
+        {step === 1 && (
+          <div className="animate-fade-in-up">
+            <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-4">Category</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Object.values(CATEGORIES).map((cat) => {
+                const isSelected = watchCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setValue('category', cat.id, { shouldValidate: true });
+                      setStep(2);
+                    }}
+                    className={`relative p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                      isSelected 
+                        ? 'border-emerald-500 bg-emerald-50 shadow-sm ring-1 ring-emerald-500' 
+                        : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30'
+                    }`}
+                  >
+                    <div className={`mb-3 flex items-center justify-center w-10 h-10 rounded-full ${isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      {CategoryIcons[cat.id]}
+                    </div>
+                    <h4 className={`text-sm font-bold ${isSelected ? 'text-emerald-900' : 'text-gray-900'}`}>{cat.label}</h4>
+                    <p className={`text-xs mt-1 leading-tight ${isSelected ? 'text-emerald-700/80' : 'text-gray-500'}`}>{cat.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {errors.category && <p className="text-sm text-red-500 font-bold mt-2">{errors.category.message}</p>}
           </div>
-          {errors.category && <p className="text-sm text-red-500 font-bold mt-2">{errors.category.message}</p>}
-        </div>
+        )}
 
-        {watchCategory === 'other' && (
+        {step === 2 && (
+          <div className="space-y-8 animate-fade-in-up">
+            {watchCategory === 'other' && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 animate-fade-in-up">
             <p className="text-yellow-800 text-sm font-medium leading-relaxed">
               {OTHER_CATEGORY_EXPLANATION}
@@ -370,7 +391,9 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
         >
           {isSubmitting || addMutation.isPending ? 'Saving...' : 'Save Cost Item'}
         </button>
-      </form>
+      </div>
+    )}
+  </form>
     </div>
   );
 }

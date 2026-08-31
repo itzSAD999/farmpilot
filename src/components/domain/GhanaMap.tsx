@@ -86,7 +86,7 @@ export function GhanaMap({ selectedRegion, onSelect }: GhanaMapProps) {
         {selectedRegion && (
           <div className="absolute top-6 left-6 z-20 animate-fade-in-up pointer-events-none">
             <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1">Selected Region</span>
-            <span className="text-2xl font-black text-[#1B5E20] dark:text-emerald-400 tracking-tight bg-white/80 dark:bg-[#1c2622]/80 px-3 py-1 rounded-lg backdrop-blur-sm shadow-sm">{selectedRegion}</span>
+            <span className="text-2xl font-black text-[#1B5E20] dark:text-emerald-400 tracking-tight bg-white/80 dark:bg-[#1a1a1a]/80 px-3 py-1 rounded-lg backdrop-blur-sm shadow-sm">{selectedRegion}</span>
           </div>
         )}
         

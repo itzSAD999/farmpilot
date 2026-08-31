@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getReport, checkProvisionalBenchmarks } from '../api/estimates';
+import { getGuidesFor } from '../api/guides';
 import { Money } from '../components/ui/Money';
 import { CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
@@ -19,6 +20,12 @@ export function EstimateReport() {
   const { data: isProvisional } = useQuery({
     queryKey: ['provisional_check', seasonId],
     queryFn: () => checkProvisionalBenchmarks(seasonId!),
+    enabled: !!seasonId,
+  });
+
+  const { data: matchedGuides } = useQuery({
+    queryKey: ['matchedGuides', seasonId],
+    queryFn: () => getGuidesFor(seasonId!),
     enabled: !!seasonId,
   });
 
@@ -162,7 +169,7 @@ export function EstimateReport() {
                       </span>
                     </div>
                     {/* Progress Bar */}
-                    <div className="h-4 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100/50 relative print:border-gray-400 print:bg-white print:h-3">
+                    <div className="h-4 w-full bg-gray-50 dark:bg-white/5 rounded-full overflow-hidden border border-gray-100/50 dark:border-white/10 relative print:border-gray-400 print:bg-white print:h-3">
                       <div 
                         className={`absolute top-0 left-0 h-full ${line.is_flagged ? 'bg-orange-500' : 'bg-emerald-500'} rounded-full transition-all duration-1000 ease-out print:bg-black`} 
                         style={{ width: `${percentage}%` }}
@@ -183,46 +190,67 @@ export function EstimateReport() {
           </h2>
           
           {flaggedLines.length === 0 ? (
-            <div className="bg-emerald-50 rounded-[24px] p-8 border border-emerald-100 text-center print:border-gray-300 print:bg-transparent">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-emerald-500 print:border print:border-gray-300 print:text-black">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-[24px] p-8 border border-emerald-100 dark:border-emerald-800 text-center print:border-gray-300 print:bg-transparent">
+              <div className="w-16 h-16 bg-white dark:bg-emerald-900/40 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-emerald-500 dark:text-emerald-400 print:border print:border-gray-300 print:text-black">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
               </div>
-              <h3 className="text-lg font-bold text-emerald-900 mb-2 print:text-black">Looking Good!</h3>
-              <p className="text-emerald-700 font-medium print:text-gray-700">Nothing stands out as high this season.</p>
+              <h3 className="text-lg font-bold text-emerald-900 dark:text-emerald-100 mb-2 print:text-black">Looking Good!</h3>
+              <p className="text-emerald-700 dark:text-emerald-300 font-medium print:text-gray-700">Nothing stands out as high this season.</p>
             </div>
           ) : (
             <>
               {flaggedLines.map((line) => {
                 const readableCategory = CATEGORIES[line.category as CostCategory]?.label || line.category;
+                const guide = matchedGuides?.find((g: any) => g.category === line.category);
                 
-                return (
-                  <div key={line.category} className="bg-[#fff8f1] rounded-[24px] p-6 md:p-8 border border-orange-100/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow print:border-gray-400 print:bg-transparent print:shadow-none print:break-inside-avoid">
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
-                        <h3 className="font-bold text-orange-900 text-lg uppercase tracking-tight print:text-black">{readableCategory}</h3>
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-orange-100 text-orange-800 text-xs font-bold border border-orange-200 print:bg-transparent print:border-black print:text-black">
-                          <svg className="w-3.5 h-3.5 mr-1.5 text-orange-600 print:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                          +{line.variance_pct}% above expected
-                        </span>
-                      </div>
-                      
-                      {line.potential_saving_pesewas != null && (
-                        <p className="text-xl font-light text-orange-800 mb-5 print:text-black">
-                          Possible saving: <span className="font-bold text-orange-600 print:text-black">GHS <Money pesewas={line.potential_saving_pesewas} /></span>
-                        </p>
-                      )}
-                      
-                      {!line.advice ? (
-                        <div className="p-4 bg-red-50 text-red-700 font-bold rounded-lg border border-red-200 print:border-black print:text-black print:bg-transparent">
-                          BUG: Missing advice for flagged category. The estimate engine must provide advice.
-                        </div>
-                      ) : (
-                        <p className="text-orange-900/80 font-medium leading-relaxed text-sm print:text-gray-800">
-                          {line.advice}
-                        </p>
-                      )}
+                const cardContent = (
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
+                      <h3 className="font-bold text-orange-900 dark:text-orange-100 text-lg uppercase tracking-tight print:text-black">
+                        <span className="mr-2 text-xl" aria-hidden="true">⚠️</span>
+                        <span className="sr-only">FLAGGED: </span>
+                        {readableCategory}
+                      </h3>
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 text-xs font-bold border border-orange-200 dark:border-orange-800 print:bg-transparent print:border-black print:text-black">
+                        <svg className="w-3.5 h-3.5 mr-1.5 text-orange-600 dark:text-orange-400 print:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        +{line.variance_pct}% above expected
+                      </span>
                     </div>
+                    
+                    {line.potential_saving_pesewas != null && (
+                      <p className="text-xl font-light text-orange-800 dark:text-orange-200 mb-5 print:text-black">
+                        Possible saving: <span className="font-bold text-orange-600 dark:text-orange-400 print:text-black">GHS <Money pesewas={line.potential_saving_pesewas} /></span>
+                      </p>
+                    )}
+                    
+                    {!line.advice ? (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-bold rounded-lg border border-red-200 dark:border-red-800 print:border-black print:text-black print:bg-transparent">
+                        BUG: Missing advice for flagged category. The estimate engine must provide advice.
+                      </div>
+                    ) : (
+                      <p className="text-orange-900/80 dark:text-orange-100/80 font-medium leading-relaxed text-sm print:text-gray-800 mb-4">
+                        {line.advice}
+                      </p>
+                    )}
+
+                    {guide && (
+                      <div className="mt-4 pt-4 border-t border-orange-200/50 dark:border-orange-800/30 flex items-center justify-between text-orange-700 dark:text-orange-400 font-bold group-hover:text-orange-900 dark:group-hover:text-orange-300 transition-colors">
+                        <span>Read the full guide</span>
+                        <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                      </div>
+                    )}
+                  </div>
+                );
+
+                const cardClasses = "block bg-[#fff8f1] dark:bg-[#2a1a10] rounded-[24px] p-6 md:p-8 border border-orange-100/50 dark:border-orange-900/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all hover:border-orange-300 dark:hover:border-orange-700 print:border-gray-400 print:bg-transparent print:shadow-none print:break-inside-avoid";
+
+                return guide ? (
+                  <Link key={line.category} to={`/guides/${guide.id}`} className={cardClasses}>
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <div key={line.category} className={cardClasses}>
+                    {cardContent}
                   </div>
                 );
               })}

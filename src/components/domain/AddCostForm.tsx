@@ -3,12 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { addCost } from '../../api/costs';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
-
-// Utility for converting Cedis to integer Pesewas
-const cedisToPesewas = (cedis: number) => Math.round(cedis * 100);
+import { cedisToPesewas } from '../../lib/money';
 
 const baseSchema = z.object({
   category: z.enum(['seeds', 'fertiliser', 'agrochem', 'land_prep', 'labour', 'transport', 'storage', 'other']),
@@ -49,6 +48,8 @@ const CategoryIcons: Record<string, React.ReactNode> = {
 export function AddCostForm({ seasonId }: AddCostFormProps) {
   const [entryMode, setEntryMode] = useState<'total' | 'rate'>('total');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }, reset, getValues } = useForm<CostFormData>({
     resolver: zodResolver(costSchema),
@@ -131,9 +132,12 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
       
       return { previousCosts };
     },
-    onError: (_err, _newCost, context) => {
+    onError: (err: any, _newCost, context) => {
       if (context?.previousCosts) {
         queryClient.setQueryData(['seasonCosts', seasonId], context.previousCosts);
+      }
+      if (err.message?.includes('session has expired')) {
+        navigate('/signin', { state: { message: err.message, from: location } });
       }
     },
     onSettled: () => {
@@ -160,6 +164,15 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
         <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Record Cost</h2>
         <p className="text-gray-500 font-medium text-sm mt-1">Track everything you spend on this season.</p>
       </div>
+
+      {addMutation.isError && !addMutation.error?.message?.includes('session has expired') && (
+        <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-sm font-medium border border-red-100 animate-fade-in flex items-center justify-between">
+          <span>{addMutation.error.message}</span>
+          <button onClick={() => addMutation.reset()} className="text-red-700 hover:text-red-900">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         

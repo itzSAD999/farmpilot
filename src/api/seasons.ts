@@ -43,6 +43,18 @@ export interface CreateSeasonInput {
 function handleSeasonError(error: any): Error {
   const msg = error.message || String(error);
 
+  if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')) {
+    return new Error('Cannot connect to the network. Please check your internet connection and try again.');
+  }
+
+  if (msg.toLowerCase().includes('jwt') || msg.toLowerCase().includes('expired') || error.code === 'PGRST301') {
+    return new Error('Your session has expired. Any unsaved changes were lost. Please sign in again.');
+  }
+
+  if (msg.toLowerCase().includes('not found') || error.code === 'PGRST116') {
+     return new Error('This season was not found, has been deleted, or you do not have permission to view it.');
+  }
+
   if (error.code === '23505' || msg.includes('unique constraint') || msg.includes('seasons_farm_id_crop_id_year_season_window_key')) {
     return new Error('You already have a season for this crop in that window. Open it instead.');
   }

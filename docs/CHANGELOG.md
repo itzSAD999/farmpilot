@@ -15,10 +15,14 @@ fresh `[Unreleased]` is opened above it.
 ## [Unreleased]
 
 ### Added
+- Error states to `Dashboard`, `CostList`, and `SeasonNew` to handle data loading failures.
+- Global navigation logic to redirect users to `/signin` upon session expiration with a friendly message.
 
 ### Changed
+- Refactored API modules (`seasons.ts`, `estimates.ts`, `costs.ts`, `farms.ts`, `dashboard.ts`, `auth.ts`) to intercept raw database/network errors and map them to farmer-friendly messages.
 
 ### Fixed
+- Fixed unhandled raw database errors surfacing in UI when creating duplicate seasons or on network drop.
 
 ### Removed
 

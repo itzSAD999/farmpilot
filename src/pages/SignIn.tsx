@@ -34,14 +34,14 @@ const signInSchema = z.object({
 type SignInFormData = z.infer<typeof signInSchema>;
 
 export function SignIn() {
+  const location = useLocation();
   const [mode, setMode] = useState<'phone' | 'email'>('phone');
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(location.state?.message || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   const { signInWithPhone, signInWithEmail } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const from = location.state?.from?.pathname || '/';
 

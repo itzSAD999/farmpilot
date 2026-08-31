@@ -17,25 +17,26 @@ export function Dashboard() {
     }
   });
 
-  const { data: seasons, isLoading: isLoadingSeasons } = useQuery({
+  const { data: seasons, isLoading: isLoadingSeasons, isError: isErrorSeasons } = useQuery({
     queryKey: ['seasons', farm?.id],
     queryFn: () => listSeasons(farm!.id as number),
     enabled: !!farm?.id,
   });
 
-  const { data: farmSummary, isLoading: isLoadingSummary } = useQuery({
+  const { data: farmSummary, isLoading: isLoadingSummary, isError: isErrorSummary } = useQuery({
     queryKey: ['farm_summary', farm?.id],
     queryFn: () => getFarmSummary(farm!.id as number),
     enabled: !!farm?.id,
   });
 
-  const { data: cropsSummary, isLoading: isLoadingCrops } = useQuery({
+  const { data: cropsSummary, isLoading: isLoadingCrops, isError: isErrorCrops } = useQuery({
     queryKey: ['crop_summary', farm?.id],
     queryFn: () => getCropSummary(farm!.id as number),
     enabled: !!farm?.id,
   });
 
   const isLoading = isLoadingSeasons || isLoadingSummary || isLoadingCrops;
+  const isError = isErrorSeasons || isErrorSummary || isErrorCrops;
 
   return (
     <div className="animate-fade-in-up pb-12 max-w-6xl mx-auto">
@@ -56,6 +57,15 @@ export function Dashboard() {
       {isLoading ? (
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1B5E20]"></div>
+        </div>
+      ) : isError ? (
+        <div className="bg-red-50 rounded-[32px] p-12 text-center border border-red-100">
+          <div className="text-6xl mb-4 opacity-50 inline-block bg-red-100 rounded-full p-6 text-red-500">⚠️</div>
+          <h2 className="text-2xl font-bold text-red-900 mb-3">Unable to load dashboard</h2>
+          <p className="text-red-700 max-w-md mx-auto mb-8 font-medium">We couldn't load your farm data. Please check your connection and try again.</p>
+          <button onClick={() => window.location.reload()} className="bg-red-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-red-700 transition-colors">
+            Try Again
+          </button>
         </div>
       ) : !seasons || seasons.length === 0 ? (
         <div className="bg-white rounded-[24px] p-12 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center mt-8">

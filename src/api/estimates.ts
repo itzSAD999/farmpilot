@@ -48,9 +48,13 @@ function handleEstimateError(error: any): Error {
     );
   }
 
-  if (msg.toLowerCase().includes('not found or not accessible')) {
+  if (msg.toLowerCase().includes('jwt') || msg.toLowerCase().includes('expired') || error.code === 'PGRST301') {
+    return new Error('Your session has expired. Any unsaved changes were lost. Please sign in again.');
+  }
+
+  if (msg.toLowerCase().includes('not found') || error.code === 'PGRST116') {
     return new Error(
-      'This season was not found or you do not have permission to view it.'
+      'This season or estimate was not found, has been deleted, or you do not have permission to view it.'
     );
   }
 

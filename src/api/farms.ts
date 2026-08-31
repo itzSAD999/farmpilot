@@ -22,6 +22,14 @@ function handleFarmError(error: any): Error {
     return new Error('Cannot connect to the network. Please check your internet connection and try again.');
   }
 
+  if (msg.toLowerCase().includes('jwt') || msg.toLowerCase().includes('expired') || error.code === 'PGRST301') {
+    return new Error('Your session has expired. Any unsaved changes were lost. Please sign in again.');
+  }
+
+  if (msg.toLowerCase().includes('not found') || error.code === 'PGRST116') {
+     return new Error('This farm was not found, has been deleted, or you do not have permission to view it.');
+  }
+
   // Handle the Postgres CHECK constraint for area
   if (msg.toLowerCase().includes('total_area_acres') && msg.toLowerCase().includes('check')) {
     return new Error('Farm area must be greater than zero acres.');

@@ -131,9 +131,13 @@ export function FarmSetup() {
               </div>
 
               <div>
+                <label htmlFor="name" className="sr-only">Farm Name</label>
                 <input
+                  id="name"
                   type="text"
                   placeholder="e.g. Mensah Family Farm"
+                  aria-invalid={errors.name ? 'true' : 'false'}
+                  aria-describedby={errors.name ? 'name-error' : undefined}
                   className="w-full text-center text-4xl md:text-5xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
                   {...register('name')}
                   autoFocus
@@ -145,7 +149,7 @@ export function FarmSetup() {
                   }}
                 />
                 {errors.name && (
-                  <p className="mt-4 text-center text-base text-red-500 font-medium">{errors.name.message}</p>
+                  <p id="name-error" className="mt-4 text-center text-base text-red-500 font-medium">{errors.name.message}</p>
                 )}
               </div>
             </div>
@@ -168,9 +172,13 @@ export function FarmSetup() {
               )}
 
               <div className="pt-6 relative max-w-sm mx-auto z-50">
+                <label htmlFor="district" className="sr-only">District</label>
                 <input
+                  id="district"
                   type="text"
                   placeholder="District (e.g. Ejisu-Juaben)"
+                  aria-invalid={errors.district ? 'true' : 'false'}
+                  aria-describedby={errors.district ? 'district-error' : undefined}
                   className="w-full text-center text-3xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
                   {...register('district')}
                   onChange={(e) => {
@@ -191,7 +199,7 @@ export function FarmSetup() {
                 {/* Suggestions Dropdown */}
                 {showSuggestions && watchRegion && GHANA_DISTRICTS[watchRegion] && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 max-h-60 overflow-y-auto z-50 animate-fade-in-up py-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 py-2 border-b border-gray-50 mb-2">Districts in {watchRegion}</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4 py-2 border-b border-gray-50 mb-2">Districts in {watchRegion}</p>
                     {GHANA_DISTRICTS[watchRegion]
                       .filter(d => !watchDistrict || d.toLowerCase().includes(watchDistrict.toLowerCase()))
                       .map((district) => (
@@ -214,7 +222,7 @@ export function FarmSetup() {
                 )}
 
                 {errors.district && (
-                  <p className="mt-4 text-center text-base text-red-500 font-medium">{errors.district.message}</p>
+                  <p id="district-error" className="mt-4 text-center text-base text-red-500 font-medium">{errors.district.message}</p>
                 )}
               </div>
             </div>
@@ -233,19 +241,23 @@ export function FarmSetup() {
 
               <div className="flex flex-col items-center justify-center">
                 <div className="relative flex items-baseline justify-center">
+                  <label htmlFor="total_area_acres" className="sr-only">Total Area in Acres</label>
                   <input
+                    id="total_area_acres"
                     type="number"
                     step="0.1"
                     min="0.1"
                     placeholder="0.0"
+                    aria-invalid={errors.total_area_acres ? 'true' : 'false'}
+                    aria-describedby={errors.total_area_acres ? 'area-error' : undefined}
                     className="w-40 text-center text-6xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
                     {...register('total_area_acres', { valueAsNumber: true })}
                     autoFocus
                   />
-                  <span className="ml-4 text-3xl font-light text-gray-400">acres</span>
+                  <span className="ml-4 text-3xl font-light text-gray-500">acres</span>
                 </div>
                 {errors.total_area_acres && (
-                  <p className="mt-4 text-base text-red-500 font-medium">{errors.total_area_acres.message}</p>
+                  <p id="area-error" className="mt-4 text-base text-red-500 font-medium">{errors.total_area_acres.message}</p>
                 )}
               </div>
             </div>

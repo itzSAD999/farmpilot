@@ -248,14 +248,14 @@ export function SignUp() {
         {/* Top Navigation */}
         <div className="relative w-full p-6 md:p-12 flex justify-between items-center z-50 shrink-0">
           {step > 1 && step < 6 ? (
-            <button onClick={handleBack} className="flex items-center text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors group">
+            <button onClick={handleBack} className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors group">
               <span className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center sm:mr-3 group-hover:bg-gray-100 transition-colors shadow-sm">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
               </span>
               <span className="hidden sm:inline">Back</span>
             </button>
           ) : step === 1 ? (
-            <Link to="/welcome" className="flex items-center text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors group">
+            <Link to="/welcome" className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors group">
               <span className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center sm:mr-3 group-hover:bg-gray-100 transition-colors shadow-sm">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
               </span>
@@ -296,14 +296,18 @@ export function SignUp() {
                   <p className="text-lg text-gray-500 font-medium mb-12 animate-fade-in-up" style={{ animationDelay: '100ms' }}>Enter your full name to get started.</p>
                   
                   <div className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <label htmlFor="fullName" className="sr-only">Full Name</label>
                     <input
+                      id="fullName"
                       type="text"
                       placeholder="e.g. Kofi Mensah"
+                      aria-invalid={errors.fullName ? 'true' : 'false'}
+                      aria-describedby={errors.fullName ? 'fullName-error' : undefined}
                       className="w-full text-3xl md:text-4xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
                       {...register('fullName')}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNext(); } }}
                     />
-                    {errors.fullName && <p className="mt-4 text-base text-red-500 font-medium">{errors.fullName.message}</p>}
+                    {errors.fullName && <p id="fullName-error" className="mt-4 text-base text-red-500 font-medium">{errors.fullName.message}</p>}
                   </div>
                 </div>
               )}
@@ -315,32 +319,40 @@ export function SignUp() {
                   <p className="text-lg text-gray-500 font-medium mb-10 leading-relaxed animate-fade-in-up" style={{ animationDelay: '100ms' }}>Enter a {mode === 'phone' ? 'phone number' : 'email'} to log in with.</p>
 
                   <div className="flex rounded-full bg-gray-100 p-1 mb-10 max-w-xs animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-                    <button type="button" className={`flex-1 rounded-full py-3 text-sm font-bold transition-all duration-200 ${mode === 'phone' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => toggleMode('phone')}>Phone</button>
-                    <button type="button" className={`flex-1 rounded-full py-3 text-sm font-bold transition-all duration-200 ${mode === 'email' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => toggleMode('email')}>Email</button>
+                    <button type="button" className={`flex-1 min-h-[44px] rounded-full py-3 text-sm font-bold transition-all duration-200 ${mode === 'phone' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => toggleMode('phone')}>Phone</button>
+                    <button type="button" className={`flex-1 min-h-[44px] rounded-full py-3 text-sm font-bold transition-all duration-200 ${mode === 'email' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => toggleMode('email')}>Email</button>
                   </div>
 
                   {mode === 'phone' ? (
                     <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                      <label htmlFor="phone" className="sr-only">Phone Number</label>
                       <input
+                        id="phone"
                         type="tel"
                         placeholder="024 123 4567"
+                        aria-invalid={errors.phone ? 'true' : 'false'}
+                        aria-describedby={errors.phone ? 'phone-error' : undefined}
                         className="w-full text-3xl md:text-4xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
                         {...register('phone')}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNext(); } }}
                       />
                       {displayPhone && !errors.phone && <p className="mt-4 text-base text-[#1B5E20] font-bold animate-fade-in">We read this as: {displayPhone}</p>}
-                      {errors.phone && <p className="mt-4 text-base text-red-500 font-medium animate-fade-in">{errors.phone.message}</p>}
+                      {errors.phone && <p id="phone-error" className="mt-4 text-base text-red-500 font-medium animate-fade-in">{errors.phone.message}</p>}
                     </div>
                   ) : (
                     <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+                      <label htmlFor="email" className="sr-only">Email</label>
                       <input
+                        id="email"
                         type="email"
                         placeholder="farmer@example.com"
+                        aria-invalid={errors.email ? 'true' : 'false'}
+                        aria-describedby={errors.email ? 'email-error' : undefined}
                         className="w-full text-3xl md:text-4xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
                         {...register('email')}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNext(); } }}
                       />
-                      {errors.email && <p className="mt-4 text-base text-red-500 font-medium animate-fade-in">{errors.email.message}</p>}
+                      {errors.email && <p id="email-error" className="mt-4 text-base text-red-500 font-medium animate-fade-in">{errors.email.message}</p>}
                     </div>
                   )}
                 </div>
@@ -354,15 +366,19 @@ export function SignUp() {
 
                   <div className="space-y-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                     <div className="relative">
+                      <label htmlFor="password" className="sr-only">Password</label>
                       <input
+                        id="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Password"
                         autoComplete="new-password"
+                        aria-invalid={errors.password ? 'true' : 'false'}
+                        aria-describedby={errors.password ? 'password-error' : undefined}
                         className="w-full text-2xl md:text-3xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 pr-12 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300 tracking-wide"
                         {...register('password')}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNext(); } }}
                       />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute bottom-4 right-0 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                      <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)} className="absolute bottom-2 right-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-gray-600 focus:outline-none">
                         {showPassword ? (
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                         ) : (
@@ -381,14 +397,14 @@ export function SignUp() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm font-medium">
-                        <div className={`flex items-center ${pwdChecks.length ? 'text-emerald-700' : 'text-gray-400'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>8+ characters</div>
-                        <div className={`flex items-center ${pwdChecks.capital ? 'text-emerald-700' : 'text-gray-400'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>Capital letter</div>
-                        <div className={`flex items-center ${pwdChecks.number ? 'text-emerald-700' : 'text-gray-400'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>Number</div>
-                        <div className={`flex items-center ${pwdChecks.special ? 'text-emerald-700' : 'text-gray-400'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>Special character</div>
+                        <div className={`flex items-center ${pwdChecks.length ? 'text-emerald-700' : 'text-gray-500'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>8+ characters</div>
+                        <div className={`flex items-center ${pwdChecks.capital ? 'text-emerald-700' : 'text-gray-500'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>Capital letter</div>
+                        <div className={`flex items-center ${pwdChecks.number ? 'text-emerald-700' : 'text-gray-500'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>Number</div>
+                        <div className={`flex items-center ${pwdChecks.special ? 'text-emerald-700' : 'text-gray-500'}`}><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>Special character</div>
                       </div>
                     </div>
                     
-                    {errors.password && <p className="text-base text-red-500 font-medium">{errors.password.message}</p>}
+                    {errors.password && <p id="password-error" className="text-base text-red-500 font-medium">{errors.password.message}</p>}
                   </div>
                 </div>
               )}
@@ -401,15 +417,19 @@ export function SignUp() {
 
                   <div className="space-y-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                     <div className="relative">
+                      <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
                       <input
+                        id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Confirm Password"
                         autoComplete="new-password"
+                        aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+                        aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
                         className="w-full text-2xl md:text-3xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 pr-12 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300 tracking-wide"
                         {...register('confirmPassword')}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNext(); } }}
                       />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute bottom-4 right-0 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                      <button type="button" aria-label={showConfirmPassword ? "Hide password" : "Show password"} onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute bottom-2 right-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-gray-600 focus:outline-none">
                         {showConfirmPassword ? (
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                         ) : (
@@ -420,7 +440,7 @@ export function SignUp() {
                     
                     <div className="min-h-[30px]">
                       {errors.confirmPassword ? (
-                        <p className="text-base text-red-500 font-medium animate-fade-in">{errors.confirmPassword.message}</p>
+                        <p id="confirmPassword-error" className="text-base text-red-500 font-medium animate-fade-in">{errors.confirmPassword.message}</p>
                       ) : watch('confirmPassword') && watch('confirmPassword') === pwdValue ? (
                         <p className="text-base text-emerald-600 font-bold flex items-center animate-fade-in">
                           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -442,7 +462,7 @@ export function SignUp() {
                     
                     <label className="flex flex-col border-b border-gray-200 pb-4 group cursor-text">
                       <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-                        <span className="text-sm uppercase tracking-widest text-gray-400 font-bold mb-2 md:mb-0 mr-4">Name</span>
+                        <span className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-2 md:mb-0 mr-4">Name</span>
                         <div className="flex items-center flex-1 justify-end">
                           <input 
                             type="text"
@@ -458,7 +478,7 @@ export function SignUp() {
 
                     <label className="flex flex-col border-b border-gray-200 pb-4 group cursor-text">
                       <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-                        <span className="text-sm uppercase tracking-widest text-gray-400 font-bold mb-2 md:mb-0 mr-4">Contact</span>
+                        <span className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-2 md:mb-0 mr-4">Contact</span>
                         <div className="flex items-center flex-1 justify-end">
                           <input 
                             type={mode === 'phone' ? 'tel' : 'email'}
@@ -474,7 +494,7 @@ export function SignUp() {
                     </label>
 
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center border-b border-gray-200 pb-4 group cursor-text">
-                      <span className="text-sm uppercase tracking-widest text-gray-400 font-bold mb-2 md:mb-0 mr-4">Password</span>
+                      <span className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-2 md:mb-0 mr-4">Password</span>
                       <div className="flex items-center flex-1 justify-end relative">
                         <input 
                           type={showPassword ? 'text' : 'password'}
@@ -494,7 +514,7 @@ export function SignUp() {
                     </div>
 
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center pb-2 group cursor-text">
-                      <span className="text-sm uppercase tracking-widest text-gray-400 font-bold mb-2 md:mb-0 mr-4">Confirm</span>
+                      <span className="text-sm uppercase tracking-widest text-gray-500 font-bold mb-2 md:mb-0 mr-4">Confirm</span>
                       <div className="flex items-center flex-1 justify-end relative">
                         <input 
                           type={showConfirmPassword ? 'text' : 'password'}
@@ -556,7 +576,7 @@ export function SignUp() {
             {/* Action Buttons */}
             {step < 6 && (
               <div className="mt-16 flex items-center justify-between border-t border-gray-100 pt-8 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-                <p className="text-sm text-gray-400 font-medium hidden md:block">
+                <p className="text-sm text-gray-500 font-medium hidden md:block">
                   Press <span className="font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded">Enter ↵</span> to continue
                 </p>
                 

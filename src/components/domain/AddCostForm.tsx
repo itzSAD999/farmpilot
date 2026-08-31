@@ -178,7 +178,7 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
         
         {/* CATEGORY GRID */}
         <div>
-          <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold mb-4">Category</label>
+          <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-4">Category</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {Object.values(CATEGORIES).map((cat) => {
               const isSelected = watchCategory === cat.id;
@@ -193,7 +193,7 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
                       : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30'
                   }`}
                 >
-                  <div className={`mb-3 flex items-center justify-center w-10 h-10 rounded-full ${isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                  <div className={`mb-3 flex items-center justify-center w-10 h-10 rounded-full ${isSelected ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                     {CategoryIcons[cat.id]}
                   </div>
                   <h4 className={`text-sm font-bold ${isSelected ? 'text-emerald-900' : 'text-gray-900'}`}>{cat.label}</h4>
@@ -216,29 +216,37 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
         {/* DESCRIPTION & DATE */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative group md:col-span-2">
-            <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold mb-2">Description (Optional)</label>
+            <label htmlFor="description" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Description (Optional)</label>
             <input
+              id="description"
               type="text"
               placeholder="e.g. NPK for the second application"
-              className="w-full text-base font-medium text-gray-900 bg-gray-50 rounded-xl px-4 py-4 h-[58px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all border border-transparent placeholder:text-gray-400"
+              aria-invalid={errors.description ? 'true' : 'false'}
+              aria-describedby={errors.description ? 'description-error' : undefined}
+              className="w-full text-base font-medium text-gray-900 bg-gray-50 rounded-xl px-4 py-4 h-[58px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all border border-transparent placeholder:text-gray-500"
               {...register('description')}
             />
+            {errors.description && <p id="description-error" className="text-sm text-red-500 font-bold mt-1">{errors.description.message}</p>}
           </div>
           
           <div className="relative group">
-            <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold mb-2">Date (Optional)</label>
+            <label htmlFor="date_incurred" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Date (Optional)</label>
             <input
+              id="date_incurred"
               type="date"
+              aria-invalid={errors.date_incurred ? 'true' : 'false'}
+              aria-describedby={errors.date_incurred ? 'date_incurred-error' : undefined}
               className="w-full text-base font-bold text-gray-900 bg-gray-50 rounded-xl px-4 py-4 h-[58px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all border border-transparent"
               {...register('date_incurred')}
             />
+            {errors.date_incurred && <p id="date_incurred-error" className="text-sm text-red-500 font-bold mt-1">{errors.date_incurred.message}</p>}
           </div>
         </div>
 
         {/* ENTRY MODE & AMOUNT */}
         <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-100">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <label className="block text-xs uppercase tracking-widest text-gray-400 font-bold">Amount Entry</label>
+            <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold">Amount Entry</label>
             <div className="flex bg-gray-200/60 p-1 rounded-xl w-full sm:w-auto">
               <button
                 type="button"
@@ -261,24 +269,30 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
             <div className="space-y-6 animate-fade-in-up">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative group">
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Quantity</label>
+                  <label htmlFor="quantity" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Quantity</label>
                   <input
+                    id="quantity"
                     type="number"
                     step="0.01"
                     inputMode="decimal"
                     placeholder="0"
+                    aria-invalid={'quantity' in errors ? 'true' : 'false'}
+                    aria-describedby={'quantity' in errors ? 'quantity-error' : undefined}
                     className={`w-full text-lg font-bold text-gray-900 bg-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all border ${'quantity' in errors ? 'border-red-300' : 'border-gray-200 shadow-sm'}`}
                     {...register('quantity', { valueAsNumber: true })}
                   />
-                  {'quantity' in errors && <p className="text-sm text-red-500 font-bold mt-1">{errors.quantity?.message}</p>}
+                  {'quantity' in errors && <p id="quantity-error" className="text-sm text-red-500 font-bold mt-1">{errors.quantity?.message}</p>}
                 </div>
                 
                 <div className="relative group">
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Unit</label>
+                  <label htmlFor="unit" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Unit</label>
                   <input
+                    id="unit"
                     type="text"
                     list="unit-suggestions"
                     placeholder="e.g. bags, trips"
+                    aria-invalid={'unit' in errors ? 'true' : 'false'}
+                    aria-describedby={'unit' in errors ? 'unit-error' : undefined}
                     className={`w-full text-lg font-bold text-gray-900 bg-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all border ${'unit' in errors ? 'border-red-300' : 'border-gray-200 shadow-sm'}`}
                     {...register('unit')}
                   />
@@ -287,23 +301,26 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
                       <option key={u} value={u} />
                     ))}
                   </datalist>
-                  {'unit' in errors && <p className="text-sm text-red-500 font-bold mt-1">{errors.unit?.message}</p>}
+                  {'unit' in errors && <p id="unit-error" className="text-sm text-red-500 font-bold mt-1">{errors.unit?.message}</p>}
                 </div>
                 
                 <div className="relative group">
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Price per unit</label>
+                  <label htmlFor="unit_cost" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Price per unit</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₵</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₵</span>
                     <input
+                      id="unit_cost"
                       type="number"
                       step="0.01"
                       inputMode="decimal"
                       placeholder="0.00"
+                      aria-invalid={'unit_cost' in errors ? 'true' : 'false'}
+                      aria-describedby={'unit_cost' in errors ? 'unit_cost-error' : undefined}
                       className={`w-full text-lg font-bold text-gray-900 bg-white rounded-xl pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all border ${'unit_cost' in errors ? 'border-red-300' : 'border-gray-200 shadow-sm'}`}
                       {...register('unit_cost', { valueAsNumber: true })}
                     />
                   </div>
-                  {'unit_cost' in errors && <p className="text-sm text-red-500 font-bold mt-1">{errors.unit_cost?.message}</p>}
+                  {'unit_cost' in errors && <p id="unit_cost-error" className="text-sm text-red-500 font-bold mt-1">{errors.unit_cost?.message}</p>}
                 </div>
               </div>
               
@@ -313,26 +330,29 @@ export function AddCostForm({ seasonId }: AddCostFormProps) {
                     {watchQty} {watchUnit || 'units'} × GHS {watchUnitCost.toFixed(2)} = GHS {computedTotal.toFixed(2)}
                   </span>
                 ) : (
-                  <span className="text-sm font-bold text-gray-400">Total amount will appear here</span>
+                  <span className="text-sm font-bold text-gray-500">Total amount will appear here</span>
                 )}
                 <span className="text-2xl font-extrabold text-[#1B5E20]">₵{computedTotal.toFixed(2)}</span>
               </div>
             </div>
           ) : (
             <div className="relative group animate-fade-in-up">
-              <label className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Total Amount</label>
+              <label htmlFor="total_amount" className="block text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Total Amount</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl">₵</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xl">₵</span>
                 <input
+                  id="total_amount"
                   type="number"
                   step="0.01"
                   inputMode="decimal"
                   placeholder="0.00"
+                  aria-invalid={'total_amount' in errors ? 'true' : 'false'}
+                  aria-describedby={'total_amount' in errors ? 'total_amount-error' : undefined}
                   className={`w-full text-3xl font-extrabold text-gray-900 bg-white rounded-xl pl-10 pr-4 py-4 h-[72px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all border ${'total_amount' in errors ? 'border-red-300' : 'border-gray-200 shadow-sm'}`}
                   {...register('total_amount', { valueAsNumber: true })}
                 />
               </div>
-              {'total_amount' in errors && <p className="text-sm text-red-500 font-bold mt-2">{errors.total_amount?.message}</p>}
+              {'total_amount' in errors && <p id="total_amount-error" className="text-sm text-red-500 font-bold mt-2">{errors.total_amount?.message}</p>}
             </div>
           )}
         </div>

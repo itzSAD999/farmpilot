@@ -206,8 +206,8 @@ export function Dashboard() {
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
                 <div className="w-full md:w-1/2 h-64 md:h-80 min-h-[256px] min-w-[256px]">
                   {cropsSummary.some(c => Number(c.total_recorded_pesewas) > 0) ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                    <div className="flex items-center justify-center w-full h-full min-h-[250px]">
+                      <PieChart width={280} height={280}>
                         <Pie
                           data={cropsSummary
                             .filter(c => Number(c.total_recorded_pesewas) > 0)
@@ -219,8 +219,8 @@ export function Dashboard() {
                           nameKey="crop_name"
                           cx="50%"
                           cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
+                          innerRadius={70}
+                          outerRadius={95}
                           paddingAngle={5}
                         >
                           {cropsSummary
@@ -234,7 +234,7 @@ export function Dashboard() {
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                         />
                       </PieChart>
-                    </ResponsiveContainer>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
                       <svg className="w-12 h-12 mb-3 text-gray-300 dark:text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>

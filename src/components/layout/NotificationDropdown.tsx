@@ -21,7 +21,7 @@ export function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+        className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 dark:text-gray-300 rounded-xl bg-gray-50 dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/15 transition-colors"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -35,9 +35,9 @@ export function NotificationDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-fade-in-up">
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <h3 className="font-bold text-gray-900">Notifications</h3>
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#1c2622] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in-up">
+          <div className="p-4 border-b border-gray-100 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-white/5">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
             {unreadCount > 0 && (
               <button 
                 onClick={() => markAllAsRead()}

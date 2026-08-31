@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import * as authApi from '../api/auth';
 import type { Profile } from '../api/auth';
+
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 interface AuthContextType {
   user: User | null;
@@ -23,8 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userRef = useRef<User | null>(null);
 
-  // Load profile in the background — never blocks rendering
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   const loadProfileQuietly = useCallback(async (_u?: User) => {
     try {
       const p = await authApi.getProfile();
@@ -34,64 +41,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Wrapped sign-in functions that set user IMMEDIATELY from the response,
-  // so ProtectedRoute sees the user before navigation happens.
+  const applySessionUser = useCallback((nextUser: User | null) => {
+    setUser(nextUser);
+    if (nextUser) {
+      setTimeout(() => loadProfileQuietly(nextUser), 0);
+    } else {
+      setProfile(null);
+    }
+  }, [loadProfileQuietly]);
+
   const signInWithPhone = useCallback(async (phone: string, password: string) => {
     const data = await authApi.signInWithPhone(phone, password);
     if (data.session?.user) {
-      setUser(data.session.user);
+      applySessionUser(data.session.user);
       setIsLoading(false);
-      loadProfileQuietly(data.session.user);
     }
     return data;
-  }, [loadProfileQuietly]);
+  }, [applySessionUser]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const data = await authApi.signInWithEmail(email, password);
     if (data.session?.user) {
-      setUser(data.session.user);
+      applySessionUser(data.session.user);
       setIsLoading(false);
-      loadProfileQuietly(data.session.user);
     }
     return data;
-  }, [loadProfileQuietly]);
+  }, [applySessionUser]);
 
   const signUpWithPhone = useCallback(async (phone: string, password: string, fullName: string) => {
     const data = await authApi.signUpWithPhone(phone, password, fullName);
     if (data.session?.user) {
-      setUser(data.session.user);
+      applySessionUser(data.session.user);
       setIsLoading(false);
-      loadProfileQuietly(data.session.user);
     }
     return data;
-  }, [loadProfileQuietly]);
+  }, [applySessionUser]);
 
   const signUpWithEmail = useCallback(async (email: string, password: string, fullName: string) => {
     const data = await authApi.signUpWithEmail(email, password, fullName);
     if (data.session?.user) {
-      setUser(data.session.user);
+      applySessionUser(data.session.user);
       setIsLoading(false);
-      loadProfileQuietly(data.session.user);
     }
     return data;
-  }, [loadProfileQuietly]);
+  }, [applySessionUser]);
+
+  const signOut = useCallback(async () => {
+    await authApi.signOut();
+    setUser(null);
+    setProfile(null);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     async function loadSession() {
-      if (!mounted) return;
-      
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
+        if (!mounted) return;
         if (session?.user) {
-          if (mounted) {
-            setUser(session.user);
-            setIsLoading(false);
-          }
-          // Load profile in background — don't block rendering
-          loadProfileQuietly(session.user);
+          applySessionUser(session.user);
         }
       } catch (err) {
         console.error("Session load error:", err);
@@ -102,15 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadSession();
 
-    // Subscribe to auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
-      } else if (session?.user) {
-        setUser(session.user);
-        // Profile loading is fire-and-forget, never blocks state updates
-        loadProfileQuietly(session.user);
+        setIsLoading(false);
+        return;
+      }
+
+      // Keep the current user during token refresh / init so the setup page
+      // is not bounced to the homepage while the session is still valid.
+      if (session?.user) {
+        applySessionUser(session.user);
       }
       setIsLoading(false);
     });
@@ -119,7 +133,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applySessionUser]);
+
+  useEffect(() => {
+    if (!user) {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      return;
+    }
+
+    const logoutIfIdle = () => {
+      idleTimerRef.current = null;
+      if (!userRef.current) return;
+      void signOut();
+    };
+
+    const resetIdleTimer = () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(logoutIfIdle, IDLE_TIMEOUT_MS);
+    };
+
+    resetIdleTimer();
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'] as const;
+    events.forEach((eventName) => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
+    document.addEventListener('visibilitychange', resetIdleTimer);
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      events.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
+      document.removeEventListener('visibilitychange', resetIdleTimer);
+    };
+  }, [user, signOut]);
 
   return (
     <AuthContext.Provider value={{
@@ -130,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUpWithPhone,
       signUpWithEmail,
       signInWithEmail,
-      signOut: authApi.signOut,
+      signOut,
       linkEmail: authApi.linkEmail,
       updateLanguage: authApi.updateLanguage,
     }}>
@@ -146,4 +193,3 @@ export function useAuth() {
   }
   return context;
 }
-

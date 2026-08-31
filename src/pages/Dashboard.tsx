@@ -75,11 +75,11 @@ export function Dashboard() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4">Welcome to FarmPilot!</h1>
-        <p className="text-gray-500 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
+        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight mb-4">Welcome to FarmPilot!</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
           Before we can help you track costs and get personalized estimates, we need some basic details about your farm.
         </p>
-        <Link to="/farm-setup" className="inline-flex items-center bg-[#1B5E20] text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-emerald-900/20 hover:bg-[#144718] transition-all hover:-translate-y-1 text-lg group">
+        <Link to="/farm/setup" className="inline-flex items-center bg-[#1B5E20] text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-emerald-900/20 hover:bg-[#144718] transition-all hover:-translate-y-1 text-lg group">
           Set Up Your Farm
           <svg className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
         </Link>
@@ -92,8 +92,8 @@ export function Dashboard() {
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
-          <p className="text-gray-500 font-medium text-sm mt-1">Manage your farm's seasons and track costs.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Dashboard</h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mt-1">Manage your farm's seasons and track costs.</p>
         </div>
         <div className="flex space-x-3">
           <Link to="/season/new" className="bg-[#1B5E20] text-white font-bold py-2.5 px-4 rounded-xl shadow-sm hover:bg-[#144718] transition-colors flex items-center justify-center">
@@ -113,14 +113,14 @@ export function Dashboard() {
           </button>
         </div>
       ) : !seasons || seasons.length === 0 ? (
-        <div className="bg-white rounded-[24px] p-12 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center mt-8">
+        <div className="bg-white dark:bg-[#1c2622] rounded-[24px] p-12 shadow-sm border border-gray-100 dark:border-white/10 flex flex-col items-center justify-center text-center mt-8">
           <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-6">
             <svg className="w-12 h-12 text-[#1B5E20]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">No seasons tracked yet</h2>
-          <p className="text-gray-500 mb-8 max-w-md">Start tracking your crops, costs, and estimates by adding your first season. It only takes a minute!</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No seasons tracked yet</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md">Start tracking your crops, costs, and estimates by adding your first season. It only takes a minute!</p>
           <Link to="/season/new" className="bg-[#1B5E20] text-white font-bold py-3 px-8 rounded-xl shadow-sm hover:bg-[#144718] transition-all hover:scale-105 inline-flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Add Your First Season
@@ -129,16 +129,16 @@ export function Dashboard() {
       ) : (
         <>
           {farmSummary && (
-            <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 mb-10 overflow-hidden relative group">
+            <div className="bg-white dark:bg-[#1c2622] rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10 overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none transition-transform group-hover:scale-110"></div>
               
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-start justify-between gap-10">
                 <div className="flex-1 space-y-8">
                   <div>
-                    <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">{farmSummary.farm_name}</h2>
-                    <div className="flex flex-wrap gap-4 text-sm font-medium text-gray-600">
-                      <span className="inline-flex items-center bg-gray-100 px-3 py-1 rounded-full">
-                        <span className="font-bold text-gray-900 mr-1.5">{Number(farmSummary.total_area_acres)}</span> acres total
+                    <h2 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight mb-2">{farmSummary.farm_name}</h2>
+                    <div className="flex flex-wrap gap-4 text-sm font-medium text-gray-600 dark:text-gray-300">
+                      <span className="inline-flex items-center bg-gray-100 dark:bg-white/10 px-3 py-1 rounded-full">
+                        <span className="font-bold text-gray-900 dark:text-gray-100 mr-1.5">{Number(farmSummary.total_area_acres)}</span> acres total
                       </span>
                       <span className="inline-flex items-center bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full border border-emerald-100">
                         <span className="font-bold text-emerald-600 mr-1.5">{Number(farmSummary.total_planted_acres)}</span> acres planted
@@ -151,16 +151,16 @@ export function Dashboard() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Recorded Spend</p>
-                      <p className="text-2xl font-bold text-gray-900 flex items-center">
-                        <span className="text-sm font-bold text-gray-500 mr-1">GHS</span>
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total Recorded Spend</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mr-1">GHS</span>
                         <Money pesewas={Number(farmSummary.total_recorded_pesewas)} />
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Estimated Cost</p>
-                      <p className="text-2xl font-bold text-gray-900 flex items-center">
-                        <span className="text-sm font-bold text-gray-500 mr-1">GHS</span>
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total Estimated Cost</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mr-1">GHS</span>
                         <Money pesewas={Number(farmSummary.total_estimated_pesewas)} />
                       </p>
                     </div>
@@ -182,7 +182,7 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-gray-100 flex items-start text-sm text-gray-500">
+              <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/10 flex items-start text-sm text-gray-500 dark:text-gray-400">
                 <svg className="w-5 h-5 text-gray-500 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <p>Each crop is estimated separately because different crops need different inputs. These are the totals across your whole farm.</p>
               </div>
@@ -191,13 +191,13 @@ export function Dashboard() {
 
           {/* Crop Comparison */}
           {cropsSummary && cropsSummary.length > 0 && (
-            <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 mb-10">
-              <h3 className="font-bold text-gray-900 mb-6 text-xl">Crop Comparison</h3>
+            <div className="bg-white dark:bg-[#1c2622] rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10">
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-6 text-xl">Crop Comparison</h3>
               
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
+                    <tr className="border-b border-gray-100 dark:border-white/10 text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400">
                       <th className="pb-4 font-bold">Crop</th>
                       <th className="pb-4 font-bold">Seasons</th>
                       <th className="pb-4 font-bold">Total Acres</th>
@@ -207,11 +207,11 @@ export function Dashboard() {
                   </thead>
                   <tbody>
                     {cropsSummary.map(crop => (
-                      <tr key={crop.crop_id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                        <td className="py-4 font-bold text-gray-900">{crop.crop_name}</td>
-                        <td className="py-4 text-gray-500 font-medium">{crop.season_count}</td>
-                        <td className="py-4 text-gray-500 font-medium">{Number(crop.total_acres)} ac</td>
-                        <td className="py-4 text-gray-500 font-medium">GHS <Money pesewas={Number(crop.total_recorded_pesewas)} /></td>
+                      <tr key={crop.crop_id} className="border-b border-gray-50 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                        <td className="py-4 font-bold text-gray-900 dark:text-gray-100">{crop.crop_name}</td>
+                        <td className="py-4 text-gray-500 dark:text-gray-400 font-medium">{crop.season_count}</td>
+                        <td className="py-4 text-gray-500 dark:text-gray-400 font-medium">{Number(crop.total_acres)} ac</td>
+                        <td className="py-4 text-gray-500 dark:text-gray-400 font-medium">GHS <Money pesewas={Number(crop.total_recorded_pesewas)} /></td>
                         <td className="py-4 text-emerald-600 font-bold text-lg">
                           {crop.cost_per_acre_pesewas ? (
                             <>GHS <Money pesewas={Number(crop.cost_per_acre_pesewas)} /></>
@@ -226,9 +226,9 @@ export function Dashboard() {
               {/* Mobile view stacked cards */}
               <div className="md:hidden space-y-4">
                 {cropsSummary.map(crop => (
-                  <div key={crop.crop_id} className="border border-gray-100 rounded-2xl p-5 bg-gray-50/50">
+                  <div key={crop.crop_id} className="border border-gray-100 dark:border-white/10 rounded-2xl p-5 bg-gray-50/50 dark:bg-white/5">
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-bold text-gray-900 text-lg">{crop.crop_name}</h4>
+                      <h4 className="font-bold text-gray-900 dark:text-gray-100 text-lg">{crop.crop_name}</h4>
                       <div className="text-right">
                         <span className="text-[10px] uppercase tracking-widest text-emerald-600 font-bold block mb-1">Cost / Acre</span>
                         <span className="text-emerald-600 font-bold text-xl">
@@ -238,18 +238,18 @@ export function Dashboard() {
                         </span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-sm border-t border-gray-100 pt-4">
+                    <div className="grid grid-cols-3 gap-2 text-sm border-t border-gray-100 dark:border-white/10 pt-4">
                       <div>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Seasons</span>
-                        <span className="text-gray-900 font-medium">{crop.season_count}</span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest block mb-1">Seasons</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">{crop.season_count}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Acres</span>
-                        <span className="text-gray-900 font-medium">{Number(crop.total_acres)}</span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest block mb-1">Acres</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">{Number(crop.total_acres)}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Spent</span>
-                        <span className="text-gray-900 font-medium truncate"><Money pesewas={Number(crop.total_recorded_pesewas)} /></span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest block mb-1">Spent</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate"><Money pesewas={Number(crop.total_recorded_pesewas)} /></span>
                       </div>
                     </div>
                   </div>
@@ -261,9 +261,9 @@ export function Dashboard() {
           {/* Seasons List Area */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 min-h-[250px]">
+              <div className="bg-white dark:bg-[#1c2622] rounded-[24px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 dark:border-white/10 min-h-[250px]">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                  <h3 className="font-bold text-gray-900 text-xl">Your Seasons</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Your Seasons</h3>
                   
                   <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
                     <div className="relative">
@@ -273,16 +273,16 @@ export function Dashboard() {
                         placeholder="Search seasons..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm w-full sm:w-48 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                        className="pl-9 pr-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl text-sm w-full sm:w-48 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     
-                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                    <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl">
                       {(['all', 'active', 'closed'] as const).map(type => (
                         <button
                           key={type}
                           onClick={() => setFilterType(type)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-colors ${filterType === type ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-colors ${filterType === type ? 'bg-white dark:bg-[#1c2622] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
                         >
                           {type}
                         </button>
@@ -319,8 +319,8 @@ export function Dashboard() {
 
                 <div className="space-y-4">
                   {filteredSeasons && filteredSeasons.length === 0 && (
-                    <div className="text-center py-12 px-4 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50">
-                      <p className="text-gray-500 font-medium">No seasons match your current filters.</p>
+                    <div className="text-center py-12 px-4 border-2 border-dashed border-gray-100 dark:border-white/10 rounded-2xl bg-gray-50/50 dark:bg-white/5">
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">No seasons match your current filters.</p>
                       {(searchQuery || filterType !== 'all') && (
                         <button 
                           onClick={() => { setSearchQuery(''); setFilterType('all'); }}
@@ -332,7 +332,7 @@ export function Dashboard() {
                     </div>
                   )}
                   {filteredSeasons?.map((season) => (
-                    <Link to={`/season/${season.id}`} key={season.id} className="block p-5 hover:bg-gray-50 rounded-2xl border border-gray-100 hover:border-emerald-200 cursor-pointer transition-all group shadow-sm hover:shadow-md">
+                    <Link to={`/season/${season.id}`} key={season.id} className="block p-5 hover:bg-gray-50 dark:hover:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10 hover:border-emerald-200 cursor-pointer transition-all group shadow-sm hover:shadow-md">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-start space-x-4">
                           <div className={`w-12 h-12 rounded-xl shrink-0 ${season.is_complete ? 'bg-gray-100' : 'bg-emerald-50'} flex items-center justify-center group-hover:scale-105 transition-transform`}>
@@ -344,23 +344,23 @@ export function Dashboard() {
                           </div>
                           <div>
                             <div className="flex items-center flex-wrap gap-2 mb-1">
-                              <h4 className="text-lg font-extrabold text-gray-900 group-hover:text-[#1B5E20] transition-colors">
+                              <h4 className="text-lg font-extrabold text-gray-900 dark:text-gray-100 group-hover:text-[#1B5E20] dark:group-hover:text-emerald-400 transition-colors">
                                 {season.crop_name}
                               </h4>
                               <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md ${season.is_complete ? 'bg-gray-100 text-gray-500' : 'bg-emerald-100 text-emerald-700'}`}>
                                 {season.is_complete ? 'Complete' : 'Recording'}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-500 font-medium capitalize">
-                              {season.season_window} {season.year} • <span className="font-bold text-gray-700">{season.area_planted_acres} acres</span>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium capitalize">
+                              {season.season_window} {season.year} • <span className="font-bold text-gray-700 dark:text-gray-200">{season.area_planted_acres} acres</span>
                             </p>
                           </div>
                         </div>
                         
                         <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                           <div className="text-left sm:text-right">
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-0.5">Recorded</p>
-                            <p className="text-lg font-bold text-gray-900"><span className="text-sm font-medium text-gray-500 mr-1">GHS</span><Money pesewas={season.total_cost_pesewas} /></p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Recorded</p>
+                            <p className="text-lg font-bold text-gray-900 dark:text-gray-100"><span className="text-sm font-medium text-gray-500 dark:text-gray-400 mr-1">GHS</span><Money pesewas={season.total_cost_pesewas} /></p>
                           </div>
                           
                           {/* Generate Estimate Shortcut */}

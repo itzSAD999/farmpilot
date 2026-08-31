@@ -18,8 +18,8 @@ export function useFarm() {
 
   return { 
     farm: query.data ?? null, 
-    isLoading: query.isLoading,
-    hasFarm: !!query.data,
+    isLoading: query.isPending || (query.isFetching && query.data === undefined),
+    hasFarm: Boolean(query.data?.id),
     error: query.error, 
     refetch: query.refetch 
   };

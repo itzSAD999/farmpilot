@@ -43,15 +43,18 @@ function handleFarmError(error: any): Error {
  * Returns null if the user hasn't set up a farm yet.
  */
 export async function getFarm(): Promise<Farm | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('You must be signed in to view your farm.');
+  // Use getSession() instead of getUser() because getSession() reads from
+  // local storage instantly, while getUser() makes a server call that can
+  // fail during the brief window while tokens are refreshing.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to view your farm.');
 
   // RLS restricts to owned rows, so no explicit user_id filter is strictly needed,
   // but we add it anyway as a second line of defence against policy misconfiguration.
   const { data, error } = await supabase
     .from('farms')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .limit(1)
     .maybeSingle();
 

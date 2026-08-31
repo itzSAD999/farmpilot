@@ -13,7 +13,7 @@ export type Profile = {
 /**
  * Maps Supabase Auth errors to friendly, farmer-facing messages.
  */
-function handleAuthError(error: any): Error {
+export function handleAuthError(error: any): Error {
   const msg = error.message || String(error);
 
   // Network failures

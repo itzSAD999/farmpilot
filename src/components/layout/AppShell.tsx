@@ -53,7 +53,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex-1 flex flex-col md:flex-row">
       
       {/* Mobile Header */}
-      <header className="md:hidden bg-white dark:bg-[#121212] shadow-[0_4px_20px_rgb(0,0,0,0.03)] z-20 relative border-b border-transparent dark:border-white/5">
+      <header className="md:hidden bg-white dark:bg-[#0a0a0a] shadow-[0_4px_20px_rgb(0,0,0,0.03)] z-20 relative border-b border-transparent dark:border-white/5">
         <div className="px-4 h-16 flex items-center justify-between">
           <div className="flex items-center">
             <img src="/logo.png" alt="FarmPilot Logo" className="h-8 w-auto object-contain" />
@@ -78,7 +78,7 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-[#121212] shadow-[4px_0_24px_rgb(0,0,0,0.02)] z-10 sticky top-0 h-screen overflow-y-auto border-r border-transparent dark:border-white/5">
+      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-[#0a0a0a] shadow-[4px_0_24px_rgb(0,0,0,0.02)] z-10 sticky top-0 h-screen overflow-y-auto border-r border-transparent dark:border-white/5">
         <div className="p-6 flex items-center justify-between mb-6">
           <img src="/logo.png" alt="FarmPilot Logo" className="h-10 w-auto object-contain" />
           <div className="flex items-center gap-2">
@@ -126,14 +126,14 @@ export function AppShell({ children }: AppShellProps) {
 
         <div className="p-4 mt-auto">
           <div className="bg-[#F4F7F6] dark:bg-white/5 rounded-2xl p-4 flex flex-col items-center text-center">
-            <div className="w-12 h-12 bg-white dark:bg-[#1a1a1a] rounded-full flex items-center justify-center text-[#1B5E20] dark:text-emerald-400 font-bold text-lg mb-2 shadow-sm">
+            <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-full flex items-center justify-center text-[#1B5E20] dark:text-emerald-400 font-bold text-lg mb-2 shadow-sm">
               {displayName.charAt(0).toUpperCase()}
             </div>
             <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate w-full">{displayName}</p>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">{user?.phone || 'Farmer'}</p>
             <button
               onClick={signOut}
-              className="min-h-[44px] w-full py-2 bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-200 font-bold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm"
+              className="min-h-[44px] w-full py-2 bg-white dark:bg-white/10 text-gray-700 dark:text-gray-200 font-bold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-white/20 transition-colors shadow-sm"
             >
               Sign out
             </button>

@@ -140,7 +140,7 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
         queryClient.setQueryData(['seasonCosts', seasonId], context.previousCosts);
       }
       if (err.message?.includes('session has expired')) {
-        navigate('/signin', { state: { message: err.message, from: location } });
+        // Just show the error message in the UI so the user can retry when online or let Supabase automatically refresh the session
       }
     },
     onSettled: () => {

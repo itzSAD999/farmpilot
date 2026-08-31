@@ -66,7 +66,7 @@ export function SeasonNew() {
       navigate('/');
     } catch (err: any) {
       if (err.message?.includes('session has expired')) {
-        navigate('/signin', { state: { message: err.message, from: location } });
+        // Let the UI handle the error; do not forcibly redirect.
       } else {
         setServerError(err.message);
       }

@@ -204,7 +204,7 @@ export function Dashboard() {
               </div>
               
               <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-                <div className="w-full md:w-1/2 h-64 md:h-80">
+                <div className="w-full md:w-1/2 h-64 md:h-80 min-h-[256px] min-w-[256px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -415,7 +415,7 @@ export function Dashboard() {
                   </div>
                   
                   <button 
-                    onClick={() => navigate('/guide')}
+                    onClick={() => navigate('/guides')}
                     className="w-full mt-6 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-between group">
                     <span>View Guides</span>
                     <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>

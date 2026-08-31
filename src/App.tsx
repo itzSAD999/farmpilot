@@ -10,6 +10,7 @@ import { SeasonNew } from './pages/SeasonNew';
 import { SeasonDetail } from './pages/SeasonDetail';
 import { EstimateReport } from './pages/EstimateReport';
 import { Landing } from './pages/Landing';
+import { NotFound } from './pages/NotFound';
 
 export function App() {
   return (
@@ -73,7 +74,7 @@ export function App() {
         />
 
         {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

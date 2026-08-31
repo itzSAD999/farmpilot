@@ -61,7 +61,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 p-4 z-50 animate-fade-in-up md:max-w-md md:left-auto md:right-4 md:bottom-4">
-      <div className="bg-white dark:bg-[#1c2622] rounded-[24px] p-5 shadow-[0_8px_40px_rgb(0,0,0,0.12)] border border-gray-100 dark:border-white/10 flex flex-col">
+      <div className="bg-white dark:bg-[#1a1a1a] rounded-[24px] p-5 shadow-[0_8px_40px_rgb(0,0,0,0.12)] border border-gray-100 dark:border-white/10 flex flex-col">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center">
             <div className="w-10 h-10 bg-[#1B5E20] rounded-xl flex items-center justify-center mr-3 shadow-sm">

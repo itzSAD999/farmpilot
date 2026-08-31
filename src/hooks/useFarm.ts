@@ -16,9 +16,15 @@ export function useFarm() {
     retry: false, // Don't hang on the skeleton screen retrying if the request fails
   });
 
+  // isLoading must be true any time we can't yet answer "does this user have a farm?"
+  // — while auth hasn't resolved (!user)
+  // — while the first fetch is in flight (query.isLoading, which is isPending + enabled)
+  // — during a refetch when we have no cached data yet
+  const isLoading = !user || query.isLoading || (query.isFetching && query.data === undefined);
+
   return { 
     farm: query.data ?? null, 
-    isLoading: query.isPending || (query.isFetching && query.data === undefined),
+    isLoading,
     hasFarm: Boolean(query.data?.id),
     error: query.error, 
     refetch: query.refetch 

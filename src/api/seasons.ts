@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase';
 
-
 export interface Season {
   id: number;
   farm_id: number;
@@ -38,6 +37,29 @@ export interface CreateSeasonInput {
   year: number;
   season_window: 'major' | 'minor' | 'dry';
   area_planted_acres: number;
+}
+
+export interface SeasonsFilter {
+  search?: string;
+  cropIds?: number[];
+  years?: number[];
+  windows?: ('major' | 'minor' | 'dry')[];
+  status?: 'recording' | 'complete';
+  sortBy?: 'year' | 'cost_per_acre' | 'total_spent' | 'area';
+  sortDir?: 'asc' | 'desc';
+}
+
+export interface SeasonFiltered {
+  id: number;
+  crop_name: string;
+  year: number;
+  season_window: 'major' | 'minor' | 'dry';
+  area_planted_acres: number;
+  total_recorded_pesewas: number;
+  cost_per_acre_pesewas: number;
+  latest_estimate_total: number | null;
+  has_flagged_categories: boolean;
+  is_complete: boolean;
 }
 
 function handleSeasonError(error: any): Error {
@@ -108,6 +130,159 @@ export async function listSeasons(farmId: number): Promise<SeasonSummary[]> {
       has_estimate,
     };
   });
+}
+
+/**
+ * List seasons filtered, sorted, and computed for the dedicated Seasons page.
+ * Uses a single query.
+ */
+export async function listSeasonsFiltered(farmId: number, filters: SeasonsFilter): Promise<SeasonFiltered[]> {
+  let query = supabase
+    .from('seasons')
+    .select(`
+      id,
+      year,
+      season_window,
+      area_planted_acres,
+      is_complete,
+      crops!inner ( name ),
+      season_costs ( amount_pesewas ),
+      estimates ( 
+        total_pesewas, 
+        created_at,
+        estimate_lines ( is_flagged ) 
+      )
+    `)
+    .eq('farm_id', farmId);
+
+  // Apply DB-level filters where possible to reduce payload
+  if (filters.cropIds && filters.cropIds.length > 0) {
+    query = query.in('crop_id', filters.cropIds);
+  }
+  if (filters.years && filters.years.length > 0) {
+    query = query.in('year', filters.years);
+  }
+  if (filters.windows && filters.windows.length > 0) {
+    query = query.in('season_window', filters.windows);
+  }
+  if (filters.status) {
+    query = query.eq('is_complete', filters.status === 'complete');
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw handleSeasonError(error);
+  }
+
+  let mapped: SeasonFiltered[] = data.map((row: any) => {
+    const crop_name = row.crops?.name || 'Unknown Crop';
+    const total_recorded_pesewas = row.season_costs.reduce((sum: number, cost: any) => sum + (cost.amount_pesewas || 0), 0);
+    const cost_per_acre_pesewas = row.area_planted_acres > 0 ? Math.round(total_recorded_pesewas / row.area_planted_acres) : 0;
+    
+    // Get latest estimate
+    let latestEstimate = null;
+    let has_flagged_categories = false;
+    
+    if (row.estimates && row.estimates.length > 0) {
+      // Sort estimates by created_at desc
+      const sortedEstimates = [...row.estimates].sort((a: any, b: any) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      latestEstimate = sortedEstimates[0];
+      
+      if (latestEstimate.estimate_lines && latestEstimate.estimate_lines.length > 0) {
+        has_flagged_categories = latestEstimate.estimate_lines.some((line: any) => line.is_flagged === true);
+      }
+    }
+
+    return {
+      id: row.id,
+      crop_name,
+      year: row.year,
+      season_window: row.season_window,
+      area_planted_acres: row.area_planted_acres,
+      total_recorded_pesewas,
+      cost_per_acre_pesewas,
+      latest_estimate_total: latestEstimate ? latestEstimate.total_pesewas : null,
+      has_flagged_categories,
+      is_complete: row.is_complete
+    };
+  });
+
+  // Apply JS-level filters (search)
+  if (filters.search) {
+    const q = filters.search.toLowerCase().trim();
+    mapped = mapped.filter(season => {
+      const label = `${season.season_window} ${season.year}`.toLowerCase();
+      return season.crop_name.toLowerCase().includes(q) || label.includes(q);
+    });
+  }
+
+  // Apply JS-level sorting
+  mapped.sort((a, b) => {
+    let valA: any = a.year;
+    let valB: any = b.year;
+
+    if (filters.sortBy === 'cost_per_acre') {
+      valA = a.cost_per_acre_pesewas;
+      valB = b.cost_per_acre_pesewas;
+    } else if (filters.sortBy === 'total_spent') {
+      valA = a.total_recorded_pesewas;
+      valB = b.total_recorded_pesewas;
+    } else if (filters.sortBy === 'area') {
+      valA = a.area_planted_acres;
+      valB = b.area_planted_acres;
+    }
+
+    if (valA === valB) {
+      // Secondary sort by ID desc
+      return b.id - a.id;
+    }
+
+    if (filters.sortDir === 'asc') {
+      return valA > valB ? 1 : -1;
+    } else {
+      // default desc
+      return valA < valB ? 1 : -1;
+    }
+  });
+
+  return mapped;
+}
+
+/**
+ * Fetch available crops and years for a farm to populate filter dropdowns.
+ */
+export async function getSeasonFilterOptions(farmId: number) {
+  const { data, error } = await supabase
+    .from('seasons')
+    .select(`
+      crop_id,
+      year,
+      crops!inner ( name )
+    `)
+    .eq('farm_id', farmId);
+
+  if (error) {
+    throw handleSeasonError(error);
+  }
+
+  const cropsMap = new Map<number, string>();
+  const yearsSet = new Set<number>();
+
+  data.forEach((row: any) => {
+    if (row.crop_id && row.crops?.name) {
+      cropsMap.set(row.crop_id, row.crops.name);
+    }
+    if (row.year) {
+      yearsSet.add(row.year);
+    }
+  });
+
+  return {
+    crops: Array.from(cropsMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+    years: Array.from(yearsSet).sort((a, b) => b - a) // Descending
+  };
 }
 
 export async function createSeason(input: CreateSeasonInput): Promise<Season> {

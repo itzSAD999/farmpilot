@@ -69,6 +69,14 @@ describe('phone utilities', () => {
     it('derives synthetic email from formatted input', () => {
       expect(phoneToSyntheticEmail('+233 24 123 4567')).toBe('0241234567@farmpilot.local');
     });
+
+    it('produces identical synthetic email for all common input formats', () => {
+      const expected = '0241234567@farmpilot.local';
+      expect(phoneToSyntheticEmail('0241234567')).toBe(expected);
+      expect(phoneToSyntheticEmail('024 123 4567')).toBe(expected);
+      expect(phoneToSyntheticEmail('+233241234567')).toBe(expected);
+      expect(phoneToSyntheticEmail('233241234567')).toBe(expected);
+    });
   });
 
   describe('formatPhoneDisplay', () => {

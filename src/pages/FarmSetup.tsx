@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -42,16 +42,23 @@ export function FarmSetup() {
   const [step, setStep] = useState(1);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    sessionStorage.setItem('farm-setup-in-progress', '1');
+    return () => {
+      // Keep the flag while they are filling the form, even across remounts.
+    };
+  }, []);
+
   const { register, handleSubmit, formState: { errors, isValid }, trigger, watch, setValue } = useForm<FarmSetupFormData>({
     resolver: zodResolver(farmSetupSchema),
     mode: 'onChange',
+    defaultValues: { name: '', region: '', district: '' },
   });
 
   const watchRegion = watch('region');
@@ -79,6 +86,7 @@ export function FarmSetup() {
     try {
       await createFarm(data);
       await queryClient.invalidateQueries({ queryKey: ['farm', user?.id] });
+      sessionStorage.removeItem('farm-setup-in-progress');
       setStep(4); // Success step
       setTimeout(() => {
         navigate('/', { replace: true });
@@ -94,7 +102,7 @@ export function FarmSetup() {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white/50 rounded-3xl relative overflow-hidden">
+    <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white/50 dark:bg-white/5 rounded-3xl relative overflow-visible">
       
       {/* Progress Indicator */}
       {step < 4 && (
@@ -103,7 +111,7 @@ export function FarmSetup() {
             <div 
               key={i} 
               className={`h-2 rounded-full transition-all duration-500 ${
-                i === step ? 'w-12 bg-emerald-600' : i < step ? 'w-4 bg-emerald-200' : 'w-4 bg-gray-200'
+                i === step ? 'w-12 bg-emerald-600' : i < step ? 'w-4 bg-emerald-200 dark:bg-emerald-900' : 'w-4 bg-gray-200 dark:bg-white/20'
               }`}
             />
           ))}
@@ -123,11 +131,11 @@ export function FarmSetup() {
           {step === 1 && (
             <div className="animate-fade-in-up space-y-10">
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center justify-center p-4 bg-emerald-50 rounded-full mb-4">
+                <div className="inline-flex items-center justify-center p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-full mb-4">
                   <span className="text-4xl">👋</span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight">Let's set up your farm</h1>
-                <p className="text-xl text-gray-500 font-medium">What do you call your land?</p>
+                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Let's set up your farm</h1>
+                <p className="text-xl text-gray-500 dark:text-gray-400 font-medium">What do you call your land?</p>
               </div>
 
               <div>
@@ -138,7 +146,7 @@ export function FarmSetup() {
                   placeholder="e.g. Mensah Family Farm"
                   aria-invalid={errors.name ? 'true' : 'false'}
                   aria-describedby={errors.name ? 'name-error' : undefined}
-                  className="w-full text-center text-4xl md:text-5xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
+                  className="w-full text-center text-4xl md:text-5xl font-light text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-gray-200 dark:border-white/20 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600"
                   {...register('name')}
                   autoFocus
                   onKeyDown={(e) => {
@@ -159,72 +167,64 @@ export function FarmSetup() {
           {step === 2 && (
             <div className="animate-fade-in-up space-y-10">
               <div className="text-center space-y-2">
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">Where is it located?</h2>
-                <p className="text-lg text-gray-500 font-medium">Select your region and enter your district.</p>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Where is it located?</h2>
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Tap a region on the map, then choose your district from the list.</p>
               </div>
 
               <GhanaMap 
-                selectedRegion={watchRegion} 
-                onSelect={(r) => setValue('region', r, { shouldValidate: true })} 
+                selectedRegion={watchRegion || ''} 
+                onSelect={(r) => {
+                  const changed = r !== watchRegion;
+                  setValue('region', r, { shouldValidate: true, shouldDirty: true });
+                  if (changed) setValue('district', '', { shouldValidate: false });
+                }} 
               />
+
+              <div className="relative z-[80] max-w-sm mx-auto space-y-4 isolate">
+                <label htmlFor="region" className="sr-only">Region</label>
+                <div className="relative">
+                  <select
+                    id="region"
+                    value={watchRegion || ''}
+                    onChange={(e) => {
+                      setValue('region', e.target.value, { shouldValidate: true, shouldDirty: true });
+                      setValue('district', '', { shouldValidate: false });
+                    }}
+                    className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1c2622] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
+                  >
+                    <option value="">Select region</option>
+                    {Object.keys(GHANA_DISTRICTS).map((region) => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                  <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+                <input type="hidden" {...register('region')} />
+
+                <label htmlFor="district" className="sr-only">District</label>
+                <div className="relative">
+                  <select
+                    id="district"
+                    value={watchDistrict || ''}
+                    disabled={!watchRegion}
+                    onChange={(e) => setValue('district', e.target.value, { shouldValidate: true, shouldDirty: true })}
+                    className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1c2622] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{watchRegion ? 'Select district' : 'Select a region first'}</option>
+                    {(GHANA_DISTRICTS[watchRegion] || []).map((district) => (
+                      <option key={district} value={district}>{district}</option>
+                    ))}
+                  </select>
+                  <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+                <input type="hidden" {...register('district')} />
+              </div>
               {errors.region && (
                 <p className="text-center text-base text-red-500 font-medium">{errors.region.message}</p>
               )}
-
-              <div className="pt-6 relative max-w-sm mx-auto z-50">
-                <label htmlFor="district" className="sr-only">District</label>
-                <input
-                  id="district"
-                  type="text"
-                  placeholder="District (e.g. Ejisu-Juaben)"
-                  aria-invalid={errors.district ? 'true' : 'false'}
-                  aria-describedby={errors.district ? 'district-error' : undefined}
-                  className="w-full text-center text-3xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
-                  {...register('district')}
-                  onChange={(e) => {
-                    register('district').onChange(e);
-                    setShowSuggestions(true);
-                  }}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      setShowSuggestions(false);
-                      handleNext();
-                    }
-                  }}
-                />
-                
-                {/* Suggestions Dropdown */}
-                {showSuggestions && watchRegion && GHANA_DISTRICTS[watchRegion] && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 max-h-60 overflow-y-auto z-50 animate-fade-in-up py-2">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4 py-2 border-b border-gray-50 mb-2">Districts in {watchRegion}</p>
-                    {GHANA_DISTRICTS[watchRegion]
-                      .filter(d => !watchDistrict || d.toLowerCase().includes(watchDistrict.toLowerCase()))
-                      .map((district) => (
-                        <button
-                          key={district}
-                          type="button"
-                          className="w-full text-left px-5 py-3 hover:bg-emerald-50 text-gray-700 font-medium transition-colors focus:bg-emerald-50 focus:outline-none"
-                          onClick={() => {
-                            setValue('district', district, { shouldValidate: true });
-                            setShowSuggestions(false);
-                          }}
-                        >
-                          {district}
-                        </button>
-                      ))}
-                    {GHANA_DISTRICTS[watchRegion].filter(d => !watchDistrict || d.toLowerCase().includes(watchDistrict.toLowerCase())).length === 0 && (
-                      <div className="px-5 py-3 text-sm text-gray-500 italic">No exact matches, but you can press Enter to use your typed district.</div>
-                    )}
-                  </div>
-                )}
-
-                {errors.district && (
-                  <p id="district-error" className="mt-4 text-center text-base text-red-500 font-medium">{errors.district.message}</p>
-                )}
-              </div>
+              {errors.district && (
+                <p id="district-error" className="text-center text-base text-red-500 font-medium">{errors.district.message}</p>
+              )}
             </div>
           )}
 
@@ -232,11 +232,11 @@ export function FarmSetup() {
           {step === 3 && (
             <div className="animate-fade-in-up space-y-10">
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center justify-center p-4 bg-emerald-50 rounded-full mb-4">
+                <div className="inline-flex items-center justify-center p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-full mb-4">
                   <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">How large is your farm?</h2>
-                <p className="text-lg text-gray-500 font-medium">Enter the total land area in acres.</p>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">How large is your farm?</h2>
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Enter the total land area in acres.</p>
               </div>
 
               <div className="flex flex-col items-center justify-center">
@@ -250,11 +250,11 @@ export function FarmSetup() {
                     placeholder="0.0"
                     aria-invalid={errors.total_area_acres ? 'true' : 'false'}
                     aria-describedby={errors.total_area_acres ? 'area-error' : undefined}
-                    className="w-40 text-center text-6xl font-light text-gray-900 bg-transparent border-b-2 border-gray-200 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300"
+                    className="w-40 text-center text-6xl font-light text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-gray-200 dark:border-white/20 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600"
                     {...register('total_area_acres', { valueAsNumber: true })}
                     autoFocus
                   />
-                  <span className="ml-4 text-3xl font-light text-gray-500">acres</span>
+                  <span className="ml-4 text-3xl font-light text-gray-500 dark:text-gray-400">acres</span>
                 </div>
                 {errors.total_area_acres && (
                   <p id="area-error" className="mt-4 text-base text-red-500 font-medium">{errors.total_area_acres.message}</p>
@@ -266,12 +266,12 @@ export function FarmSetup() {
           {/* STEP 4: SUCCESS */}
           {step === 4 && (
             <div className="animate-fade-in-up flex flex-col items-center justify-center space-y-6 py-12">
-              <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center animate-bounce">
+              <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center animate-bounce">
                 <svg className="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Farm Created!</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Farm Created!</h2>
               <p className="text-emerald-600 font-medium">Preparing your dashboard...</p>
             </div>
           )}
@@ -282,7 +282,7 @@ export function FarmSetup() {
               <button
                 type="button"
                 onClick={handleBack}
-                className={`px-8 py-4 text-gray-500 font-bold hover:text-gray-900 transition-colors ${step === 1 ? 'invisible' : ''}`}
+                className={`px-8 py-4 text-gray-500 dark:text-gray-400 font-bold hover:text-gray-900 dark:hover:text-gray-100 transition-colors ${step === 1 ? 'invisible' : ''}`}
               >
                 Back
               </button>

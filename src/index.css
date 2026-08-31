@@ -1,12 +1,19 @@
 /* FarmPilot — Base styles */
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 html, body {
   background-color: #F4F7F6;
   color: #111827; /* gray-900 equivalent */
   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark, html.dark body {
+  background-color: #0c1210;
+  color: #f3f4f6;
 }
 
 /* Custom animations — Tailwind v4 doesn't read tailwind.config.js */

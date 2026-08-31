@@ -97,13 +97,13 @@ export function Profile() {
     <div className="animate-fade-in-up pb-12 max-w-3xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Your Profile</h1>
-          <p className="text-gray-500 font-medium text-sm mt-1">Manage your account settings and preferences.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Your Profile</h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mt-1">Manage your account settings and preferences.</p>
         </div>
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
-            className="bg-white border border-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center"
+            className="bg-white dark:bg-[#1c2622] border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-bold py-2.5 px-4 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center"
           >
             <svg className="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
             Edit Profile
@@ -111,7 +111,7 @@ export function Profile() {
         )}
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 overflow-hidden mb-8">
+      <div className="bg-white dark:bg-[#1c2622] rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 dark:border-white/10 overflow-hidden mb-8">
         {isEditing ? (
           <form onSubmit={handleSave} className="p-8 space-y-8">
             {(profileMutation.isError || farmMutation.isError) && (
@@ -121,26 +121,26 @@ export function Profile() {
             )}
             
             <div className="space-y-6">
-              <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-2">Personal Details</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-white/10 pb-2">Personal Details</h2>
             
               <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700 block">Full Name</label>
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block">Full Name</label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                   placeholder="Enter your name"
                   required
                 />
               </div>
             
               <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700 block">Preferred Language</label>
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block">Preferred Language</label>
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as any)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors appearance-none"
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors appearance-none"
                 >
                   <option value="en">English</option>
                   <option value="tw">Twi</option>
@@ -153,49 +153,49 @@ export function Profile() {
             
             {farm && (
               <div className="space-y-6 pt-4">
-                <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-2">Farm Details</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-white/10 pb-2">Farm Details</h2>
                 
                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-gray-700 block">Farm Name</label>
+                  <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block">Farm Name</label>
                   <input
                     type="text"
                     value={farmName}
                     onChange={(e) => setFarmName(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                     required
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-sm font-bold text-gray-700 block">Region</label>
+                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block">Region</label>
                     <input
                       type="text"
                       value={farmRegion}
                       onChange={(e) => setFarmRegion(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-bold text-gray-700 block">District</label>
+                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block">District</label>
                     <input
                       type="text"
                       value={farmDistrict}
                       onChange={(e) => setFarmDistrict(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                     />
                   </div>
                 </div>
                 
                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-gray-700 block">Total Area (Acres)</label>
+                  <label className="text-sm font-bold text-gray-700 dark:text-gray-300 block">Total Area (Acres)</label>
                   <input
                     type="number"
                     step="0.1"
                     min="0.1"
                     value={farmArea}
                     onChange={(e) => setFarmArea(Number(e.target.value))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                     required
                   />
                 </div>
@@ -224,7 +224,7 @@ export function Profile() {
                   }
                 }}
                 disabled={profileMutation.isPending || farmMutation.isPending}
-                className="flex-1 bg-white border border-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+                className="flex-1 bg-white dark:bg-[#141c19] border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-bold py-3 px-4 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
@@ -236,52 +236,52 @@ export function Profile() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</h3>
-                  <p className="text-lg font-bold text-gray-900">{profile?.full_name || 'Not provided'}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{profile?.full_name || 'Not provided'}</p>
                 </div>
                 
                 <div>
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Preferred Language</h3>
-                  <p className="text-lg font-bold text-gray-900">{getLanguageName(profile?.preferred_language || 'en')}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{getLanguageName(profile?.preferred_language || 'en')}</p>
                 </div>
                 
                 {farm && (
                   <>
-                    <hr className="border-gray-100" />
+                    <hr className="border-gray-100 dark:border-white/10" />
                     <div>
                       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Farm Name</h3>
-                      <p className="text-lg font-bold text-gray-900">{String(farm.name)}</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{String(farm.name)}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Location</h3>
-                        <p className="font-bold text-gray-900">{farm.district || farm.region ? `${String(farm.district)}, ${String(farm.region)}` : 'Not provided'}</p>
+                        <p className="font-bold text-gray-900 dark:text-gray-100">{farm.district || farm.region ? `${String(farm.district)}, ${String(farm.region)}` : 'Not provided'}</p>
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Acres</h3>
-                        <p className="font-bold text-gray-900">{Number(farm.total_area_acres)}</p>
+                        <p className="font-bold text-gray-900 dark:text-gray-100">{Number(farm.total_area_acres)}</p>
                       </div>
                     </div>
                   </>
                 )}
               </div>
               
-              <div className="space-y-6 bg-gray-50 p-6 rounded-2xl border border-gray-100 h-fit">
+              <div className="space-y-6 bg-gray-50 dark:bg-white/5 p-6 rounded-2xl border border-gray-100 dark:border-white/10 h-fit">
                 <div>
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sign In Method</h3>
-                  <p className="text-sm font-bold text-gray-900 capitalize">{profile?.auth_method}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 capitalize">{profile?.auth_method}</p>
                 </div>
                 
                 {profile?.phone && (
                   <div>
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Phone Number</h3>
-                    <p className="text-lg font-bold text-gray-900">{profile.phone}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{profile.phone}</p>
                   </div>
                 )}
                 
                 {profile?.email && (
                   <div>
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Email</h3>
-                    <p className="text-lg font-bold text-gray-900">{profile.email}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{profile.email}</p>
                   </div>
                 )}
               </div>

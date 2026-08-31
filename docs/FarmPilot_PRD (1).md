@@ -467,6 +467,16 @@ translation and text-to-speech for Twi and Ewe. A farmer who reads English
 poorly can still listen. If only one half is built, it should be the
 audio. See ADR-009.
 
+### 7.14 AI Assistant (FarmBot)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-14.1 | A user can interact with an AI assistant (FarmBot) available on all screens | P0 |
+| FR-14.2 | FarmBot has real-time context of the user's farm details, recorded costs, and estimated totals | P0 |
+| FR-14.3 | FarmBot has access to the user's active and completed seasons, along with crop and area planted details | P0 |
+| FR-14.4 | FarmBot provides specific, actionable agricultural advice tailored to the user's current farm data | P0 |
+| FR-14.5 | FarmBot handles network errors gracefully without crashing the application | P0 |
+
 ---
 
 ## 8. Data Requirements

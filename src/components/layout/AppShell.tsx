@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { OfflineBanner } from './OfflineBanner';
 import { NotificationDropdown } from './NotificationDropdown';
+import { FarmBot } from '../domain/FarmBot';
 
 interface AppShellProps {
   children: ReactNode;
@@ -144,6 +145,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Content */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 overflow-y-auto mb-16 md:mb-0">
         {children}
+        <FarmBot />
       </main>
 
       {/* Mobile Bottom Navigation */}

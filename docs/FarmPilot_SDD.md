@@ -230,6 +230,7 @@ would want to remove.
 | Frontend hosting | Vercel | Git-push deployment, free tier, HTTPS by default |
 | Offline shell | vite-plugin-pwa + IndexedDB (idb) | Cost entry happens in a field; writes queue locally and flush on reconnect (P1) |
 | Local languages | Khaya AI API, Ghana NLP | Translation and text-to-speech for Twi, Ewe, Ga, Dagbani, Frafra (P2) |
+| AI Integration | Claude / OpenRouter | FarmBot uses OpenRouter to access Claude, providing intelligent, context-aware agricultural advice based on real-time farm state. |
 | Version control | Git / GitHub | Branch-per-developer with review before merge |
 
 ---
@@ -251,11 +252,12 @@ src/
 │   ├── seasons.ts              listSeasons, createSeason, completeSeason
 │   ├── costs.ts                listCosts, addCost, deleteCost
 │   ├── reference.ts            listCrops, listCategories
-│   └── estimates.ts            generateEstimate, getReport
+│   ├── estimates.ts            generateEstimate, getReport
+│   └── ai.ts                   askFarmBot
 ├── components/
 │   ├── layout/                 AppShell, Header, ProtectedRoute
 │   ├── ui/                     Button, Input, Select, Card, Table, Money
-│   └── domain/                 SeasonCard, CostRow, CategoryBar, FlagBadge
+│   └── domain/                 SeasonCard, CostRow, CategoryBar, FlagBadge, FarmBot
 ├── pages/
 │   ├── SignIn.tsx
 │   ├── SignUp.tsx

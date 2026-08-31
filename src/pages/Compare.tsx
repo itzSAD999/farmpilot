@@ -72,6 +72,7 @@ const PATTERN_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ec4899'];
 function SeasonVsSeasonTab() {
   const [searchParams] = useSearchParams();
   const seasonIds = searchParams.get('s')?.split(',').map(Number).filter(n => !isNaN(n)) || [];
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const { data: result, isLoading } = useQuery({
     queryKey: ['compareSeasons', seasonIds],
@@ -89,7 +90,7 @@ function SeasonVsSeasonTab() {
     let maxChangePct = 0;
     let maxChangeAbs = 0;
 
-    const tableData = data.map(row => {
+    let tableData = data.map(row => {
       const firstVal = row[firstS] || 0;
       const lastVal = row[lastS] || 0;
       const absDiff = lastVal - firstVal;
@@ -111,11 +112,26 @@ function SeasonVsSeasonTab() {
     let takeaway = "No material changes found between the selected seasons.";
     if (Math.abs(maxChangePct) > 5) {
       const dir = maxChangeAbs > 0 ? 'rose' : 'fell';
-      takeaway = `Your ${maxChangeCat.replace('_', ' ')} cost per acre ${dir} ${Math.abs(Math.round(maxChangePct))}% between ${firstS} and ${lastS}.`;
+      takeaway = `Smart Insight: Your ${maxChangeCat.replace('_', ' ')} cost per acre ${dir} ${Math.abs(Math.round(maxChangePct))}% between ${firstS} and ${lastS}.`;
     }
 
-    return { tableData, seasons, takeaway };
-  }, [result]);
+    if (selectedCategory !== 'all') {
+      tableData = tableData.filter(r => r.category === selectedCategory);
+    }
+
+    return { tableData, seasons, takeaway, allCategories: data.map(r => r.category) };
+  }, [result, selectedCategory]);
+
+  const copyDataToClipboard = () => {
+    if (!processedData) return;
+    const headers = ['Category', ...processedData.seasons.map(s => s.name), 'Abs Diff', 'Pct Diff'].join('\t');
+    const rows = processedData.tableData.map(row => {
+      const vals = processedData.seasons.map(s => (row[s.name]/100).toFixed(2));
+      return [row.category, ...vals, (row.absDiff/100).toFixed(2), `${Math.round(row.pctDiff)}%`].join('\t');
+    }).join('\n');
+    navigator.clipboard.writeText(`${headers}\n${rows}`);
+    alert('Data copied to clipboard!');
+  };
 
   if (seasonIds.length < 2) {
     return (
@@ -131,27 +147,61 @@ function SeasonVsSeasonTab() {
   if (!processedData) return <div>Failed to process comparison data.</div>;
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {(result?.excluded?.length || 0) > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-6 text-sm">
-          <strong>Note:</strong> The following seasons were excluded because they have no recorded costs: {result!.excluded.join(', ')}
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-6 text-sm flex items-start gap-3 shadow-sm">
+          <svg className="w-5 h-5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <div><strong>Note:</strong> The following seasons were excluded because they have no recorded costs: {result!.excluded.join(', ')}</div>
         </div>
       )}
 
-      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl mb-8 border border-emerald-100 dark:border-emerald-800/30 text-emerald-900 dark:text-emerald-300 font-medium text-center text-lg">
-        {processedData.takeaway}
+      <div className="bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 p-5 rounded-2xl mb-8 border border-emerald-100 dark:border-emerald-800/30 flex items-center shadow-sm">
+        <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-full flex items-center justify-center mr-4 shrink-0 text-emerald-600 dark:text-emerald-400">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+        </div>
+        <div className="text-emerald-900 dark:text-emerald-300 font-medium md:text-lg">
+          {processedData.takeaway}
+        </div>
       </div>
 
-      <div className="h-[400px] w-full mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <div className="w-full sm:w-auto">
+          <label htmlFor="category-filter" className="sr-only">Filter by Category</label>
+          <select 
+            id="category-filter"
+            className="w-full sm:w-64 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+          >
+            <option value="all">All Categories</option>
+            {processedData.allCategories.map(c => (
+              <option key={c} value={c}>{c.replace('_', ' ').toUpperCase()}</option>
+            ))}
+          </select>
+        </div>
+        <button 
+          onClick={copyDataToClipboard}
+          className="w-full sm:w-auto px-4 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-sm font-bold rounded-xl transition-colors flex items-center justify-center shadow-sm"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+          Export Data
+        </button>
+      </div>
+
+      <div className="h-[400px] w-full mb-8 bg-white dark:bg-[#1a1a1a] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={processedData.tableData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="category" tickFormatter={(val: any) => val.replace('_', ' ')} style={{ fontSize: '12px' }} />
-            <YAxis label={{ value: 'Cost per Acre (GHS)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }} />
-            <Tooltip formatter={(value: any) => [`GHS ${(Number(value)/100).toFixed(2)}`, 'Cost/Acre']} />
-            <Legend />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
+            <XAxis dataKey="category" tickFormatter={(val: any) => val.replace('_', ' ')} style={{ fontSize: '12px' }} axisLine={false} tickLine={false} />
+            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => (val/100).toString()} />
+            <Tooltip 
+              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+              formatter={(value: any) => [`GHS ${(Number(value)/100).toFixed(2)}`, 'Cost/Acre']} 
+            />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
             {processedData.seasons.map((s, i) => (
-              <Bar key={s.name} dataKey={s.name} name={s.name} fill={PATTERN_COLORS[i % PATTERN_COLORS.length]} />
+              <Bar key={s.name} dataKey={s.name} name={s.name} fill={PATTERN_COLORS[i % PATTERN_COLORS.length]} radius={[4, 4, 0, 0]} maxBarSize={60} />
             ))}
           </BarChart>
         </ResponsiveContainer>

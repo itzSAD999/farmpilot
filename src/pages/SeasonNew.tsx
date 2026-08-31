@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createSeason } from '../api/seasons';
 import { getCrops } from '../api/crops';
 import { useFarm } from '../hooks/useFarm';
@@ -18,6 +18,7 @@ export function SeasonNew() {
   const navigate = useNavigate();
   const location = useLocation();
   const { farm, isLoading: isFarmLoading } = useFarm();
+  const queryClient = useQueryClient();
   
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +64,11 @@ export function SeasonNew() {
         season_window: data.season_window as any,
         area_planted_acres: data.area_planted_acres,
       });
+      // Invalidate both farm_summary and seasons so the dashboard updates instantly
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+        queryClient.invalidateQueries({ queryKey: ['farm_summary'] })
+      ]);
       navigate('/');
     } catch (err: any) {
       if (err.message?.includes('session has expired')) {

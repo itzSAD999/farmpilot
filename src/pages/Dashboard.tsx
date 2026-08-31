@@ -192,86 +192,98 @@ export function Dashboard() {
             </div>
           )}
 
-          {/* Spend by Crop Overview */}
-          {cropsSummary && cropsSummary.length > 0 && (
-            <div className="bg-white dark:bg-white/5 rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10">
-              <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-white/10 pb-4">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-2xl">Spend by Crop</h3>
-                <Link to="/compare?tab=crops" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-bold py-2 px-4 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center">
-                  Full Comparison
-                  <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                </Link>
-              </div>
-              
-              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-                <div className="w-full md:w-1/2 h-64 md:h-80 min-h-[256px] min-w-[256px]">
-                  {cropsSummary.some(c => Number(c.total_recorded_pesewas) > 0) ? (
-                    <div className="flex items-center justify-center w-full h-full min-h-[250px]">
-                      <PieChart width={280} height={280}>
-                        <Pie
-                          data={cropsSummary
-                            .filter(c => Number(c.total_recorded_pesewas) > 0)
-                            .map(c => ({
-                              ...c,
-                              total_recorded_pesewas: Number(c.total_recorded_pesewas)
-                            }))}
-                          dataKey="total_recorded_pesewas"
-                          nameKey="crop_name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={70}
-                          outerRadius={95}
-                          paddingAngle={5}
-                        >
-                          {cropsSummary
-                            .filter(c => Number(c.total_recorded_pesewas) > 0)
-                            .map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          formatter={(value: any) => [`GHS ${(Number(value) / 100).toFixed(2)}`, 'Spent']} 
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
-                        />
-                      </PieChart>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+              {/* Spend by Crop Pie Wheel */}
+              {cropsSummary && cropsSummary.length > 0 && (
+                <div className="bg-white dark:bg-white/5 rounded-[32px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 flex flex-col">
+                  <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Spend by Crop</h3>
+                    <Link to="/compare?tab=crops" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold py-2 px-3 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center">
+                      Full Comparison
+                    </Link>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center gap-6 flex-1">
+                    <div className="w-full sm:w-1/2 flex justify-center items-center h-48">
+                      {cropsSummary.some(c => Number(c.total_recorded_pesewas) > 0) ? (
+                        <PieChart width={180} height={180}>
+                          <Pie
+                            data={cropsSummary.filter(c => Number(c.total_recorded_pesewas) > 0).map(c => ({...c, val: Number(c.total_recorded_pesewas)}))}
+                            dataKey="val"
+                            nameKey="crop_name"
+                            cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5}
+                          >
+                            {cropsSummary.filter(c => Number(c.total_recorded_pesewas) > 0).map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: any) => [`GHS ${(Number(value) / 100).toFixed(2)}`, 'Spent']} />
+                        </PieChart>
+                      ) : (
+                        <p className="text-sm text-gray-400">No costs yet</p>
+                      )}
                     </div>
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
-                      <svg className="w-12 h-12 mb-3 text-gray-300 dark:text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
-                      <p className="text-sm font-medium">No costs recorded yet.</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="w-full md:w-1/2">
-                  <div className="grid grid-cols-1 gap-4">
-                    {cropsSummary.map((crop, index) => (
-                      <div key={crop.crop_id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <div>
-                            <p className="font-bold text-gray-900 dark:text-gray-100">{crop.crop_name}</p>
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{crop.season_count} season{crop.season_count !== 1 ? 's' : ''} • {Number(crop.total_acres)} acres</p>
+                    <div className="w-full sm:w-1/2 flex flex-col gap-2 overflow-y-auto max-h-48 pr-2">
+                      {cropsSummary.map((crop, index) => (
+                        <div key={crop.crop_id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate max-w-[100px]">{crop.crop_name}</span>
                           </div>
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400"><Money pesewas={Number(crop.total_recorded_pesewas)} /></span>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900 dark:text-gray-100 text-lg">
-                            <span className="text-xs font-medium text-gray-500 mr-1">GHS</span>
-                            <Money pesewas={Number(crop.total_recorded_pesewas)} />
-                          </p>
-                          <p className="text-xs font-bold text-emerald-600">
-                            {crop.cost_per_acre_pesewas ? (
-                              <>₵{(Number(crop.cost_per_acre_pesewas) / 100).toFixed(2)} / ac</>
-                            ) : '-'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Season Status Pie Wheel */}
+              {seasons && seasons.length > 0 && (
+                <div className="bg-white dark:bg-white/5 rounded-[32px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 flex flex-col">
+                  <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/10 pb-4">
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Season Status</h3>
+                    <Link to="/seasons" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold py-2 px-3 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center">
+                      View All
+                    </Link>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center gap-6 flex-1">
+                    <div className="w-full sm:w-1/2 flex justify-center items-center h-48">
+                      <PieChart width={180} height={180}>
+                        <Pie
+                          data={[
+                            { name: 'Active', value: seasons.filter(s => !s.is_complete).length },
+                            { name: 'Completed', value: seasons.filter(s => s.is_complete).length }
+                          ]}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5}
+                        >
+                          <Cell fill="#10b981" /> {/* Active: Emerald */}
+                          <Cell fill="#9ca3af" /> {/* Completed: Gray */}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </div>
+                    <div className="w-full sm:w-1/2 flex flex-col gap-4">
+                      <div className="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full shrink-0 bg-emerald-500" />
+                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Active</span>
+                        </div>
+                        <span className="text-lg font-extrabold text-emerald-600">{seasons.filter(s => !s.is_complete).length}</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full shrink-0 bg-gray-400" />
+                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Completed</span>
+                        </div>
+                        <span className="text-lg font-extrabold text-gray-500">{seasons.filter(s => s.is_complete).length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
           
           {/* Seasons List Area */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { OfflineBanner } from './OfflineBanner';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface AppShellProps {
   children: ReactNode;
@@ -26,7 +27,8 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex items-center">
             <img src="/logo.png" alt="FarmPilot Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-center">
+            <NotificationDropdown />
             <Link
               to="/profile"
               className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -45,8 +47,9 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white shadow-[4px_0_24px_rgb(0,0,0,0.02)] z-10 sticky top-0 h-screen overflow-y-auto">
-        <div className="p-6 flex items-center mb-6">
+        <div className="p-6 flex items-center justify-between mb-6">
           <img src="/logo.png" alt="FarmPilot Logo" className="h-10 w-auto object-contain" />
+          <NotificationDropdown />
         </div>
 
         <nav className="flex-1 px-4 space-y-1">

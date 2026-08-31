@@ -8,7 +8,7 @@ import { generateEstimate } from '../api/estimates';
 import { Money } from '../components/ui/Money';
 
 export function Dashboard() {
-  const { farm } = useFarm();
+  const { farm, isLoading: isLoadingFarm, hasFarm } = useFarm();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,7 +39,7 @@ export function Dashboard() {
     enabled: !!farm?.id,
   });
 
-  const isLoading = isLoadingSeasons || isLoadingSummary || isLoadingCrops;
+  const isLoading = isLoadingFarm || isLoadingSeasons || isLoadingSummary || isLoadingCrops;
   const isError = isErrorSeasons || isErrorSummary || isErrorCrops;
 
   const filteredSeasons = seasons?.filter(season => {
@@ -59,6 +59,34 @@ export function Dashboard() {
     return true;
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1B5E20]"></div>
+      </div>
+    );
+  }
+
+  if (!hasFarm && !isLoadingFarm) {
+    return (
+      <div className="animate-fade-in-up pb-12 max-w-4xl mx-auto text-center mt-12">
+        <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-12 h-12 text-[#1B5E20]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4">Welcome to FarmPilot!</h1>
+        <p className="text-gray-500 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
+          Before we can help you track costs and get personalized estimates, we need some basic details about your farm.
+        </p>
+        <Link to="/farm-setup" className="inline-flex items-center bg-[#1B5E20] text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-emerald-900/20 hover:bg-[#144718] transition-all hover:-translate-y-1 text-lg group">
+          Set Up Your Farm
+          <svg className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in-up pb-12 max-w-6xl mx-auto">
       {/* Header Area */}
@@ -75,11 +103,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1B5E20]"></div>
-        </div>
-      ) : isError ? (
+      {isError ? (
         <div className="bg-red-50 rounded-[32px] p-12 text-center border border-red-100">
           <div className="text-6xl mb-4 opacity-50 inline-block bg-red-100 rounded-full p-6 text-red-500">⚠️</div>
           <h2 className="text-2xl font-bold text-red-900 mb-3">Unable to load dashboard</h2>

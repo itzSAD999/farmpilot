@@ -84,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
           <img src="/logo.png" alt="FarmPilot Logo" className="h-10 w-auto object-contain" />
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <NotificationDropdown />
+            <NotificationDropdown align="left" />
           </div>
         </div>
 

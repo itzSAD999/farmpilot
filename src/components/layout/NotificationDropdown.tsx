@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNotifications } from '../../hooks/useNotifications';
 
-export function NotificationDropdown() {
+interface NotificationDropdownProps {
+  align?: 'left' | 'right';
+}
+
+export function NotificationDropdown({ align = 'right' }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, isLoading } = useNotifications();
@@ -16,6 +20,8 @@ export function NotificationDropdown() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const alignmentClass = align === 'right' ? 'sm:left-auto sm:right-0' : 'sm:right-auto sm:left-0';
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -36,7 +42,7 @@ export function NotificationDropdown() {
       </button>
 
       {isOpen && (
-        <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in-up">
+        <div className={`fixed left-4 right-4 top-16 sm:absolute ${alignmentClass} sm:top-full sm:mt-2 sm:w-96 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in-up`}>
           <div className="p-4 border-b border-gray-100 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-white/5">
             <h3 className="font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
             {unreadCount > 0 && (

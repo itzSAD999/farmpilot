@@ -6,7 +6,7 @@ export interface Message {
 // Fallback to the provided key if env var is missing. In a production app, this should
 // ideally be proxied through a backend to keep the key secure.
 // Use environment variable for the API key to prevent secret leakage
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+const OPENROUTER_API_KEY = import.meta.env.OPENROUTER_API_KEY;
 const MODEL = 'anthropic/claude-3-haiku'; // Fast, cheap, and good for basic reasoning
 
 export async function chatWithFarmBot(messages: Message[]): Promise<string> {

@@ -111,9 +111,19 @@ export function Dashboard() {
           <div className="text-6xl mb-4 opacity-50 inline-block bg-red-100 rounded-full p-6 text-red-500">⚠️</div>
           <h2 className="text-2xl font-bold text-red-900 mb-3">Unable to load dashboard</h2>
           <p className="text-red-700 max-w-md mx-auto mb-8 font-medium">We couldn't load your farm data. Please check your connection and try again.</p>
-          <button onClick={() => window.location.reload()} className="bg-red-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-red-700 transition-colors">
-            Try Again
-          </button>
+          <div className="flex gap-4 justify-center">
+            <button onClick={() => window.location.reload()} className="bg-red-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-red-700 transition-colors">
+              Try Again
+            </button>
+            <button onClick={async () => {
+              // Sign out logic
+              const { supabase } = await import('../lib/supabase');
+              await supabase.auth.signOut();
+              window.location.href = '/signin';
+            }} className="bg-white text-red-700 font-bold py-3 px-8 rounded-xl border border-red-200 hover:bg-red-50 transition-colors">
+              Sign In Again
+            </button>
+          </div>
         </div>
       ) : !seasons || seasons.length === 0 ? (
         <div className="bg-white dark:bg-white/5 rounded-[24px] p-12 shadow-sm border border-gray-100 dark:border-white/10 flex flex-col items-center justify-center text-center mt-8">

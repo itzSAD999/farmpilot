@@ -14,6 +14,10 @@ import { NotFound } from './pages/NotFound';
 import { Profile } from './pages/Profile';
 import { Privacy } from './pages/Privacy';
 import { Terms } from './pages/Terms';
+import { Seasons } from './pages/Seasons';
+import { Compare } from './pages/Compare';
+import { GuideLibrary } from './pages/GuideLibrary';
+import { GuideDetail } from './pages/GuideDetail';
 
 export function App() {
   return (
@@ -45,6 +49,46 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <Profile />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/seasons"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Seasons />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/compare"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Compare />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/guides"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <GuideLibrary />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/guides/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <GuideDetail />
               </AppShell>
             </ProtectedRoute>
           }

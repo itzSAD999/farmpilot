@@ -4,8 +4,6 @@ import type { User } from '@supabase/supabase-js';
 import * as authApi from '../api/auth';
 import type { Profile } from '../api/auth';
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
-
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
@@ -25,7 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userRef = useRef<User | null>(null);
 
   useEffect(() => {
@@ -134,39 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, [applySessionUser]);
-
-  useEffect(() => {
-    if (!user) {
-      if (idleTimerRef.current) {
-        clearTimeout(idleTimerRef.current);
-        idleTimerRef.current = null;
-      }
-      return;
-    }
-
-    const logoutIfIdle = () => {
-      idleTimerRef.current = null;
-      if (!userRef.current) return;
-      void signOut();
-    };
-
-    const resetIdleTimer = () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = setTimeout(logoutIfIdle, IDLE_TIMEOUT_MS);
-    };
-
-    resetIdleTimer();
-
-    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'] as const;
-    events.forEach((eventName) => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
-    document.addEventListener('visibilitychange', resetIdleTimer);
-
-    return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      events.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
-      document.removeEventListener('visibilitychange', resetIdleTimer);
-    };
-  }, [user, signOut]);
 
   return (
     <AuthContext.Provider value={{

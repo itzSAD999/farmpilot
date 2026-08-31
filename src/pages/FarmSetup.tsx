@@ -190,7 +190,7 @@ export function FarmSetup() {
                       setValue('region', e.target.value, { shouldValidate: true, shouldDirty: true });
                       setValue('district', '', { shouldValidate: false });
                     }}
-                    className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1c2622] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
+                    className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
                   >
                     <option value="">Select region</option>
                     {Object.keys(GHANA_DISTRICTS).map((region) => (
@@ -208,7 +208,7 @@ export function FarmSetup() {
                     value={watchDistrict || ''}
                     disabled={!watchRegion}
                     onChange={(e) => setValue('district', e.target.value, { shouldValidate: true, shouldDirty: true })}
-                    className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1c2622] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">{watchRegion ? 'Select district' : 'Select a region first'}</option>
                     {(GHANA_DISTRICTS[watchRegion] || []).map((district) => (

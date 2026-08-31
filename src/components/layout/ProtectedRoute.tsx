@@ -53,18 +53,34 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Check if it's a real missing farm vs a network error
   if (farmError && (farmError as any).message !== 'This farm was not found, has been deleted, or you do not have permission to view it.') {
+    const errorMsg = (farmError as any).message || '';
+    const isAuthError = errorMsg.includes('session has expired') || errorMsg.includes('signed in');
+
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center p-6 text-center">
+      <div className="flex h-screen w-full flex-col items-center justify-center p-6 text-center bg-[#F4F7F6] dark:bg-[#0a0a0a]">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Could not load your farm</h2>
         <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
-          {(farmError as any).message || 'There was a problem connecting to the server.'}
+          {errorMsg || 'There was a problem connecting to the server.'}
         </p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-6 py-2 bg-[#1B5E20] text-white font-bold rounded-xl hover:bg-[#144718]"
-        >
-          Try Again
-        </button>
+        {isAuthError ? (
+          <button 
+            onClick={async () => {
+              const { supabase } = await import('../../lib/supabase');
+              await supabase.auth.signOut();
+              window.location.href = '/signin';
+            }}
+            className="px-6 py-2 bg-[#1B5E20] text-white font-bold rounded-xl hover:bg-[#144718]"
+          >
+            Sign In Again
+          </button>
+        ) : (
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-[#1B5E20] text-white font-bold rounded-xl hover:bg-[#144718]"
+          >
+            Try Again
+          </button>
+        )}
       </div>
     );
   }

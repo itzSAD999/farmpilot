@@ -208,7 +208,10 @@ export function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={cropsSummary}
+                        data={cropsSummary.map(c => ({
+                          ...c,
+                          total_recorded_pesewas: Number(c.total_recorded_pesewas)
+                        }))}
                         dataKey="total_recorded_pesewas"
                         nameKey="crop_name"
                         cx="50%"

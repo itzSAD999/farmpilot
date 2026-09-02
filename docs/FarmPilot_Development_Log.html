@@ -439,6 +439,153 @@
 <p>section and of the Weekly Check-in demo's question flow against the</p>
 <p>running dev server.</p>
 <hr/>
+<h3 id="issue-22-no-way-to-record-a-new-cost-once-an-estimate-existed">Issue #22 — No way to record a new cost once an estimate existed</h3>
+<p><strong>Severity:</strong> High (a real workflow dead end, found directly by the</p>
+<p>user testing the app). <code>EstimateReport.tsx</code>'s full-report view (once</p>
+<p><code>generate_estimate()</code> has produced at least one line) had no "Add Cost"</p>
+<p>action anywhere — only a pencil "edit" control that overwrites the</p>
+<p><em>displayed</em> <code>estimate_lines.estimated_pesewas</code> value directly, which is</p>
+<p>cosmetic and does not insert into <code>season_costs</code>; the edit is silently</p>
+<p>lost the next time the estimate is regenerated. The <code>AddCostForm</code> modal</p>
+<p>this page already imports was only ever mounted in the empty</p>
+<p>"Need More Data" state, never in the populated report.</p>
+<p><strong>Fix.</strong> Added a "Record a Cost" button in the report header and a</p>
+<p>per-line "+ Record actual" action next to every still-<code>Predicted</code> line,</p>
+<p>both opening the same <code>AddCostForm</code> modal against the report's real</p>
+<p><code>season_id</code>. On save, the estimate is regenerated immediately</p>
+<p>(<code>regenerateMutation.mutate()</code>) and the page navigates to the fresh</p>
+<p>report, so a newly recorded cost is reflected on screen right away</p>
+<p>instead of leaving a stale report open.</p>
+<p><strong>Evidence.</strong> Live Puppeteer walkthrough on the demo account: opened an</p>
+<p>existing estimate report, clicked "Record a Cost," recorded a Transport</p>
+<p>cost, and confirmed the URL moved from <code>/report/69</code> to a new</p>
+<p><code>/report/70</code> with the fresh figures — not the same report silently</p>
+<p>unchanged.</p>
+<hr/>
+<h3 id="issue-23-crop-vs-crop-had-no-way-to-scope-by-year-and-no-explanation-of-methodology">Issue #23 — Crop vs Crop had no way to scope by year, and no explanation of methodology</h3>
+<p><strong>Severity:</strong> Low (usability/clarity, not a defect). <code>compareCrops()</code></p>
+<p>always aggregated every recorded season of a crop into one figure with</p>
+<p>no year filter, and none of the three Compare tabs explained what their</p>
+<p>numbers actually meant (e.g. that everything is per-acre, or that Crop</p>
+<p>vs Crop blends multiple seasons rather than showing the latest one) —</p>
+<p>raised directly as "nothing should be vague for users."</p>
+<p><strong>Fix.</strong> <code>compareCrops(farmId, years?)</code> now accepts an optional year</p>
+<p>filter, aggregating just the matching seasons with the same weighted</p>
+<p>sum(cost)/sum(area) formula the unfiltered <code>v_crop_summary</code> view uses,</p>
+<p>so the two paths agree when the filter covers every year. Crop vs Crop</p>
+<p>gained a year-chip filter bar and a season-count column. A new</p>
+<p><code><InfoTip></code> component (small "i" icon, click-to-reveal explanation) was</p>
+<p>added to all three Compare tabs, the Costs page's pie chart and header,</p>
+<p>and the Season Detail page's cost distribution chart — each explaining</p>
+<p>what the number is actually measuring and where it comes from.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live query against the demo</p>
+<p>account confirmed <code>compareCrops(farmId, [2026])</code> returns different</p>
+<p>figures than the unfiltered call, matching the seasons actually</p>
+<p>recorded in that year.</p>
+<hr/>
+<h3 id="issue-24-cost-lab-a-what-if-sandbox-requested-directly">Issue #24 — "Cost Lab" — a what-if sandbox, requested directly</h3>
+<p><strong>Severity:</strong> N/A (new feature, not a bug). Requested so a farmer can</p>
+<p>experiment with different cost assumptions for a crop and acreage before</p>
+<p>committing to a real season — nothing analogous existed; the only way to</p>
+<p>see benchmark numbers was inside an actual season.</p>
+<p><strong>Fix.</strong> New migration <code>014_crop_benchmark_breakdown.sql</code> adds</p>
+<p><code>get_crop_benchmark_breakdown(crop_id, season_window, area_acres)</code>, a</p>
+<p><code>security invoker</code>, <code>stable</code> SQL function returning the same</p>
+<p>norms × price × price_multiplier benchmark math as</p>
+<p><code>get_category_benchmark_pesewas()</code> and <code>generate_estimate()</code>, but for a</p>
+<p>crop/window/acreage combination with <strong>no season row required</strong> — every</p>
+<p>existing benchmark RPC needed a real season to read <code>crop_id</code> and</p>
+<p><code>area_planted_acres</code> from. Applied directly to the linked project via</p>
+<p><code>npx supabase db query --linked -f</code>, and <code>database.types.ts</code></p>
+<p>regenerated. A new page (<code>/lab</code>, linked from the sidebar) lets a farmer</p>
+<p>pick a crop, season window, and acreage, seeds every category from this</p>
+<p>real benchmark data, and lets them drag each one to see the scenario</p>
+<p>total, cost per acre, and percentage versus the standard rate — purely</p>
+<p>client-side, nothing is written to the database.</p>
+<p><strong>Evidence.</strong> `select c.name, b.* from crops c, lateral</p>
+<p>get_crop_benchmark_breakdown(c.id, 'major', 2.5) b where c.name =</p>
+<p>'Maize'` returned the same GHS 3,375.68 fertiliser figure already</p>
+<p>verified elsewhere in this document for a 2.5-acre Maize farm — confirms</p>
+<p>the new function reproduces the existing, already-tested benchmark math</p>
+<p>exactly. <code>npx tsc -b --noEmit</code> clean; live screenshot of the working page.</p>
+<hr/>
+<h3 id="issue-25-farmbot-had-no-guided-entry-point-and-no-crop-comparison-awareness">Issue #25 — FarmBot had no guided entry point and no crop-comparison awareness</h3>
+<p><strong>Severity:</strong> Low (capability gap, not a defect) — raised directly as</p>
+<p>"upgrade the AI bot functionality." A first-time user faced an empty</p>
+<p>input box with no sense of what to ask, the assistant had no aggregated</p>
+<p>crop-vs-crop figures (only itemized costs, from which it would have had</p>
+<p>to estimate rather than state exactly), and there was no way to start a</p>
+<p>fresh conversation without losing context in a long-running chat.</p>
+<p><strong>Fix.</strong> Added four suggested-prompt chips shown until the first real</p>
+<p>question is asked ("Am I overspending anywhere?", "What's my cost per</p>
+<p>acre so far?", "Which crop costs me the most to grow?", "How do I set up</p>
+<p>cost history for a crop?"), a "New chat" reset control in the header, a</p>
+<p><code>compareCrops()</code> query feeding the same weighted per-acre figures the</p>
+<p>Compare page shows into the system prompt, and a paragraph describing</p>
+<p>Cost Lab, cost-history backfill, the Weekly Check-in, and the Compare</p>
+<p>page so the assistant can accurately point to them if asked what it or</p>
+<p>the app can do.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live screenshot confirms the</p>
+<p>four suggestion chips render on first open.</p>
+<hr/>
+<h3 id="issue-26-no-way-to-cap-what-you-re-willing-to-spend-on-a-category">Issue #26 — No way to cap what you're willing to spend on a category</h3>
+<p><strong>Severity:</strong> N/A (new feature, requested directly): "people should be</p>
+<p>able to set a cost limit ... maybe they don't want to spend this on a</p>
+<p>particular crop or they don't want to spend this amount on labour for a</p>
+<p>particular crop." Deliberately distinct from the benchmark comparison —</p>
+<p>the benchmark is a fixed, external MoFA-derived figure the farmer has no</p>
+<p>say over; a budget is the farmer's own ceiling for their own season,</p>
+<p>independent of whether that category happens to be within or outside</p>
+<p>the benchmark.</p>
+<p><strong>Fix.</strong> New migration <code>015_category_budgets.sql</code>: a <code>category_budgets</code></p>
+<p>table (one optional limit per <code>(season_id, category)</code>, RLS matching the</p>
+<p>existing <code>season_costs</code>-style ownership check) and a</p>
+<p><code>v_category_budget_status</code> view joining each budget against what's</p>
+<p>actually been recorded, computing spent/remaining/over-budget/percentage</p>
+<p>in one row. Applied directly to the linked project;</p>
+<p><code>database.types.ts</code> regenerated. <code>SeasonDetail.tsx</code> gained a "Category</p>
+<p>Budgets" card (progress bar per category, red once over, a "Set a</p>
+<p>budget" modal) and <code>AddCostForm.tsx</code> now shows a live amber warning</p>
+<p>("This would put you GHS X over your GHS Y budget") while recording a</p>
+<p>cost that would exceed an existing budget for that category — before</p>
+<p>the farmer saves it, not after.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live Puppeteer walkthrough:</p>
+<p>set a GHS 10 Seeds budget on the demo account's active Cassava season,</p>
+<p>confirmed the progress bar rendered "GHS 0.00 / GHS 10.00," then opened</p>
+<p>Record Cost → Seeds, entered GHS 50, and confirmed the live warning read</p>
+<p>"This would put you GHS 40.00 over your GHS 10.00 seeds budget for this</p>
+<p>season."</p>
+<hr/>
+<h3 id="issue-27-no-way-to-export-a-report-or-costs-as-a-pdf">Issue #27 — No way to export a report or costs as a PDF</h3>
+<p><strong>Severity:</strong> Medium (a real capability gap, requested directly).</p>
+<p><code>EstimateReport.tsx</code> already carried an extensive, unused <code>print:</code></p>
+<p>Tailwind treatment (50+ classes converting the dark hero, charts, and</p>
+<p>flagged-category cards into a clean black-on-white layout) — but there</p>
+<p>was no button anywhere that triggered printing, and more importantly</p>
+<p><code>AppShell</code>'s sidebar, mobile nav, top bar, and the FarmBot floating</p>
+<p>button/chat window had no print handling at all, so even opening the</p>
+<p>browser's own print dialog manually would have printed the app chrome</p>
+<p>alongside the report.</p>
+<p><strong>Fix.</strong> Added a <code>.print-hide</code> utility (<code>src/index.css</code>, `@media</p>
+<p>print`) and applied it to every piece of persistent app chrome</p>
+<p>(<code>AppShell</code>'s mobile header, desktop sidebar, mobile bottom nav, and</p>
+<p>theme/notification bar; <code>FarmBot</code>'s FAB and chat window; <code>OfflineBanner</code>;</p>
+<p><code>PwaInstallPrompt</code>) plus <code>InfoTip</code>'s icon button, so any page prints</p>
+<p>cleanly by default. Added a "Download PDF" button (<code>window.print()</code> —</p>
+<p>the browser's native "Save as PDF" destination, no client-side PDF</p>
+<p>library needed) to <code>EstimateReport.tsx</code>, which already had page-specific</p>
+<p>print styling, and to <code>CostsOverview.tsx</code>, which gained a lighter print</p>
+<p>treatment (search/toggle controls hidden, the pie chart and category</p>
+<p>list left visible) alongside its new dashboard from Issue #19. A global</p>
+<p>print-time light-mode override was also added so a farmer viewing in</p>
+<p>dark mode still gets a normal white/black printout.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; Puppeteer screenshots with</p>
+<p><code>page.emulateMediaType('print')</code> on both pages confirm the sidebar,</p>
+<p>bottom nav, FarmBot button, and page controls are gone, the "Download</p>
+<p>PDF" button itself is hidden from its own output, and the estimate</p>
+<p>report / cost breakdown (including the donut chart) render cleanly on a</p>
+<p>white page.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table. Full evidence for</p>
 <p>each row:</p>
@@ -457,6 +604,12 @@
 <tr><td>— / Issue #19</td><td>Costs page has a chart / search</td><td>Neither</td><td>Donut chart + search across both views</td><td>Live screenshot + <code>tsc</code></td></tr>
 <tr><td>— / Issue #20</td><td>Historical seasons enter <code>generate_estimate()</code>'s history path</td><td>Only via full live recording flow</td><td>Backfillable at season creation, up to 3 years</td><td>Live walkthrough + <code>tsc</code></td></tr>
 <tr><td>— / Issue #21</td><td>Landing page features match shipped functionality</td><td>4 of 4 cards hypothetical</td><td>6 new cards, each a live demo of a real feature</td><td>Live screenshots</td></tr>
+<tr><td>— / Issue #22</td><td>Can record a new cost from an existing estimate report</td><td>No path at all</td><td>"Record a Cost" + per-line "Record actual," auto-regenerates</td><td>Live walkthrough, <code>/report/69</code> → <code>/report/70</code></td></tr>
+<tr><td>— / Issue #23</td><td><code>compareCrops()</code> respects a year filter</td><td>Always all years, no explanation</td><td>Filterable by year, <code>InfoTip</code> on all 3 Compare tabs + Costs + Season</td><td>Live query with/without <code>years</code></td></tr>
+<tr><td>— / Issue #24</td><td><code>get_crop_benchmark_breakdown()</code> matches known-good benchmark figures</td><td>—</td><td>Maize fertiliser at 2.5 acres = GHS 3,375.68, matches prior verification</td><td>Direct SQL query</td></tr>
+<tr><td>— / Issue #25</td><td>FarmBot has a guided first-open state</td><td>Empty input box</td><td>4 suggested-prompt chips + "New chat"</td><td>Live screenshot</td></tr>
+<tr><td>— / Issue #26</td><td>Live over-budget warning while recording a cost</td><td>Did not exist</td><td>"This would put you GHS 40.00 over your GHS 10.00 seeds budget"</td><td>Live walkthrough</td></tr>
+<tr><td>— / Issue #27</td><td>App chrome absent from a printed/PDF page</td><td>Sidebar, nav, FarmBot all printed</td><td>All hidden via <code>.print-hide</code>; report/costs render cleanly</td><td>Puppeteer <code>emulateMediaType('print')</code></td></tr>
 </tbody></table>
 <p>Every fix in §4 was verified against the live, linked Supabase project —</p>
 <p>not a local mock or an assumed-correct code review — using either a</p>
@@ -475,6 +628,8 @@
 <tr><td>Field-officer / aggregator role</td><td>Low</td><td>Explicitly out of scope for this project window (PRD §15)</td></tr>
 <tr><td>SMS OTP phone verification</td><td>Low</td><td>Explicitly deferred (PRD FR-1.13, ADR-006) — not implemented, and correctly documented as such throughout</td></tr>
 <tr><td>Delete the four dead stub components (Issue #15)</td><td>Low</td><td>Blocked by an environment permission restriction on file deletion during this session; zero functional risk in the meantime</td></tr>
+<tr><td>Region-specific and per-crop-scale (not just per-acre) budget defaults</td><td>Low</td><td>Category Budgets (Issue #26) are entirely farmer-set with no suggested starting value yet</td></tr>
+<tr><td>A saved/named history of Cost Lab scenarios</td><td>Low</td><td>Lab (Issue #24) is intentionally a stateless sandbox — nothing persists across a reload today</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="7-appendix-file-and-migration-index">7. Appendix — File and Migration Index</h2>
@@ -486,6 +641,8 @@
 <tr><td><code>supabase/migrations/011_category_benchmark_estimate.sql</code></td><td>Issue #6</td></tr>
 <tr><td><code>supabase/migrations/012_fix_crop_input_norms_duplicates.sql</code></td><td>Issue #4</td></tr>
 <tr><td><code>supabase/migrations/013_seed_additional_crop_norms.sql</code></td><td>Issue #17</td></tr>
+<tr><td><code>supabase/migrations/014_crop_benchmark_breakdown.sql</code></td><td>Issue #24 (Cost Lab)</td></tr>
+<tr><td><code>supabase/migrations/015_category_budgets.sql</code></td><td>Issue #26 (Category Budgets)</td></tr>
 <tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
 <tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>

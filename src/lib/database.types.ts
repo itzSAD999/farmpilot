@@ -91,6 +91,41 @@ export type Database = {
         }
         Relationships: []
       }
+      category_budgets: {
+        Row: {
+          category: Database["public"]["Enums"]["cost_category"]
+          created_at: string
+          id: number
+          limit_pesewas: number
+          season_id: number
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["cost_category"]
+          created_at?: string
+          id?: number
+          limit_pesewas: number
+          season_id: number
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["cost_category"]
+          created_at?: string
+          id?: number
+          limit_pesewas?: number
+          season_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_budgets_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cost_benchmarks: {
         Row: {
           basis: Database["public"]["Enums"]["price_basis"]
@@ -618,6 +653,27 @@ export type Database = {
       }
     }
     Views: {
+      v_category_budget_status: {
+        Row: {
+          category: Database["public"]["Enums"]["cost_category"] | null
+          id: number | null
+          is_over_budget: boolean | null
+          limit_pesewas: number | null
+          pct_used: number | null
+          remaining_pesewas: number | null
+          season_id: number | null
+          spent_pesewas: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_budgets_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_crop_summary: {
         Row: {
           cost_per_acre_pesewas: number | null
@@ -719,6 +775,17 @@ export type Database = {
           p_season_id: number
         }
         Returns: number
+      }
+      get_crop_benchmark_breakdown: {
+        Args: {
+          p_area_acres: number
+          p_crop_id: number
+          p_season_window: Database["public"]["Enums"]["season_window"]
+        }
+        Returns: {
+          benchmark_pesewas: number
+          category: Database["public"]["Enums"]["cost_category"]
+        }[]
       }
       quick_fill_costs: { Args: { p_season_id: number }; Returns: undefined }
     }

@@ -272,13 +272,22 @@ export function EstimateReport() {
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-6 lg:px-8 animate-fade-in pb-24 print:py-0 print:px-0 print:bg-white">
-      {/* Back Link */}
-      <Link to={`/season/${meta.season_id}`} className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center mb-8 group w-max print:hidden">
-        <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors border border-gray-100">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
-        </span>
-        Back to Season
-      </Link>
+      {/* Back Link + Download */}
+      <div className="flex items-center justify-between mb-8 print:hidden">
+        <Link to={`/season/${meta.season_id}`} className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center group w-max">
+          <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors border border-gray-100">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+          </span>
+          Back to Season
+        </Link>
+        <button
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-4 py-2.5 rounded-xl shadow-sm transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+          Download PDF
+        </button>
+      </div>
 
       {/* Provisional Notice */}
       {isProvisional && (
@@ -313,7 +322,7 @@ export function EstimateReport() {
               <svg className="w-4 h-4 mr-2 text-emerald-400 print:text-black print:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               {methodText}
             </div>
-            
+
             {/* Mobile Jump Link */}
             {flaggedLines.length > 0 && (
               <div className="mt-6 md:hidden print:hidden">
@@ -324,6 +333,18 @@ export function EstimateReport() {
               </div>
             )}
           </div>
+
+          {/* Record a new cost — recalculates the estimate immediately on save */}
+          <button
+            onClick={() => {
+              setCostModalCategory(undefined);
+              setIsCostModalOpen(true);
+            }}
+            className="print:hidden shrink-0 inline-flex items-center justify-center px-6 py-3.5 bg-white text-gray-900 font-bold rounded-2xl hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+            Record a Cost
+          </button>
         </div>
       </div>
 
@@ -360,6 +381,18 @@ export function EstimateReport() {
                               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                               High
                             </span>
+                          )}
+                          {!line.is_actual && (
+                            <button
+                              onClick={() => {
+                                setCostModalCategory(line.category as CostCategory);
+                                setIsCostModalOpen(true);
+                              }}
+                              className="print:hidden ml-2 inline-flex items-center text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border text-blue-700 bg-blue-50 border-blue-100 hover:bg-blue-100 transition-colors"
+                              title="Record what you actually spent on this category"
+                            >
+                              + Record actual
+                            </button>
                           )}
                         </span>
                         <span className="text-sm text-gray-500 font-medium flex items-center print:text-gray-700 h-8">
@@ -521,6 +554,30 @@ export function EstimateReport() {
 
         </div>
       </div>
+
+      {isCostModalOpen && rawSeasonId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsCostModalOpen(false)}></div>
+          <div className="relative w-full max-w-2xl z-10 animate-fade-in-up">
+            <AddCostForm
+              seasonId={rawSeasonId}
+              initialCategory={costModalCategory}
+              onSuccess={() => {
+                setIsCostModalOpen(false);
+                setCostModalCategory(undefined);
+                // A cost just landed in season_costs — the estimate on screen
+                // was computed before it existed, so regenerate immediately
+                // rather than leaving a stale report showing "Predicted."
+                regenerateMutation.mutate();
+              }}
+              onCancel={() => {
+                setIsCostModalOpen(false);
+                setCostModalCategory(undefined);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

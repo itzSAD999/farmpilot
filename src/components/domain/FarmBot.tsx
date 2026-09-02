@@ -6,6 +6,14 @@ import { getFarmSummary } from '../../api/dashboard';
 import { chatWithFarmBot, Message } from '../../api/ai';
 import { getDetailedCostsForFarm } from '../../api/costs';
 import { getFlaggedInsightsForFarm } from '../../api/estimates';
+import { compareCrops } from '../../api/compare';
+
+const SUGGESTED_PROMPTS = [
+  'Am I overspending anywhere?',
+  "What's my cost per acre so far?",
+  'Which crop costs me the most to grow?',
+  'How do I set up cost history for a crop?',
+];
 
 export function FarmBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,6 +49,15 @@ export function FarmBot() {
   const { data: flaggedInsights } = useQuery({
     queryKey: ['flagged_insights', farm?.id],
     queryFn: () => getFlaggedInsightsForFarm(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+
+  // Aggregated crop-vs-crop cost per acre, so the bot can answer "which
+  // crop costs me the most" with the same weighted figure the Compare
+  // page shows, instead of trying to eyeball it from itemized costs.
+  const { data: cropComparison } = useQuery({
+    queryKey: ['compareCrops', farm?.id],
+    queryFn: () => compareCrops(farm!.id as number),
     enabled: !!farm?.id,
   });
 
@@ -84,16 +101,30 @@ export function FarmBot() {
       });
     }
 
-    prompt += `\nGuidelines for your responses:
+    if (cropComparison && cropComparison.data.length > 0) {
+      prompt += `\nCrop vs Crop (weighted cost per acre across every recorded season of each crop — same figures as the Compare page's "Crop vs Crop" tab):\n`;
+      cropComparison.data.forEach((c: any) => {
+        prompt += `- ${c.name}: GHS ${(c.cost_per_acre / 100).toFixed(2)}/acre across ${c.season_count} season(s)\n`;
+      });
+    }
+
+    prompt += `\nOther things you can point the farmer to inside FarmPilot, if relevant to what they ask:
+- "Cost Lab" (/lab): a sandbox to try different cost assumptions for a crop and acreage before recording anything for real — nothing there is saved.
+- Recording cost history: when starting a new season (Start New Season), after picking a crop there's a "Have you grown this before?" toggle to back-fill up to 3 previous years' costs, so estimates use real history from day one instead of only the benchmark.
+- The Weekly Check-in prompt on the Dashboard for quickly logging shared costs across active seasons, split by planted acreage.
+- The Compare page (season vs season, crop vs crop, me vs standard benchmark) for the underlying numbers behind whatever you tell them.
+
+Guidelines for your responses:
 - Keep answers concise and extremely practical.
 - Speak in plain English, avoiding overly technical jargon.
 - If they ask about costs or where they are overspending, lead with the 'Overspend Flags' above — those are real, computed comparisons against the benchmark, not a guess. Use their exact numbers and categories. If there are no flags, say their recorded spending looks on track rather than inventing a concern.
+- If they ask which crop costs more, use 'Crop vs Crop' above rather than estimating from the itemized list.
 - Read 'Detailed Expense History' for anything not covered by a flag.
 - Mention Ghanaian agricultural context (e.g., MoFA subsidy, two seasons, specific local practices).
 - Format using simple markdown for readability.`;
 
     return prompt;
-  }, [farm, summary, seasons, detailedCosts, flaggedInsights]);
+  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison]);
 
   // Initialize with greeting
   useEffect(() => {
@@ -119,11 +150,10 @@ export function FarmBot() {
     return () => window.removeEventListener('open-farmbot', handleOpen);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
 
-    const userMsg: Message = { role: 'user', content: inputValue.trim() };
+    const userMsg: Message = { role: 'user', content: text.trim() };
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsLoading(true);
@@ -139,13 +169,24 @@ export function FarmBot() {
       const replyContent = await chatWithFarmBot(conversation);
       setMessages(prev => [...prev, { role: 'assistant', content: replyContent }]);
     } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "Sorry, I'm having trouble connecting right now. Please try again later." 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "Sorry, I'm having trouble connecting right now. Please try again later."
       }]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessage(inputValue);
+  };
+
+  const startNewChat = () => {
+    setMessages([
+      { role: 'assistant', content: "New chat started. What would you like to know?" }
+    ]);
   };
 
   return (
@@ -153,7 +194,7 @@ export function FarmBot() {
       {/* Floating Action Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-6 md:bottom-8 md:right-8 w-16 h-16 bg-[#1B5E20] hover:bg-[#144718] text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-105 z-40 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        className={`print-hide fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-6 md:bottom-8 md:right-8 w-16 h-16 bg-[#1B5E20] hover:bg-[#144718] text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-105 z-40 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
         aria-label="Open FarmBot"
       >
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
@@ -161,7 +202,7 @@ export function FarmBot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed inset-0 md:inset-auto md:bottom-8 md:right-8 md:w-[400px] md:h-[500px] bg-white dark:bg-[#1a1a1a] md:rounded-[24px] shadow-2xl z-50 flex flex-col overflow-hidden border border-gray-200 dark:border-white/10 animate-fade-in-up">
+        <div className="print-hide fixed inset-0 md:inset-auto md:bottom-8 md:right-8 md:w-[400px] md:h-[500px] bg-white dark:bg-[#1a1a1a] md:rounded-[24px] shadow-2xl z-50 flex flex-col overflow-hidden border border-gray-200 dark:border-white/10 animate-fade-in-up">
           {/* Header */}
           <div className="bg-[#1B5E20] p-4 text-white flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
@@ -173,12 +214,21 @@ export function FarmBot() {
                 <p className="text-xs text-white/70">AI Agronomist</p>
               </div>
             </div>
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={startNewChat}
+                title="New chat"
+                className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -209,6 +259,19 @@ export function FarmBot() {
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                 </div>
+              </div>
+            )}
+            {messages.length === 1 && !isLoading && (
+              <div className="flex flex-col items-start gap-2 pt-2 animate-fade-in">
+                {SUGGESTED_PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => sendMessage(p)}
+                    className="text-xs font-bold text-left text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-3 py-2 rounded-xl transition-colors"
+                  >
+                    {p}
+                  </button>
+                ))}
               </div>
             )}
             <div ref={messagesEndRef} />

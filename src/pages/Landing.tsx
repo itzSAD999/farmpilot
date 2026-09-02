@@ -882,6 +882,17 @@ export function Landing() {
                 body: "Every recorded cost is compared category-by-category against an independent benchmark built from MoFA input prices and per-acre norms. Anything more than 30% over gets flagged with a specific, sourced reason — across all 10 seeded crops.",
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />,
                 accent: 'text-amber-400',
+                preview: (
+                  <div className="mt-2 mb-5 bg-black/40 rounded-xl p-3 border border-white/5">
+                    <div className="flex justify-between text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1.5">
+                      <span>Fertiliser</span><span className="text-amber-400">+42%</span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="absolute inset-y-0 left-0 bg-amber-500 rounded-full" style={{ width: '78%' }} />
+                      <div className="absolute inset-y-0 w-px bg-white/60" style={{ left: '55%' }} />
+                    </div>
+                  </div>
+                ),
               },
               {
                 key: 'benchmarkfill',
@@ -889,6 +900,13 @@ export function Landing() {
                 body: 'Recording an expense you can’t put a number on? One tap fills in the standard benchmark rate for that category, scaled to your farm’s acreage — no guessing, no blank fields.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
                 accent: 'text-emerald-400',
+                preview: (
+                  <div className="mt-2 mb-5 flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-white/30 line-through px-2 py-1 rounded bg-white/5 border border-dashed border-white/10">GH₵ ???</span>
+                    <svg className="w-3.5 h-3.5 text-white/20 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    <span className="text-[11px] font-bold text-emerald-300 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30">GH₵ 1,840.00</span>
+                  </div>
+                ),
               },
               {
                 key: 'weeklycheckin',
@@ -896,6 +914,17 @@ export function Landing() {
                 body: 'A short weekly prompt to log shared costs across every active season — split proportionally to how many acres you actually planted of each crop, not divided evenly.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
                 accent: 'text-blue-400',
+                preview: (
+                  <div className="mt-2 mb-5">
+                    <div className="flex h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-emerald-500" style={{ width: '60%' }} />
+                      <div className="bg-blue-500" style={{ width: '40%' }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-white/40 font-bold mt-1.5">
+                      <span>Maize 60%</span><span>Cassava 40%</span>
+                    </div>
+                  </div>
+                ),
               },
               {
                 key: 'aiassistant',
@@ -903,6 +932,12 @@ export function Landing() {
                 body: 'Ask FarmPilot’s built-in assistant about your spending and it answers using your actual flagged categories and variance — not a generic chatbot bolted on the side.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-6l-4 4v-4z" />,
                 accent: 'text-purple-400',
+                preview: (
+                  <div className="mt-2 mb-5 space-y-1.5">
+                    <div className="ml-auto w-fit max-w-[75%] bg-emerald-600/80 text-white text-[10px] font-bold rounded-lg rounded-br-sm px-2.5 py-1.5">Am I overspending?</div>
+                    <div className="w-fit max-w-[80%] bg-white/5 border border-white/10 text-white/60 text-[10px] font-medium rounded-lg rounded-bl-sm px-2.5 py-1.5">Yes — fertiliser is 42% over...</div>
+                  </div>
+                ),
               },
               {
                 key: 'dashboards',
@@ -910,6 +945,15 @@ export function Landing() {
                 body: 'Costs, Seasons, and each season’s own page carry their own visual breakdown — pie charts, bar charts, and search/filter — not just one dashboard at the top level.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
                 accent: 'text-orange-400',
+                preview: (
+                  <div className="mt-2 mb-5 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full shrink-0" style={{ background: 'conic-gradient(#10b981 0% 47%, #3b82f6 47% 77%, #f59e0b 77% 95%, #8b5cf6 95% 100%)' }} />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-1.5 bg-white/15 rounded-full w-full" />
+                      <div className="h-1.5 bg-white/10 rounded-full w-2/3" />
+                    </div>
+                  </div>
+                ),
               },
               {
                 key: 'coldstart',
@@ -917,21 +961,29 @@ export function Landing() {
                 body: 'New to a crop? Your first estimate comes straight from the benchmark. Closed a season already? Next time, your own recorded figures take over — same screen, no setup required.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />,
                 accent: 'text-yellow-400',
+                preview: (
+                  <div className="mt-2 mb-5 flex items-center gap-2 text-[10px] font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/40">Benchmark</span>
+                    <svg className="w-3 h-3 text-white/20 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    <span className="px-2.5 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-300">Your History</span>
+                  </div>
+                ),
               },
             ].map((f, i) => (
               <button
                 key={f.key}
                 type="button"
                 onClick={() => setSelectedFeature(f.key)}
-                className="reveal-on-scroll text-left cursor-pointer bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] hover:scale-[1.02] active:scale-[0.99]"
+                className="reveal-on-scroll text-left cursor-pointer bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] hover:scale-[1.02] active:scale-[0.99] flex flex-col"
                 style={{ transitionDelay: `${100 + i * 100}ms` }}
               >
                 <div className={`w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-6 bg-black/50 backdrop-blur-sm ${f.accent}`}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{f.icon}</svg>
                 </div>
                 <h3 className="text-xl font-medium tracking-wide mb-3 text-white">{f.title}</h3>
-                <p className="text-sm text-white/50 font-light leading-relaxed mb-4">{f.body}</p>
-                <span className="inline-flex items-center text-xs font-bold uppercase tracking-widest text-white/40">
+                <p className="text-sm text-white/50 font-light leading-relaxed">{f.body}</p>
+                {f.preview}
+                <span className="mt-auto inline-flex items-center text-xs font-bold uppercase tracking-widest text-white/40">
                   Try it
                   <svg className="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                 </span>

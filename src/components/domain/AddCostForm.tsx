@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addCost, updateCost, getCategoryBenchmarkPesewas } from '../../api/costs';
+import { listBudgetsForSeason } from '../../api/budgets';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
 import { cedisToPesewas, pesewasToCedis } from '../../lib/money';
@@ -78,6 +79,7 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
   const watchQty = watch('quantity');
   const watchUnitCost = watch('unit_cost');
   const watchUnit = watch('unit');
+  const watchTotalAmount = watch('total_amount');
 
   const selectedCategoryConfig = watchCategory ? CATEGORIES[watchCategory as CostCategory] : null;
 
@@ -99,6 +101,22 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
     handleModeSwitch('total');
     setValue('total_amount', pesewasToCedis(categoryBenchmarkPesewas), { shouldValidate: true });
   };
+
+  // Farmer's own spending cap for this category, if they've set one — see
+  // migration 015. Only meaningful while recording a new item; when
+  // editing an existing one, the budget's "spent so far" already includes
+  // the value being edited, so the live warning would double-count it.
+  const { data: budgets } = useQuery({
+    queryKey: ['categoryBudgets', seasonId],
+    queryFn: () => listBudgetsForSeason(seasonId),
+    enabled: step === 2 && !isEditing,
+  });
+  const activeBudget = !isEditing ? budgets?.find((b) => b.category === watchCategory) : undefined;
+  const pendingAmountPesewas = entryMode === 'rate'
+    ? cedisToPesewas(computedTotal || 0)
+    : cedisToPesewas(watchTotalAmount || 0);
+  const wouldBeSpentPesewas = (activeBudget?.spent_pesewas || 0) + pendingAmountPesewas;
+  const wouldExceedBudget = !!activeBudget && pendingAmountPesewas > 0 && wouldBeSpentPesewas > activeBudget.limit_pesewas;
 
   const handleModeSwitch = (mode: 'total' | 'rate') => {
     setEntryMode(mode);
@@ -469,6 +487,15 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
             </div>
           )}
         </div>
+
+        {wouldExceedBudget && activeBudget && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 animate-fade-in-up">
+            <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+              This would put you <span className="text-amber-900 dark:text-amber-200">GHS {((wouldBeSpentPesewas - activeBudget.limit_pesewas) / 100).toFixed(2)} over</span> your GHS {(activeBudget.limit_pesewas / 100).toFixed(2)} {CATEGORIES[watchCategory as CostCategory]?.label.toLowerCase()} budget for this season.
+            </p>
+          </div>
+        )}
 
         {addMutation.isError && (
           <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm font-bold border border-red-200">

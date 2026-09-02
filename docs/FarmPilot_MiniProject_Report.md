@@ -290,6 +290,16 @@ Every screen is usable at 360px width (Figure 4.8); cost entry, the weekly check
 *Figure 4.8 — Mobile dashboard.*
 ![Mobile dashboard](screenshots/09_mobile_dashboard.png)
 
+#### 4.2.7 Cost Lab, Category Budgets, and exporting a report
+
+Three further tools sit alongside the core recording-and-estimating flow, each addressing a distinct question a farmer might have.
+
+**Cost Lab** (`/lab`) answers "what would this cost, hypothetically" without touching a real season. A farmer picks a crop, a season window, and an acreage; every category is seeded from the same benchmark math `generate_estimate()` itself uses — a new database function, `get_crop_benchmark_breakdown()`, computes it directly from `crop_input_norms` and `cost_benchmarks` given a crop and acreage rather than requiring an existing `seasons` row. The farmer can then drag any category to see the scenario's total, per-acre cost, and percentage against the standard rate — entirely client-side, so nothing is written to the database until the farmer actually starts a real season.
+
+**Category Budgets** answer a different question: not "is this above the national-average benchmark," but "is this above what *I* am willing to spend this season." A farmer can cap any category for an active season (e.g. "no more than GHS 500 on labour"); the season page shows a progress bar per category, and the cost-entry form itself warns, before the cost is saved, if the amount being entered would push that category over its cap. This is deliberately independent of the benchmark comparison — a category can be within the MoFA-derived benchmark and still over a farmer's own budget, or the reverse.
+
+**Exporting a report.** Both the Estimate Report and the farm-wide Costs page carry a "Download PDF" action, using the browser's native print-to-PDF rather than a client-side PDF library — the report screen already needed a clean, chart-inclusive print layout for a farmer to hand to a lender or cooperative, so the browser's own "Save as PDF" destination was the more reliable route than a separately-maintained PDF renderer.
+
 ### 4.3 Testing
 
 Testing combined direct database-level verification of the estimation engine (the part of the system with the least visible surface area, and the part most likely to be silently wrong) with functional testing of the recording and reporting flows end to end.
@@ -422,7 +432,7 @@ npx supabase db query --linked -f supabase/demo_seed.sql
 A full account of the project treated as a real, shipped system rather
 than only a final snapshot: the six-week Python-based proposal versus
 what was actually built and why, a stage-by-stage development timeline,
-an index into all twelve architecture decisions, a twenty-one-item issue
+an index into all twelve architecture decisions, a twenty-seven-item issue
 register from a full post-build hardening pass (each with root cause, fix,
 and live verification evidence), the complete testing record behind
 Chapter Four's summary table, and the outstanding backlog. Kept as a

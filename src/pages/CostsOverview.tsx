@@ -7,6 +7,7 @@ import { listSeasons } from '../api/seasons';
 import { listCosts } from '../api/costs';
 import { CATEGORIES } from '../lib/categories';
 import { Money } from '../components/ui/Money';
+import { InfoTip } from '../components/ui/InfoTip';
 import type { CostCategory, CostItem } from '../api/costs';
 import type { SeasonSummary } from '../api/seasons';
 
@@ -114,9 +115,21 @@ export function CostsOverview() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Costs</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Costs</h1>
+            <InfoTip text="This rolls up every cost item recorded across all of your seasons — including back-filled historical years — regardless of whether that season is still active or already closed." />
+          </div>
           <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mt-1">All expenses across your seasons in one place.</p>
         </div>
+        {allCosts && allCosts.length > 0 && (
+          <button
+            onClick={() => window.print()}
+            className="print:hidden inline-flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 px-4 py-2.5 rounded-xl shadow-sm transition-colors shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Download PDF
+          </button>
+        )}
       </div>
 
       {!allCosts || allCosts.length === 0 ? (
@@ -181,7 +194,10 @@ export function CostsOverview() {
           {/* Mini-dashboard: pie chart breakdown of where money is going */}
           {pieData.length > 0 && (
             <div className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-[0_8px_40px_rgb(0,0,0,0.03)] mb-8">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Where your money is going</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Where your money is going</h3>
+                <InfoTip text="Each slice is that category's share of total recorded spend across every cost item counted above — search or a category/season filter narrows both the chart and the list below together." />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -216,7 +232,7 @@ export function CostsOverview() {
           {/* Search + Toggle View */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 shrink-0">Cost Breakdown</h2>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <div className="print:hidden flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
                 <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 <input

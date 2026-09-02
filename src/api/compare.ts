@@ -9,8 +9,10 @@ export interface CompareSeasonsResult {
 }
 
 export interface CompareCropsResult {
-  data: any[]; // { name: string, cost_per_acre: number }
+  data: any[]; // { name: string, cost_per_acre: number, season_count: number }
   excluded: string[];
+  /** Years actually included in this result — omitted (all years) unless a filter was applied. */
+  years?: number[];
 }
 
 export interface CompareBenchmarkResult {
@@ -70,32 +72,74 @@ export async function compareSeasons(seasonIds: number[]): Promise<CompareSeason
 }
 
 // 2. Crop vs Crop
-export async function compareCrops(farmId: number): Promise<CompareCropsResult> {
+// Without a year filter this reads the pre-aggregated v_crop_summary view
+// (all recorded seasons, any year). With one, it aggregates seasons for
+// just those years directly — using the same sum(cost)/sum(area) weighting
+// the view uses, so the two paths agree when the filter covers every year.
+export async function compareCrops(farmId: number, years?: number[]): Promise<CompareCropsResult> {
+  if (!years || years.length === 0) {
+    const { data, error } = await supabase
+      .from('v_crop_summary')
+      .select('*')
+      .eq('farm_id', farmId);
+
+    if (error) throw error;
+
+    const excluded: string[] = [];
+    const chartData: any[] = [];
+
+    for (const crop of data) {
+      if (Number(crop.total_recorded_pesewas) === 0) {
+        excluded.push(crop.crop_name);
+      } else {
+        chartData.push({
+          name: crop.crop_name,
+          cost_per_acre: Number(crop.cost_per_acre_pesewas),
+          season_count: Number(crop.season_count),
+        });
+      }
+    }
+
+    chartData.sort((a, b) => b.cost_per_acre - a.cost_per_acre);
+    return { data: chartData, excluded };
+  }
+
   const { data, error } = await supabase
-    .from('v_crop_summary')
-    .select('*')
-    .eq('farm_id', farmId);
+    .from('seasons')
+    .select('area_planted_acres, crops (name), season_costs (amount_pesewas)')
+    .eq('farm_id', farmId)
+    .in('year', years);
 
   if (error) throw error;
 
+  const byCrop = new Map<string, { totalCost: number; totalArea: number; count: number }>();
+  for (const s of data) {
+    const name = (s.crops as any)?.name || 'Unknown Crop';
+    const cost = (s.season_costs as any[]).reduce((sum, c) => sum + Number(c.amount_pesewas), 0);
+    const area = Number(s.area_planted_acres);
+    const entry = byCrop.get(name) || { totalCost: 0, totalArea: 0, count: 0 };
+    entry.totalCost += cost;
+    entry.totalArea += area;
+    entry.count += 1;
+    byCrop.set(name, entry);
+  }
+
   const excluded: string[] = [];
   const chartData: any[] = [];
-
-  for (const crop of data) {
-    if (Number(crop.total_recorded_pesewas) === 0) {
-      excluded.push(crop.crop_name);
+  for (const [name, { totalCost, totalArea, count }] of byCrop.entries()) {
+    if (totalCost === 0) {
+      excluded.push(name);
     } else {
       chartData.push({
-        name: crop.crop_name,
-        cost_per_acre: Number(crop.cost_per_acre_pesewas)
+        name,
+        cost_per_acre: totalArea > 0 ? Math.round(totalCost / totalArea) : 0,
+        season_count: count,
       });
     }
   }
 
-  // Sort descending by cost per acre
   chartData.sort((a, b) => b.cost_per_acre - a.cost_per_acre);
-
-  return { data: chartData, excluded };
+  return { data: chartData, excluded, years };
 }
 
 // 3. Me vs Benchmark

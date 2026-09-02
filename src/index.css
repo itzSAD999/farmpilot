@@ -61,6 +61,17 @@ html.dark, html.dark body {
   animation: checkPop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+/* App chrome (nav, theme/notification bar, FarmBot, install prompt) has no
+   meaning on a printed/PDF page — pages that want a clean printout (see
+   EstimateReport's own `print:` classes) mark their surrounding shell with
+   this instead of duplicating "hide the sidebar" logic per page. */
+@media print {
+  .print-hide { display: none !important; }
+  /* Printing (Download PDF) always renders on a white page, regardless of
+     which theme the farmer is viewing the app in on screen. */
+  html.dark, html.dark body { background: #fff; color: #111827; }
+}
+
 .reveal-on-scroll {
   /* Fallback visibility in case IntersectionObserver fails to run or is interrupted */
   opacity: 1;

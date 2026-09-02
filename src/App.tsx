@@ -19,6 +19,7 @@ import { Compare } from './pages/Compare';
 import { GuideLibrary } from './pages/GuideLibrary';
 import { GuideDetail } from './pages/GuideDetail';
 import { CostsOverview } from './pages/CostsOverview';
+import { Lab } from './pages/Lab';
 
 export function App() {
   return (
@@ -80,6 +81,16 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <CostsOverview />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Lab />
               </AppShell>
             </ProtectedRoute>
           }

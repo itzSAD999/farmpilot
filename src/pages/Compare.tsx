@@ -5,7 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { useFarm } from '../hooks/useFarm';
 import { compareSeasons, compareCrops, compareToBenchmark } from '../api/compare';
 import { Money } from '../components/ui/Money';
-import { listSeasons } from '../api/seasons';
+import { listSeasons, getSeasonFilterOptions } from '../api/seasons';
+import { InfoTip } from '../components/ui/InfoTip';
 
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,6 +28,7 @@ export function Compare() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </Link>
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Compare Costs</h1>
+            <InfoTip text="Every figure on this page is normalised to cost per acre, so a 1-acre plot and a 10-acre plot of the same crop can be compared fairly — a season, crop, or benchmark that cost more in total but covered more land isn't automatically 'worse.'" />
           </div>
           <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Analyze your spending per acre.</p>
         </div>
@@ -166,8 +168,11 @@ function SeasonVsSeasonTab() {
 
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <div className="w-full sm:w-auto">
-          <label htmlFor="category-filter" className="sr-only">Filter by Category</label>
-          <select 
+          <div className="flex items-center gap-2 mb-1.5">
+            <label htmlFor="category-filter" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Filter by Category</label>
+            <InfoTip text="Every column is that season's total recorded spend for a category divided by its own planted acreage, so seasons of different sizes stay comparable. 'Difference' compares only the earliest and latest of the seasons you selected." />
+          </div>
+          <select
             id="category-filter"
             className="w-full sm:w-64 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
             value={selectedCategory}
@@ -179,7 +184,7 @@ function SeasonVsSeasonTab() {
             ))}
           </select>
         </div>
-        <button 
+        <button
           onClick={copyDataToClipboard}
           className="w-full sm:w-auto px-4 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-sm font-bold rounded-xl transition-colors flex items-center justify-center shadow-sm"
         >
@@ -250,62 +255,111 @@ function SeasonVsSeasonTab() {
 // ---------------------------------------------------------------------------
 function CropVsCropTab() {
   const { farm } = useFarm();
-  const { data: result, isLoading } = useQuery({
-    queryKey: ['compareCrops', farm?.id],
-    queryFn: () => compareCrops(farm!.id as number),
+  const [selectedYears, setSelectedYears] = useState<number[]>([]);
+
+  const { data: filterOptions } = useQuery({
+    queryKey: ['seasonOptions', farm?.id],
+    queryFn: () => getSeasonFilterOptions(farm!.id as number),
     enabled: !!farm?.id,
   });
 
-  if (isLoading) return <LoadingSpinner />;
-  if (!result || result.data.length === 0) return <div>No cost data available for crops.</div>;
+  const { data: result, isLoading } = useQuery({
+    queryKey: ['compareCrops', farm?.id, selectedYears],
+    queryFn: () => compareCrops(farm!.id as number, selectedYears),
+    enabled: !!farm?.id,
+  });
 
-  const highest = result.data[0];
-  const takeaway = `${highest.name} is your most expensive crop to grow, averaging GHS ${(highest.cost_per_acre/100).toFixed(0)} per acre.`;
+  const toggleYear = (year: number) => {
+    setSelectedYears((prev) => prev.includes(year) ? prev.filter((y) => y !== year) : [...prev, year]);
+  };
+
+  if (isLoading) return <LoadingSpinner />;
+
+  const yearsLabel = selectedYears.length > 0
+    ? selectedYears.slice().sort((a, b) => b - a).join(', ')
+    : 'every year recorded';
 
   return (
     <div>
-      {result.excluded.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-6 text-sm">
-          <strong>Note:</strong> The following crops were excluded because they have no recorded costs: {result.excluded.join(', ')}
-        </div>
-      )}
-
-      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl mb-8 border border-emerald-100 dark:border-emerald-800/30 text-emerald-900 dark:text-emerald-300 font-medium text-center text-lg">
-        {takeaway}
-      </div>
-
-      <div className="h-[400px] w-full mb-8">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={result.data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="name" style={{ fontSize: '12px' }} />
-            <YAxis label={{ value: 'Total Cost per Acre (GHS)', angle: -90, position: 'insideLeft' }} />
-            <Tooltip formatter={(value: any) => [`GHS ${(Number(value)/100).toFixed(2)}`, 'Cost/Acre']} />
-            <Bar dataKey="cost_per_acre" name="Cost per Acre" fill="#10b981" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b-2 border-gray-200 dark:border-white/10 text-xs uppercase tracking-widest text-gray-500">
-              <th className="pb-3 font-bold px-4">Crop</th>
-              <th className="pb-3 font-bold px-4 text-right">Total Cost per Acre</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.data.map((row: any) => (
-              <tr key={row.name} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5">
-                <td className="py-4 px-4 font-bold">{row.name}</td>
-                <td className="py-4 px-4 text-right font-medium text-gray-900 dark:text-gray-100">
-                  <Money pesewas={row.cost_per_acre} />
-                </td>
-              </tr>
+      <div className="flex items-start gap-2 mb-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Filter by year</span>
+            <InfoTip text="Each crop's number is the weighted cost per acre across every one of your seasons that matches the year filter below — combining several seasons of the same crop, not just the most recent one. Leave no year selected to include all of them." />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions?.years.map((y) => (
+              <button
+                key={y}
+                onClick={() => toggleYear(y)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
+                  selectedYears.includes(y)
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-white dark:bg-transparent border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {y}
+              </button>
             ))}
-          </tbody>
-        </table>
+            {selectedYears.length > 0 && (
+              <button onClick={() => setSelectedYears([])} className="px-3 py-1.5 rounded-lg text-sm font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline decoration-gray-300 underline-offset-4">
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
       </div>
+
+      {!result || result.data.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">No cost data available for crops in {yearsLabel}.</div>
+      ) : (
+        <>
+          {result.excluded.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-6 text-sm">
+              <strong>Note:</strong> The following crops were excluded because they have no recorded costs in {yearsLabel}: {result.excluded.join(', ')}
+            </div>
+          )}
+
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl mb-8 border border-emerald-100 dark:border-emerald-800/30 text-emerald-900 dark:text-emerald-300 font-medium text-center text-lg">
+            {result.data[0].name} is your most expensive crop to grow, averaging GHS {(result.data[0].cost_per_acre / 100).toFixed(0)} per acre across {yearsLabel}.
+          </div>
+
+          <div className="h-[400px] w-full mb-8">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={result.data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis dataKey="name" style={{ fontSize: '12px' }} />
+                <YAxis label={{ value: 'Total Cost per Acre (GHS)', angle: -90, position: 'insideLeft' }} />
+                <Tooltip formatter={(value: any, _n: any, item: any) => [`GHS ${(Number(value)/100).toFixed(2)}`, `Cost/Acre (${item?.payload?.season_count ?? '?'} season${item?.payload?.season_count === 1 ? '' : 's'})`]} />
+                <Bar dataKey="cost_per_acre" name="Cost per Acre" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b-2 border-gray-200 dark:border-white/10 text-xs uppercase tracking-widest text-gray-500">
+                  <th className="pb-3 font-bold px-4">Crop</th>
+                  <th className="pb-3 font-bold px-4 text-right">Seasons</th>
+                  <th className="pb-3 font-bold px-4 text-right">Cost per Acre</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.data.map((row: any) => (
+                  <tr key={row.name} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5">
+                    <td className="py-4 px-4 font-bold">{row.name}</td>
+                    <td className="py-4 px-4 text-right font-medium text-gray-500 dark:text-gray-400">{row.season_count}</td>
+                    <td className="py-4 px-4 text-right font-medium text-gray-900 dark:text-gray-100">
+                      <Money pesewas={row.cost_per_acre} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -357,8 +411,11 @@ function BenchmarkTab() {
   return (
     <div>
       <div className="mb-6">
-        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Select a season to check</label>
-        <select 
+        <div className="flex items-center gap-2 mb-2">
+          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Select a season to check</label>
+          <InfoTip text="Compares this season's recorded spend per acre against the standard MoFA-derived benchmark for the same crop, category by category — the same comparison the Estimate Report uses to decide what to flag. 'Other' has no benchmark, since it isn't a specific input." />
+        </div>
+        <select
           className="w-full sm:w-64 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm"
           value={selectedSeason || ''}
           onChange={(e) => setSelectedSeason(Number(e.target.value))}

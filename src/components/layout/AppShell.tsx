@@ -68,7 +68,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex-1 flex flex-col md:flex-row">
       
       {/* Mobile Header */}
-      <header className="md:hidden bg-white dark:bg-[#0a0a0a] shadow-[0_4px_20px_rgb(0,0,0,0.03)] z-20 relative border-b border-transparent dark:border-white/5">
+      <header className="print-hide md:hidden bg-white dark:bg-[#0a0a0a] shadow-[0_4px_20px_rgb(0,0,0,0.03)] z-20 relative border-b border-transparent dark:border-white/5">
         <div className="px-4 h-16 flex items-center justify-between">
           <div className="flex items-center">
             <img src="/logo.png" alt="FarmPilot Logo" className="h-8 w-auto object-contain" />
@@ -94,7 +94,7 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex flex-col bg-white dark:bg-[#0a0a0a] shadow-[4px_0_24px_rgb(0,0,0,0.02)] z-10 sticky top-0 h-screen overflow-y-auto border-r border-transparent dark:border-white/5 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      <aside className={`print-hide hidden md:flex flex-col bg-white dark:bg-[#0a0a0a] shadow-[4px_0_24px_rgb(0,0,0,0.02)] z-10 sticky top-0 h-screen overflow-y-auto border-r border-transparent dark:border-white/5 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
         <div className={`p-4 flex items-center mb-6 relative ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed && <img src="/logo.png" alt="FarmPilot Logo" className="h-8 w-auto object-contain" />}
           {isCollapsed && <img src="/icon.png" alt="FP" className="h-8 w-auto object-contain" onError={(e) => {
@@ -140,6 +140,21 @@ export function AppShell({ children }: AppShellProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
             {!isCollapsed && <span>Guides</span>}
+          </Link>
+
+          <Link to="/compare" title={isCollapsed ? "Compare" : undefined} className={`flex items-center px-3 py-3 rounded-xl font-bold group transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive('/compare') ? 'bg-[#1B5E20]/10 text-[#1B5E20] dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+            <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} ${isActive('/compare') ? 'text-[#1B5E20] dark:text-emerald-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            {!isCollapsed && <span>Compare</span>}
+          </Link>
+
+          <Link to="/lab" title={isCollapsed ? "Lab" : undefined} className={`flex items-center px-3 py-3 rounded-xl font-bold group transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive('/lab') ? 'bg-[#1B5E20]/10 text-[#1B5E20] dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+            <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} ${isActive('/lab') ? 'text-[#1B5E20] dark:text-emerald-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.75 3v4.5m4.5-4.5v4.5m-8.5 0h12.5l-2.056 8.223A3 3 0 0113.278 18h-2.556a3 3 0 01-2.916-2.277L5.75 7.5z" />
+            </svg>
+            {!isCollapsed && <span>Lab</span>}
+            {!isCollapsed && <span className="ml-auto text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">New</span>}
           </Link>
 
         </nav>
@@ -204,7 +219,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 overflow-y-auto mb-16 md:mb-0 relative flex flex-col">
-        <div className="hidden md:flex justify-end mb-6 w-full shrink-0">
+        <div className="print-hide hidden md:flex justify-end mb-6 w-full shrink-0">
           <div className="flex items-center gap-3 bg-white/80 dark:bg-black/40 backdrop-blur-md p-1.5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm">
             <ThemeToggle />
             <NotificationDropdown align="right" />
@@ -215,7 +230,7 @@ export function AppShell({ children }: AppShellProps) {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#121212] border-t border-gray-200 dark:border-white/5 pb-safe z-30">
+      <nav className="print-hide md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#121212] border-t border-gray-200 dark:border-white/5 pb-safe z-30">
         <div className="flex items-center justify-around h-16 px-2">
           <Link to="/" className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive('/') ? 'text-[#1B5E20] dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -19,13 +19,22 @@ Password: FarmPilotDemo2026!
 ## How it works
 
 A farmer records their farm, a growing season, and what they spend on it —
-either a flat total or a quantity and rate. FarmPilot compares that
-spending, category by category, against an independent benchmark built
-from MoFA input-price data and per-acre application norms, flags any
-category more than 30% above the expected rate, and gives a specific,
-sourced suggestion for reducing it. A farmer with no history yet still
-gets a usable estimate from the benchmark alone — the whole design exists
-to make that true.
+either a flat total or a quantity and rate — with up to three previous
+years back-fillable per crop at season creation, so estimates can use
+real history from day one. FarmPilot compares that spending, category by
+category, against an independent benchmark built from MoFA input-price
+data and per-acre application norms, flags any category more than 30%
+above the expected rate, and gives a specific, sourced suggestion for
+reducing it. A farmer with no history yet still gets a usable estimate
+from the benchmark alone — the whole design exists to make that true.
+
+Beyond that core loop: **Cost Lab** (`/lab`) is a what-if sandbox for
+trying different cost assumptions before recording anything for real;
+**Category Budgets** let a farmer cap their own spend per category per
+season, independent of the benchmark, with a live warning while
+recording a cost that would exceed it; the Estimate Report and Costs
+pages can each be downloaded as a PDF; and an AI assistant (FarmBot)
+answers questions using the farmer's real recorded and flagged data.
 
 ## Documentation
 
@@ -36,7 +45,7 @@ Everything about the project — not just the code — lives in `docs/`:
 | [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules |
 | [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model |
 | [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
-| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 21-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 27-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
 | [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |
 | `docs/adr/` | Additional standalone ADRs |
@@ -57,7 +66,7 @@ farmpilot/
 │   ├── lib/                  supabase client, database.types.ts (generated), money/categories helpers
 │   └── pages/                One file per route
 ├── supabase/
-│   ├── migrations/           Numbered, applied-in-order schema history (001–013)
+│   ├── migrations/           Numbered, applied-in-order schema history (001–015)
 │   └── demo_seed.sql         Reproducible demonstration account — see docs/…Report.md Appendix D
 ├── scripts/
 │   ├── test_crud.ts          Manual end-to-end CRUD smoke test
@@ -122,7 +131,7 @@ or `npx supabase db query --linked -f <file>`) rather than
 reflect them — see `FarmPilot_SDD.md` §16.3.
 
 **Setting up a brand-new Supabase project from scratch:** run every file
-in `supabase/migrations/` in numeric order (001 → 013) — either paste
+in `supabase/migrations/` in numeric order (001 → 015) — either paste
 each into the Supabase Dashboard's SQL Editor one at a time, or, once
 `npx supabase login` and `npx supabase link --project-ref <your-ref>`
 are done, run each with `npx supabase db query --linked -f <file>`. They

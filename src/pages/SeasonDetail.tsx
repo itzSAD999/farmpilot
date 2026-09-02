@@ -8,10 +8,12 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Cartes
 import { getSeason, completeSeason, updateSeason, deleteSeason } from '../api/seasons';
 import { listCosts, getExpectedCategoriesForCrop, CostCategory } from '../api/costs';
 import { generateEstimate } from '../api/estimates';
+import { listBudgetsForSeason, setCategoryBudget, deleteCategoryBudget } from '../api/budgets';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { CATEGORIES } from '../lib/categories';
 import { CostList } from '../components/features/CostList';
 import { Money } from '../components/ui/Money';
+import { InfoTip } from '../components/ui/InfoTip';
 import { useOnline } from '../hooks/useOnline';
 import { useAuth } from '../hooks/useAuth';
 const closeSeasonSchema = z.object({
@@ -67,6 +69,31 @@ export function SeasonDetail() {
     queryKey: ['expectedCategories', season?.crop_id],
     queryFn: () => getExpectedCategoriesForCrop(season!.crop_id),
     enabled: !!season?.crop_id,
+  });
+
+  const { data: budgets } = useQuery({
+    queryKey: ['categoryBudgets', seasonId],
+    queryFn: () => listBudgetsForSeason(seasonId),
+    enabled: isReady,
+  });
+
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [budgetCategory, setBudgetCategory] = useState<CostCategory | ''>('');
+  const [budgetAmount, setBudgetAmount] = useState('');
+
+  const saveBudgetMutation = useMutation({
+    mutationFn: () => setCategoryBudget(seasonId, budgetCategory as CostCategory, Math.round(Number(budgetAmount) * 100)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categoryBudgets', seasonId] });
+      setIsBudgetModalOpen(false);
+      setBudgetCategory('');
+      setBudgetAmount('');
+    },
+  });
+
+  const deleteBudgetMutation = useMutation({
+    mutationFn: (budgetId: number) => deleteCategoryBudget(budgetId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categoryBudgets', seasonId] }),
   });
 
   const deleteSeasonMutation = useMutation({
@@ -347,11 +374,73 @@ export function SeasonDetail() {
                     </div>
                   </div>
                 )}
-                
+
+                {/* Category Budgets — a farmer's own spending caps, separate from the benchmark */}
+                {!season.is_complete && (
+                  <div className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-[0_8px_40px_rgb(0,0,0,0.03)] mb-8 animate-fade-in-up">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Category Budgets</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Your own spending caps for this season — separate from the standard benchmark.</p>
+                      </div>
+                      <button
+                        onClick={() => setIsBudgetModalOpen(true)}
+                        className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-3 py-2 rounded-xl transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        Set a budget
+                      </button>
+                    </div>
+
+                    {!budgets || budgets.length === 0 ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500 italic">No budgets set yet — tap "Set a budget" to cap what you're willing to spend on a category, e.g. labour.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {budgets.map((b) => {
+                          const pct = Math.min(100, b.pct_used ?? 0);
+                          return (
+                            <div key={b.id}>
+                              <div className="flex justify-between items-end mb-1.5">
+                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{CATEGORIES[b.category].label}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-bold ${b.is_over_budget ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    <Money pesewas={b.spent_pesewas} /> / <Money pesewas={b.limit_pesewas} />
+                                  </span>
+                                  <button
+                                    onClick={() => deleteBudgetMutation.mutate(b.id)}
+                                    className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 transition-colors"
+                                    title="Remove budget"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="h-2.5 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${b.is_over_budget ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              {b.is_over_budget && (
+                                <p className="text-xs font-bold text-red-500 mt-1">
+                                  <Money pesewas={b.spent_pesewas - b.limit_pesewas} /> over budget
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Cost Distribution Chart */}
                 {costChartData.length > 0 && (
                   <div className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-[0_8px_40px_rgb(0,0,0,0.03)] mb-8 animate-fade-in-up">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Cost Distribution</h3>
+                    <div className="flex items-center gap-2 mb-6">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Cost Distribution</h3>
+                      <InfoTip text="What you've recorded so far this season, by category — this is your actual spend, not the benchmark or estimate. Generate an estimate below to see how these figures compare to the expected rate." />
+                    </div>
                     <div className="h-64 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={costChartData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -552,6 +641,61 @@ export function SeasonDetail() {
                 </button>
                 <button type="submit" disabled={editSeasonMutation.isPending} className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">
                   {editSeasonMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Set a Budget Modal */}
+    {isBudgetModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+        <div className="absolute inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => !saveBudgetMutation.isPending && setIsBudgetModalOpen(false)}></div>
+
+        <div className="relative w-full max-w-md bg-white dark:bg-[#121212] rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-full border border-transparent dark:border-white/5">
+          <div className="p-8 overflow-y-auto">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Set a Budget</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Cap what you're willing to spend on a category this season — you'll see a warning if you go over.</p>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!budgetCategory || !budgetAmount || Number(budgetAmount) <= 0) return;
+              saveBudgetMutation.mutate();
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                <select
+                  value={budgetCategory}
+                  onChange={(e) => setBudgetCategory(e.target.value as CostCategory)}
+                  required
+                  className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                >
+                  <option value="" disabled>Select a category...</option>
+                  {(Object.keys(CATEGORIES) as CostCategory[])
+                    .filter((cat) => !budgets?.some((b) => b.category === cat))
+                    .map((cat) => (
+                      <option key={cat} value={cat}>{CATEGORIES[cat].label}</option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Limit (GHS)</label>
+                <input
+                  type="number" min="0.01" step="0.01" required
+                  value={budgetAmount}
+                  onChange={(e) => setBudgetAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setIsBudgetModalOpen(false)} className="flex-1 py-3 px-4 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saveBudgetMutation.isPending} className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">
+                  {saveBudgetMutation.isPending ? 'Saving...' : 'Set Budget'}
                 </button>
               </div>
             </form>

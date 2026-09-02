@@ -134,7 +134,8 @@ export async function signOut() {
  * Fetches the profile of the currently authenticated user.
  */
 export async function getProfile(): Promise<Profile | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -155,7 +156,8 @@ export async function getProfile(): Promise<Profile | null> {
  * Links a real email address to an existing phone-based account.
  */
 export async function linkEmail(email: string) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error('You must be signed in to link an email.');
 
   // Note: True email linking would require updating the Supabase Auth email 
@@ -183,7 +185,8 @@ export async function linkEmail(email: string) {
  * Updates the user's preferred language.
  */
 export async function updateLanguage(lang: 'en' | 'tw' | 'dag') {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error('You must be signed in to update your language preference.');
 
   const { error } = await supabase
@@ -202,7 +205,8 @@ export async function updateLanguage(lang: 'en' | 'tw' | 'dag') {
  * Updates the current user's profile.
  */
 export async function updateProfile(updates: Partial<Profile>) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error('You must be signed in to update your profile.');
 
   const { error } = await supabase

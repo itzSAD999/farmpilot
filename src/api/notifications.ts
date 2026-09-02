@@ -12,7 +12,8 @@ export type Notification = {
 };
 
 export async function getNotifications(): Promise<Notification[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -35,7 +36,8 @@ export async function markNotificationAsRead(id: string) {
 }
 
 export async function markAllNotificationsAsRead() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return;
 
   const { error } = await supabase

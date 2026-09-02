@@ -70,7 +70,8 @@ export async function getFarm(): Promise<Farm | null> {
  * Creates a new farm for the current user.
  */
 export async function createFarm(input: CreateFarmInput): Promise<Farm> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error('You must be signed in to create a farm.');
 
   // Client-side validation for area
@@ -98,7 +99,8 @@ export async function createFarm(input: CreateFarmInput): Promise<Farm> {
  * Updates an existing farm's details.
  */
 export async function updateFarm(id: string | number, input: UpdateFarmInput): Promise<Farm> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error('You must be signed in to update your farm.');
 
   if (input.total_area_acres !== undefined && input.total_area_acres <= 0) {

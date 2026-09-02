@@ -425,7 +425,7 @@ $$;
 -- The whole results screen is one select against this.
 -- ============================================================
 
-create or replace view v_estimate_report as
+create or replace view v_estimate_report with (security_invoker = true) as
 select
   e.id                as estimate_id,
   e.season_id,

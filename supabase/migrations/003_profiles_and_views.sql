@@ -135,7 +135,7 @@ create trigger seasons_touch before update on seasons
 -- that rollup so the dashboard is one query.
 -- ============================================================
 
-create or replace view v_farm_summary as
+create or replace view v_farm_summary with (security_invoker = true) as
 select
   f.id                                as farm_id,
   f.user_id,
@@ -169,7 +169,7 @@ group by f.id, f.user_id, f.name, f.total_area_acres;
 
 
 -- Per-crop rollup: "what does each crop cost me to run?"
-create or replace view v_crop_summary as
+create or replace view v_crop_summary with (security_invoker = true) as
 select
   s.farm_id,
   f.user_id,

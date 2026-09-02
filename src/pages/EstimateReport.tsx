@@ -10,6 +10,7 @@ import { pesewasToCedis, cedisToPesewas } from '../lib/money';
 import { CATEGORIES, ESSENTIAL_CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
 import { AddCostForm } from '../components/domain/AddCostForm';
+import { InfoTip } from '../components/ui/InfoTip';
 
 export function EstimateReport() {
   const { estimateId } = useParams<{ estimateId: string }>();
@@ -353,7 +354,10 @@ export function EstimateReport() {
         {/* Cost Breakdown */}
         <div className={`${flaggedLines.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'} print:col-span-12`}>
           <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 print:shadow-none print:border-none print:p-0">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-10 print:text-black">Where Your Money Goes</h2>
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-10 print:text-black flex items-center gap-2">
+              Where Your Money Goes
+              <InfoTip text="'Recorded' categories are exactly what you've entered this season; 'Predicted' ones are a prediction — your own history if you have it for this crop, otherwise the standard benchmark — that will be replaced the moment you record something real for that category." />
+            </h2>
             
             <div className="space-y-8 print:space-y-4">
               {sortedLines.map((line) => {
@@ -471,6 +475,7 @@ export function EstimateReport() {
           <h2 className="text-sm font-bold text-orange-500 uppercase tracking-widest px-2 flex items-center mb-6 print:text-black">
             <svg className="w-5 h-5 mr-2 print:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             Where You Can Save
+            <InfoTip className="ml-2" text="A category is flagged here only once you've actually recorded a real cost for it that comes in more than 30% above the standard benchmark rate — a still-predicted category is never flagged, since there's nothing real to compare yet." />
           </h2>
           
           {flaggedLines.length === 0 ? (

@@ -29,23 +29,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userRef.current = user;
   }, [user]);
 
-  const loadProfileQuietly = useCallback(async (_u?: User) => {
+  const applySessionUser = useCallback(async (authUser: User | null) => {
+    if (!authUser) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+    setUser(authUser);
     try {
       const p = await authApi.getProfile();
+      if (!p) {
+        // If the database has no profile for this user, it usually means 
+        // the user was deleted on the backend but the frontend still has their token.
+        // We must forcefully clear local storage to escape the 401/406 loop.
+        console.warn('Profile not found for authenticated user. Assuming user was deleted.');
+        localStorage.clear(); // Nuclear option to clear the broken supabase auth keys
+        setUser(null);
+        setProfile(null);
+        window.location.reload();
+        return;
+      }
       setProfile(p);
-    } catch (e) {
-      console.error("Profile load error:", e);
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+      localStorage.clear();
+      setUser(null);
+      setProfile(null);
+      window.location.reload();
     }
   }, []);
-
-  const applySessionUser = useCallback((nextUser: User | null) => {
-    setUser(nextUser);
-    if (nextUser) {
-      setTimeout(() => loadProfileQuietly(nextUser), 0);
-    } else {
-      setProfile(null);
-    }
-  }, [loadProfileQuietly]);
 
   const signInWithPhone = useCallback(async (phone: string, password: string) => {
     const data = await authApi.signInWithPhone(phone, password);

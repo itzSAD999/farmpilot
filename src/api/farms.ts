@@ -80,17 +80,23 @@ export async function getFarm(userId: string): Promise<Farm | null> {
  * Creates a new farm for the current user.
  */
 export async function createFarm(userId: string, input: CreateFarmInput): Promise<Farm> {
-
   // Client-side validation for area
   if (input.total_area_acres <= 0) {
     throw new Error("Farm area must be greater than zero acres.");
+  }
+
+  // Force the client to verify and refresh the session with the server 
+  // immediately before the PostgREST call to prevent 401 Unauthorized errors.
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error('Your session has expired. Please refresh the page and sign in again.');
   }
 
   const { data, error } = await supabase
     .from("farms")
     .insert({
       ...input,
-      user_id: userId,
+      user_id: user.id // Always use the guaranteed authenticated user ID
     })
     .select()
     .single();

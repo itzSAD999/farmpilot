@@ -344,6 +344,12 @@ export function FarmSetup() {
                     className="w-40 text-center text-6xl font-light text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-gray-200 dark:border-white/20 pb-4 focus:outline-none focus:border-[#1B5E20] transition-colors placeholder:text-gray-300 dark:placeholder:text-gray-600"
                     {...register("total_area_acres", { valueAsNumber: true })}
                     autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleNext();
+                      }
+                    }}
                   />
                   <span className="ml-4 text-3xl font-light text-gray-500 dark:text-gray-400">
                     acres

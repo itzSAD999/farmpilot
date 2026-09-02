@@ -525,7 +525,7 @@ export function Dashboard() {
                 
                 <div className="relative z-10 h-full flex flex-col justify-between">
                   <div>
-                    <h3 className="font-bold text-xl mb-2">Need Guidance?</h3>
+                    <h3 className="font-bold text-xl mb-2">AI Guidance</h3>
                     <p className="text-sm text-white/60 leading-relaxed">
                       Check out the recommended best practices for your current active seasons to maximize yield.
                     </p>
@@ -534,7 +534,7 @@ export function Dashboard() {
                   <button 
                     onClick={() => navigate('/guides')}
                     className="w-full mt-6 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-between group">
-                    <span>View Guides</span>
+                    <span>Get more guidance</span>
                     <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                   </button>
                 </div>

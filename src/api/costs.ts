@@ -115,3 +115,35 @@ export async function getExpectedCategoriesForCrop(cropId: number): Promise<Cost
   if (error) throw handleCostError(error);
   return Array.from(new Set(data.map(d => d.category as CostCategory)));
 }
+
+/**
+ * Fetch detailed cost history for all seasons of a farm, to provide context to the AI.
+ */
+export async function getDetailedCostsForFarm(farmId: number) {
+  const { data, error } = await supabase
+    .from('seasons')
+    .select(`
+      id,
+      year,
+      season_window,
+      is_complete,
+      crops ( name ),
+      season_costs (
+        category,
+        amount_pesewas,
+        description
+      )
+    `)
+    .eq('farm_id', farmId);
+
+  if (error) throw handleCostError(error);
+  
+  return data.map((season: any) => ({
+    seasonId: season.id,
+    cropName: season.crops?.name || 'Unknown Crop',
+    year: season.year,
+    seasonWindow: season.season_window,
+    isComplete: season.is_complete,
+    costs: season.season_costs || [],
+  }));
+}

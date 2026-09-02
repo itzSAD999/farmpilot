@@ -4,6 +4,7 @@ import { useFarm } from '../../hooks/useFarm';
 import { listSeasons } from '../../api/seasons';
 import { getFarmSummary } from '../../api/dashboard';
 import { chatWithFarmBot, Message } from '../../api/ai';
+import { getDetailedCostsForFarm } from '../../api/costs';
 
 export function FarmBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +28,12 @@ export function FarmBot() {
     enabled: !!farm?.id,
   });
 
+  const { data: detailedCosts } = useQuery({
+    queryKey: ['farm_detailed_costs', farm?.id],
+    queryFn: () => getDetailedCostsForFarm(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+
   // Construct system prompt when context loads
   const systemPrompt = React.useMemo(() => {
     let prompt = `You are FarmBot, an expert agronomist AI assistant for FarmPilot. You advise Ghanaian smallholder farmers on how to reduce costs and improve yields.\n\n`;
@@ -42,19 +49,31 @@ export function FarmBot() {
     if (seasons && seasons.length > 0) {
       prompt += `\nSeasons tracked:\n`;
       seasons.forEach((s: any) => {
-        prompt += `- ${s.crop_name} (${s.season_window} ${s.year}), ${s.area_planted_acres} acres. ${s.is_complete ? 'Completed.' : 'Active.'} Recorded cost: GHS ${(s.total_cost_pesewas / 100).toFixed(2)}\n`;
+        prompt += `- ${s.crop_name} (${s.season_window} ${s.year}), ${s.area_planted_acres} acres. ${s.is_complete ? 'Completed.' : 'Active.'} Recorded total cost: GHS ${(s.total_cost_pesewas / 100).toFixed(2)}\n`;
+      });
+    }
+
+    if (detailedCosts && detailedCosts.length > 0) {
+      prompt += `\nDetailed Expense History (Itemized costs):\n`;
+      detailedCosts.forEach((season: any) => {
+        if (season.costs && season.costs.length > 0) {
+          prompt += `[Season: ${season.cropName} - ${season.seasonWindow} ${season.year}]\n`;
+          season.costs.forEach((c: any) => {
+            prompt += `  - ${c.category}: GHS ${(c.amount_pesewas / 100).toFixed(2)}${c.description ? ` (${c.description})` : ''}\n`;
+          });
+        }
       });
     }
 
     prompt += `\nGuidelines for your responses:
 - Keep answers concise and extremely practical.
 - Speak in plain English, avoiding overly technical jargon.
-- If they ask about costs, reference their actual data provided above.
+- If they ask about costs or where they are overspending, read their 'Detailed Expense History' above to provide specific, exact numbers and categories.
 - Mention Ghanaian agricultural context (e.g., MoFA subsidy, two seasons, specific local practices).
 - Format using simple markdown for readability.`;
 
     return prompt;
-  }, [farm, summary, seasons]);
+  }, [farm, summary, seasons, detailedCosts]);
 
   // Initialize with greeting
   useEffect(() => {

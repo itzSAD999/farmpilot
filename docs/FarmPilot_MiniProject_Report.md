@@ -408,13 +408,13 @@ FarmPilot was built to answer two questions a smallholder farmer cannot currentl
 ## References
 
 1. Ministry of Food and Agriculture (Ghana), *Agriculture in Ghana: Facts and Figures*, Statistics, Research and Information Directorate (SRID), 2018 edition — source of national average crop yields (Table 4.6), benchmark input prices (Table 7.3), and fertiliser subsidy price structure (Table 7.5) used throughout the benchmark layer (§3.3.2, §4.2.3).
-2. Esoko Networks — market information and agronomic SMS platform. *[Insert full citation / URL per department's required style before submission.]*
-3. AgroCenta — farmer aggregation and market-access platform. *[Insert full citation / URL.]*
-4. Farmerline — Mergdata advisory platform. *[Insert full citation / URL.]*
-5. Supabase Inc., *Supabase Documentation* — Auth, Row Level Security, and PostgREST reference material used throughout the implementation. *[Insert URL and access date.]*
+2. Esoko Networks — market information and agronomic SMS platform. *[Insert full citation / URL — not supplied by the team; add before submission.]*
+3. AgroCenta — farmer aggregation and market-access platform. Available at: https://agrocenta.com/ (Accessed: *[insert access date]*).
+4. Farmerline — Mergdata advisory platform. Available at: https://farmerline.co/ (Accessed: *[insert access date]*).
+5. Supabase Inc., *Supabase Documentation* — Auth, Row Level Security, and PostgREST reference material used throughout the implementation. Available at: https://supabase.com/docs (Accessed: *[insert access date]*).
 6. PostgreSQL Global Development Group, *PostgreSQL 17 Documentation*, chapters on Row Security Policies and PL/pgSQL. *[Insert URL and access date.]*
 
-> **Note to the team before submission:** items 2–6 are drawn from general, verifiable knowledge of these named, real platforms and tools, but the exact citation details (author, publication venue, access date, page numbers) must be filled in against the primary sources directly and checked against the department's required citation style (APA/IEEE) before this report is submitted. Do not submit with the bracketed placeholders still present.
+> **Note to the team before submission:** the access dates above and the Esoko and PostgreSQL URLs still need to be filled in, and every entry's exact citation format must be checked against the department's required style (APA/IEEE) before this report is submitted.
 
 ---
 
@@ -454,7 +454,7 @@ A permanent, fully-populated demo account is seeded on the live database for pre
 
 | | |
 |---|---|
-| **URL** | *[insert the deployed Vercel URL before submission]* |
+| **URL** | https://farmpilot-chi.vercel.app/signin |
 | **Email** | `kwame.mensah@farmpilot.demo` |
 | **Password** | `FarmPilotDemo2026!` |
 

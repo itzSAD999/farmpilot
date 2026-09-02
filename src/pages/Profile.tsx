@@ -23,6 +23,7 @@ export function Profile() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const deleteInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -107,8 +108,9 @@ export function Profile() {
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== 'deletemyfarm') return;
+    if (deleteConfirmation !== 'deletemyfarm' || isDeleting) return;
     
+    setIsDeleting(true);
     try {
       if (user?.id) {
         // Attempt to call the RPC function that actually deletes the auth.users row
@@ -120,10 +122,12 @@ export function Profile() {
           await supabase.from('farms').delete().eq('user_id', user.id);
         }
       }
+      setIsDeleteModalOpen(false);
       await signOut();
     } catch (e) {
       console.error('Failed to delete account data:', e);
       alert('Failed to delete account data. Please try again.');
+      setIsDeleting(false);
     }
   };
 
@@ -426,7 +430,8 @@ export function Profile() {
                 value={deleteConfirmation}
                 onChange={(e) => setDeleteConfirmation(e.target.value)}
                 placeholder="deletemyfarm"
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all dark:text-white font-mono"
+                disabled={isDeleting}
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all dark:text-white font-mono disabled:opacity-50"
               />
             </div>
             
@@ -436,16 +441,21 @@ export function Profile() {
                   setIsDeleteModalOpen(false);
                   setDeleteConfirmation('');
                 }}
-                className="flex-1 py-3 px-4 font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-xl transition-colors"
+                disabled={isDeleting}
+                className="flex-1 py-3 px-4 font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-xl transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmation !== 'deletemyfarm'}
-                className="flex-1 py-3 px-4 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={deleteConfirmation !== 'deletemyfarm' || isDeleting}
+                className="flex-1 py-3 px-4 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
               >
-                Delete All
+                {isDeleting ? (
+                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                  'Delete All'
+                )}
               </button>
             </div>
           </div>

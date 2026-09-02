@@ -748,6 +748,93 @@ showing its one recorded entry and +33% benchmark variance.
 
 ---
 
+### Issue #31 — Farm-wide Costs page category cards had the same gap as Issue #30
+**Severity:** Low (a direct follow-up report: "the cost breakdown detail
+page for each cost you haven't yet implemented it"). Issue #30 fixed
+`CostList.tsx`'s per-season category cards, but the separate,
+farm-wide `/costs` page (`CostsOverview.tsx`) has its own "By Category"
+list aggregating across every season, and its cards were still plain,
+non-interactive `<div>`s.
+
+**Fix.** Each category card is now a toggle: tapping it expands an
+inline list of every individual cost entry in that category across all
+seasons (reusing data already fetched for the page — no extra query),
+each showing which season it belongs to and linking to that season's
+`/season/:id/category/:category` detail page from Issue #30.
+
+**Evidence.** `npx tsc -b --noEmit` clean; live walkthrough expanding
+"Fertiliser" on the demo account shows both its entries (open-market
+2026, subsidised 2025) with a working link to
+`/season/57/category/fertiliser`.
+
+---
+
+### Issue #32 — More InfoTip coverage requested directly
+**Severity:** N/A (polish, requested directly: "add tooltips where
+needed"). Compare, Costs, and Season Detail already had `InfoTip`
+explainers; the Estimate Report (the core analysis page) and the
+Dashboard's headline numbers didn't.
+
+**Fix.** Added `InfoTip` to the Estimate Report's "Where Your Money
+Goes" (explaining Recorded vs Predicted) and "Where You Can Save"
+(explaining exactly when a category is flagged), and to the Dashboard's
+"Total Possible Saving," "Spend by Crop," and "Season Status" cards.
+
+**Evidence.** `npx tsc -b --noEmit` clean.
+
+---
+
+### Issue #33 — Real GitHub 2FA recovery codes were committed and pushed to the repository
+**Severity:** Critical (a genuine secret-exposure incident, not a code
+defect). While reorganising the project's file structure, a file
+`docs/github-recovery-codes.txt` was found tracked in the repository —
+real-looking GitHub two-factor recovery codes, already pushed to
+`origin/main` in an earlier commit (`044b8ce`).
+
+**Response (two stages, both required, handled in that order):**
+1. **Immediate:** the user was told directly, before any other work
+   continued, to regenerate their GitHub 2FA recovery codes themselves —
+   removing the file from the repository does nothing to a code that has
+   already been exposed; only regenerating it invalidates the old ones.
+   This is an account-level action only the account owner can take.
+2. **Repository remediation**, explicitly split into two decisions
+   because they carry very different risk: (a) untrack and delete the
+   file from the current working tree immediately (`git rm --cached`,
+   plus a `.gitignore` rule against `*recovery-codes*`, `*.pem`, `*.key`
+   to prevent recurrence) — done the same session; (b) actually purge
+   the file from every commit in history — deferred at the time,
+   pending the user's explicit go-ahead, since it requires rewriting
+   every commit hash on `main` and force-pushing, which is destructive
+   to anyone else's clone. Completed only once the user later said
+   explicitly to proceed.
+
+**Fix (history rewrite).** No `git-filter-repo`/Python was available in
+this environment, so the git-native fallback was used: `git filter-branch
+--index-filter "git rm --cached --ignore-unmatch docs/github-recovery-codes.txt"
+--prune-empty -- --all`, run across every local ref. A second branch,
+`cursor/setup-map-idle-dark-mode`, shared the same early history and was
+found to carry the same exposure — confirmed via `git log --oneline
+<branch> -- <path>` before deciding how to handle it — and was rewritten
+and force-pushed alongside `main` once the user separately confirmed
+they wanted that branch cleaned too (rather than left as-is or deleted).
+Backup refs (`refs/original/`) were removed and `git gc --prune=now
+--aggressive` run locally before force-pushing, so the object no longer
+exists even in the local repository, not just unreferenced.
+
+**Evidence.** Before push: `git log --all --oneline -- docs/github-
+recovery-codes.txt` returned no results on either rewritten branch.
+After `git push origin --force` to both `main` and
+`cursor/setup-map-idle-dark-mode`: `git fetch origin` followed by the
+same `git log --all` check against `origin/*` confirmed zero commits
+reference the file on the remote either.
+
+**Lasting note for anyone else with a clone of this repository:** commit
+hashes on both branches changed as of this rewrite. A prior clone's
+`main` will not fast-forward — it needs to be re-fetched and reset to
+the new history (or re-cloned) rather than merged.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table. Full evidence for

@@ -10,6 +10,7 @@ import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Money } from '../components/ui/Money';
 import { WeeklyCatchUp } from '../components/features/WeeklyCatchUp';
 import { AddCostForm } from '../components/domain/AddCostForm';
+import { InfoTip } from '../components/ui/InfoTip';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -297,6 +298,7 @@ export function Dashboard() {
                     <div className="flex items-center mb-3">
                       <svg className="w-5 h-5 text-emerald-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       <h3 className="text-emerald-50 text-sm font-bold uppercase tracking-widest">Total Possible Saving</h3>
+                      <InfoTip className="ml-1.5" text="The sum of every flagged category's possible saving across all your active seasons — a category is only flagged once you've actually recorded a cost that comes in over 30% above the standard benchmark rate." />
                     </div>
                     <div className="text-5xl font-light tracking-tighter text-white">
                       <Money pesewas={Number(farmSummary.total_possible_saving_pesewas)} />
@@ -317,7 +319,10 @@ export function Dashboard() {
               {cropsSummary && cropsSummary.length > 0 && (
                 <div className="bg-white dark:bg-white/5 rounded-[32px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 flex flex-col">
                   <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/10 pb-4">
-                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Spend by Crop</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Spend by Crop</h3>
+                      <InfoTip text="Each slice is a crop's share of total recorded spend across every season you've tracked for it — not per-acre, so a bigger plot naturally shows as a bigger slice. See Compare > Crop vs Crop for the per-acre view." />
+                    </div>
                     <Link to="/compare?tab=crops" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold py-2 px-3 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center">
                       Full Comparison
                     </Link>
@@ -361,7 +366,10 @@ export function Dashboard() {
               {seasons && seasons.length > 0 && (
                 <div className="bg-white dark:bg-white/5 rounded-[32px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 flex flex-col">
                   <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/10 pb-4">
-                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Season Status</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-xl">Season Status</h3>
+                      <InfoTip text="How many of your seasons are still active (recording costs) versus already closed. Closing a season locks in its figures as history for future estimates of the same crop." />
+                    </div>
                     <Link to="/seasons" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold py-2 px-3 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center">
                       View All
                     </Link>

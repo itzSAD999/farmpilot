@@ -653,6 +653,83 @@
 <p>populated "Land work" card landed on <code>/season/58/category/land_prep</code></p>
 <p>showing its one recorded entry and +33% benchmark variance.</p>
 <hr/>
+<h3 id="issue-31-farm-wide-costs-page-category-cards-had-the-same-gap-as-issue-30">Issue #31 — Farm-wide Costs page category cards had the same gap as Issue #30</h3>
+<p><strong>Severity:</strong> Low (a direct follow-up report: "the cost breakdown detail</p>
+<p>page for each cost you haven't yet implemented it"). Issue #30 fixed</p>
+<p><code>CostList.tsx</code>'s per-season category cards, but the separate,</p>
+<p>farm-wide <code>/costs</code> page (<code>CostsOverview.tsx</code>) has its own "By Category"</p>
+<p>list aggregating across every season, and its cards were still plain,</p>
+<p>non-interactive <code><div></code>s.</p>
+<p><strong>Fix.</strong> Each category card is now a toggle: tapping it expands an</p>
+<p>inline list of every individual cost entry in that category across all</p>
+<p>seasons (reusing data already fetched for the page — no extra query),</p>
+<p>each showing which season it belongs to and linking to that season's</p>
+<p><code>/season/:id/category/:category</code> detail page from Issue #30.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live walkthrough expanding</p>
+<p>"Fertiliser" on the demo account shows both its entries (open-market</p>
+<p>2026, subsidised 2025) with a working link to</p>
+<p><code>/season/57/category/fertiliser</code>.</p>
+<hr/>
+<h3 id="issue-32-more-infotip-coverage-requested-directly">Issue #32 — More InfoTip coverage requested directly</h3>
+<p><strong>Severity:</strong> N/A (polish, requested directly: "add tooltips where</p>
+<p>needed"). Compare, Costs, and Season Detail already had <code>InfoTip</code></p>
+<p>explainers; the Estimate Report (the core analysis page) and the</p>
+<p>Dashboard's headline numbers didn't.</p>
+<p><strong>Fix.</strong> Added <code>InfoTip</code> to the Estimate Report's "Where Your Money</p>
+<p>Goes" (explaining Recorded vs Predicted) and "Where You Can Save"</p>
+<p>(explaining exactly when a category is flagged), and to the Dashboard's</p>
+<p>"Total Possible Saving," "Spend by Crop," and "Season Status" cards.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean.</p>
+<hr/>
+<h3 id="issue-33-real-github-2fa-recovery-codes-were-committed-and-pushed-to-the-repository">Issue #33 — Real GitHub 2FA recovery codes were committed and pushed to the repository</h3>
+<p><strong>Severity:</strong> Critical (a genuine secret-exposure incident, not a code</p>
+<p>defect). While reorganising the project's file structure, a file</p>
+<p><code>docs/github-recovery-codes.txt</code> was found tracked in the repository —</p>
+<p>real-looking GitHub two-factor recovery codes, already pushed to</p>
+<p><code>origin/main</code> in an earlier commit (<code>044b8ce</code>).</p>
+<p><strong>Response (two stages, both required, handled in that order):</strong></p>
+<ol>
+<li><strong>Immediate:</strong> the user was told directly, before any other work</li>
+</ol>
+<p>   continued, to regenerate their GitHub 2FA recovery codes themselves —</p>
+<p>   removing the file from the repository does nothing to a code that has</p>
+<p>   already been exposed; only regenerating it invalidates the old ones.</p>
+<p>   This is an account-level action only the account owner can take.</p>
+<ol>
+<li><strong>Repository remediation</strong>, explicitly split into two decisions</li>
+</ol>
+<p>   because they carry very different risk: (a) untrack and delete the</p>
+<p>   file from the current working tree immediately (<code>git rm --cached</code>,</p>
+<p>   plus a <code>.gitignore</code> rule against <code><em>recovery-codes</em></code>, <code><em>.pem</code>, <code></em>.key</code></p>
+<p>   to prevent recurrence) — done the same session; (b) actually purge</p>
+<p>   the file from every commit in history — deferred at the time,</p>
+<p>   pending the user's explicit go-ahead, since it requires rewriting</p>
+<p>   every commit hash on <code>main</code> and force-pushing, which is destructive</p>
+<p>   to anyone else's clone. Completed only once the user later said</p>
+<p>   explicitly to proceed.</p>
+<p><strong>Fix (history rewrite).</strong> No <code>git-filter-repo</code>/Python was available in</p>
+<p>this environment, so the git-native fallback was used: `git filter-branch</p>
+<p>--index-filter "git rm --cached --ignore-unmatch docs/github-recovery-codes.txt"</p>
+<p>--prune-empty -- --all`, run across every local ref. A second branch,</p>
+<p><code>cursor/setup-map-idle-dark-mode</code>, shared the same early history and was</p>
+<p>found to carry the same exposure — confirmed via `git log --oneline</p>
+<p><branch> -- <path>` before deciding how to handle it — and was rewritten</p>
+<p>and force-pushed alongside <code>main</code> once the user separately confirmed</p>
+<p>they wanted that branch cleaned too (rather than left as-is or deleted).</p>
+<p>Backup refs (<code>refs/original/</code>) were removed and `git gc --prune=now</p>
+<p>--aggressive` run locally before force-pushing, so the object no longer</p>
+<p>exists even in the local repository, not just unreferenced.</p>
+<p><strong>Evidence.</strong> Before push: `git log --all --oneline -- docs/github-</p>
+<p>recovery-codes.txt` returned no results on either rewritten branch.</p>
+<p>After <code>git push origin --force</code> to both <code>main</code> and</p>
+<p><code>cursor/setup-map-idle-dark-mode</code>: <code>git fetch origin</code> followed by the</p>
+<p>same <code>git log --all</code> check against <code>origin/*</code> confirmed zero commits</p>
+<p>reference the file on the remote either.</p>
+<p><strong>Lasting note for anyone else with a clone of this repository:</strong> commit</p>
+<p>hashes on both branches changed as of this rewrite. A prior clone's</p>
+<p><code>main</code> will not fast-forward — it needs to be re-fetched and reset to</p>
+<p>the new history (or re-cloned) rather than merged.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table. Full evidence for</p>
 <p>each row:</p>

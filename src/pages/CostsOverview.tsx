@@ -20,6 +20,7 @@ const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4
 export function CostsOverview() {
   const { farm, isLoading: isLoadingFarm } = useFarm();
   const [groupBy, setGroupBy] = useState<'category' | 'season'>('category');
+  const [expandedCategory, setExpandedCategory] = useState<CostCategory | null>(null);
   const [search, setSearch] = useState('');
 
   // Load all seasons
@@ -272,31 +273,67 @@ export function CostsOverview() {
               {categoryTotals.map(({ category, total, count }) => {
                 const config = CATEGORIES[category];
                 const pct = grandTotal > 0 ? Math.round((total / grandTotal) * 100) : 0;
+                const isExpanded = expandedCategory === category;
+                const entries = (costsByCategory[category] || []).slice().sort(
+                  (a, b) => new Date(b.date_incurred || b.created_at).getTime() - new Date(a.date_incurred || a.created_at).getTime()
+                );
                 return (
-                  <div key={category} className="bg-white dark:bg-white/5 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center">
-                          <span className="text-lg">{getCategoryEmoji(category)}</span>
+                  <div key={category} className="bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedCategory(isExpanded ? null : category)}
+                      className="w-full text-left p-5"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center">
+                            <span className="text-lg">{getCategoryEmoji(category)}</span>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                              {config?.label || category}
+                              <svg className={`w-4 h-4 text-gray-300 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{count} {count === 1 ? 'entry' : 'entries'} — tap for details</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-gray-900 dark:text-gray-100">{config?.label || category}</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{count} {count === 1 ? 'entry' : 'entries'}</p>
+                        <div className="text-right">
+                          <p className="text-lg font-extrabold text-gray-900 dark:text-gray-100">
+                            <Money pesewas={total} />
+                          </p>
+                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{pct}% of total</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-extrabold text-gray-900 dark:text-gray-100">
-                          <Money pesewas={total} />
-                        </p>
-                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{pct}% of total</p>
+                      <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
                       </div>
-                    </div>
-                    <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2 overflow-hidden">
-                      <div 
-                        className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-gray-100 dark:border-white/10 divide-y divide-gray-50 dark:divide-white/5 animate-fade-in">
+                        {entries.map((cost) => (
+                          <Link
+                            key={cost.id}
+                            to={cost.season_id ? `/season/${cost.season_id}/category/${category}` : '#'}
+                            className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
+                          >
+                            <div>
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                {cost.description || config?.label || category}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {cost.season ? `${cost.season.crop_name} ${cost.season.season_window} ${cost.season.year}` : 'Unknown season'}
+                                {cost.date_incurred && ` · ${new Date(cost.date_incurred).toLocaleDateString()}`}
+                              </p>
+                            </div>
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100"><Money pesewas={cost.amount_pesewas} /></span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

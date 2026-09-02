@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProfile, updateProfile } from '../api/auth';
@@ -23,6 +23,14 @@ export function Profile() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const deleteInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isDeleteModalOpen && deleteInputRef.current) {
+      // Small timeout ensures it focuses after the modal animation starts
+      setTimeout(() => deleteInputRef.current?.focus(), 100);
+    }
+  }, [isDeleteModalOpen]);
 
   // Form State
   const [formData, setFormData] = useState<any>({
@@ -101,12 +109,16 @@ export function Profile() {
   const handleDeleteAccount = async () => {
     if (deleteConfirmation !== 'deletemyfarm') return;
     
-    // Attempt to delete profile and farm data (cascades)
-    // Note: Full auth user deletion typically requires backend admin privileges.
     try {
       if (user?.id) {
-        await supabase.from('profiles').delete().eq('id', user.id);
-        await supabase.from('farms').delete().eq('user_id', user.id);
+        // Attempt to call the RPC function that actually deletes the auth.users row
+        const { error } = await supabase.rpc('delete_my_account');
+        if (error) {
+          // Fallback to manual deletion of profile and farm data if RPC fails/doesn't exist
+          console.warn('RPC delete failed, falling back to manual deletion:', error);
+          await supabase.from('profiles').delete().eq('id', user.id);
+          await supabase.from('farms').delete().eq('user_id', user.id);
+        }
       }
       await signOut();
     } catch (e) {
@@ -409,6 +421,7 @@ export function Profile() {
                 Type <span className="text-red-600 dark:text-red-400 select-all">deletemyfarm</span> to confirm
               </label>
               <input
+                ref={deleteInputRef}
                 type="text"
                 value={deleteConfirmation}
                 onChange={(e) => setDeleteConfirmation(e.target.value)}

@@ -50,7 +50,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 -- ---------- 1.1 app_settings ----------
 -- Single-row config table. Holds the values you will need to tune
 -- during marking without a redeploy.
-create table app_settings (
+create table if not exists app_settings (
   id                  boolean primary key default true,
   -- MoFA input prices are from 2018. This multiplier brings them to
   -- present-day cedis. VERIFY against current market before demo.
@@ -61,11 +61,11 @@ create table app_settings (
   constraint app_settings_single_row check (id)
 );
 
-insert into app_settings (id) values (true);
+insert into app_settings (id) values (true) on conflict do nothing;
 
 
 -- ---------- 1.2 crops ----------
-create table crops (
+create table if not exists crops (
   id                  bigserial primary key,
   name                text not null unique,
   local_name          text,                    -- Twi / Dagbani
@@ -81,7 +81,7 @@ comment on column crops.avg_yield_mt_ha is
 
 -- ---------- 1.3 cost_benchmarks ----------
 -- Unit prices of inputs. This is the table that solves cold start.
-create table cost_benchmarks (
+create table if not exists cost_benchmarks (
   id                  bigserial primary key,
   input_name          text not null,
   category            cost_category not null,
@@ -102,7 +102,7 @@ comment on table cost_benchmarks is
 -- THE BRIDGE. Benchmarks give price per unit; norms give units per acre.
 -- Multiply the two to get an expected per-acre cost for a new farmer.
 -- Without this table the benchmark prices are unusable.
-create table crop_input_norms (
+create table if not exists crop_input_norms (
   id                  bigserial primary key,
   crop_id             bigint not null references crops(id) on delete cascade,
   benchmark_id        bigint not null references cost_benchmarks(id) on delete restrict,
@@ -121,7 +121,7 @@ comment on table crop_input_norms is
 -- ---------- 1.5 advice_rules ----------
 -- One suggestion per category. Kept as a table so the text can be
 -- edited without touching the function.
-create table advice_rules (
+create table if not exists advice_rules (
   id                  bigserial primary key,
   category            cost_category not null unique,
   message             text not null
@@ -134,7 +134,7 @@ create table advice_rules (
 -- ============================================================
 
 -- ---------- 2.1 farms ----------
-create table farms (
+create table if not exists farms (
   id                  bigserial primary key,
   user_id             uuid not null references auth.users(id) on delete cascade,
   name                text not null,
@@ -144,11 +144,11 @@ create table farms (
   created_at          timestamptz not null default now()
 );
 
-create index farms_user_id_idx on farms(user_id);
+create index if not exists farms_user_id_idx on farms(user_id);
 
 
 -- ---------- 2.2 seasons ----------
-create table seasons (
+create table if not exists seasons (
   id                  bigserial primary key,
   farm_id             bigint not null references farms(id) on delete cascade,
   crop_id             bigint not null references crops(id) on delete restrict,
@@ -165,12 +165,12 @@ create table seasons (
   unique (farm_id, crop_id, year, season_window)
 );
 
-create index seasons_farm_id_idx on seasons(farm_id);
-create index seasons_lookup_idx on seasons(farm_id, crop_id, year desc);
+create index if not exists seasons_farm_id_idx on seasons(farm_id);
+create index if not exists seasons_lookup_idx on seasons(farm_id, crop_id, year desc);
 
 
 -- ---------- 2.3 season_costs ----------
-create table season_costs (
+create table if not exists season_costs (
   id                  bigserial primary key,
   season_id           bigint not null references seasons(id) on delete cascade,
   category            cost_category not null,
@@ -185,8 +185,8 @@ create table season_costs (
   created_at          timestamptz not null default now()
 );
 
-create index season_costs_season_id_idx on season_costs(season_id);
-create index season_costs_category_idx on season_costs(season_id, category);
+create index if not exists season_costs_season_id_idx on season_costs(season_id);
+create index if not exists season_costs_category_idx on season_costs(season_id, category);
 
 
 -- ============================================================
@@ -196,7 +196,7 @@ create index season_costs_category_idx on season_costs(season_id, category);
 -- ============================================================
 
 -- ---------- 3.1 estimates ----------
-create table estimates (
+create table if not exists estimates (
   id                  bigserial primary key,
   season_id           bigint not null references seasons(id) on delete cascade,
   method              estimate_method not null,
@@ -207,13 +207,13 @@ create table estimates (
   created_at          timestamptz not null default now()
 );
 
-create index estimates_season_id_idx on estimates(season_id, created_at desc);
+create index if not exists estimates_season_id_idx on estimates(season_id, created_at desc);
 
 
 -- ---------- 3.2 estimate_lines ----------
 -- One row per category. Carries the estimate, the comparison, the
 -- flag, and the advice — so the results screen is a single query.
-create table estimate_lines (
+create table if not exists estimate_lines (
   id                  bigserial primary key,
   estimate_id         bigint not null references estimates(id) on delete cascade,
   category            cost_category not null,

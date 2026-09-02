@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 import { getSeason, completeSeason, updateSeason, deleteSeason } from '../api/seasons';
 import { listCosts, getExpectedCategoriesForCrop, CostCategory } from '../api/costs';
 import { generateEstimate } from '../api/estimates';
@@ -20,6 +21,8 @@ const closeSeasonSchema = z.object({
 });
 
 type CloseSeasonFormData = z.infer<typeof closeSeasonSchema>;
+
+const CHART_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export function SeasonDetail() {
   const { id } = useParams<{ id: string }>();
@@ -109,6 +112,20 @@ export function SeasonDetail() {
   const completedCategories = new Set(seasonCosts?.map(c => c.category) || []);
   const pendingCategories = expectedCategories?.filter(c => !completedCategories.has(c)) || [];
   const achievedCategories = expectedCategories?.filter(c => completedCategories.has(c)) || [];
+
+  const costChartData = useMemo(() => {
+    if (!seasonCosts) return [];
+    const grouped = seasonCosts.reduce((acc, cost) => {
+      const label = CATEGORIES[cost.category as keyof typeof CATEGORIES]?.label || cost.category;
+      if (!acc[label]) acc[label] = 0;
+      acc[label] += cost.amount_pesewas / 100;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(grouped)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [seasonCosts]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<CloseSeasonFormData>({
     resolver: zodResolver(closeSeasonSchema),
@@ -328,6 +345,31 @@ export function SeasonDetail() {
                           {CATEGORIES[cat].label}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Cost Distribution Chart */}
+                {costChartData.length > 0 && (
+                  <div className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-[0_8px_40px_rgb(0,0,0,0.03)] mb-8 animate-fade-in-up">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Cost Distribution</h3>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={costChartData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="currentColor" className="opacity-10 dark:opacity-20" />
+                          <XAxis type="number" tickFormatter={(val) => `₵${val}`} className="text-xs text-gray-500" />
+                          <YAxis dataKey="name" type="category" width={100} className="text-xs font-bold text-gray-700 dark:text-gray-300" tick={{fill: 'currentColor'}} />
+                          <Tooltip 
+                            formatter={(value: any) => [`₵${Number(value).toFixed(2)}`, 'Spent']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                          />
+                          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                            {costChartData.map((_entry, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                 )}

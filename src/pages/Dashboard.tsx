@@ -5,7 +5,7 @@ import { useFarm } from '../hooks/useFarm';
 import { listSeasons } from '../api/seasons';
 import { getFarmSummary, getCropSummary } from '../api/dashboard';
 import { generateEstimate } from '../api/estimates';
-import { listGuides } from '../api/guides';
+import { generateWeeklyTip } from '../api/ai';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Money } from '../components/ui/Money';
 import { WeeklyCatchUp } from '../components/features/WeeklyCatchUp';
@@ -76,9 +76,11 @@ export function Dashboard() {
     enabled: !!farm?.id,
   });
 
-  const { data: guides } = useQuery({
-    queryKey: ['dashboard_guides'],
-    queryFn: () => listGuides(),
+  const { data: weeklyTip, isLoading: isLoadingTip } = useQuery({
+    queryKey: ['weekly_tip', farm?.id],
+    queryFn: () => generateWeeklyTip([], farmSummary),
+    enabled: !!farmSummary,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
   });
 
   const isLoading = isLoadingFarm || isLoadingSeasons || isLoadingSummary || isLoadingCrops;
@@ -335,46 +337,7 @@ export function Dashboard() {
               )}
             </div>
 
-            {/* AI Feedback / Guidance Area */}
-            {guides && guides.length > 0 && (
-              <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Link to={`/guides/${guides[0].id}`} className="bg-[#0a0a0a] rounded-[32px] p-8 text-white relative overflow-hidden group shadow-xl hover:-translate-y-1 transition-transform">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl -mt-10 -mr-10 group-hover:bg-emerald-500/30 transition-colors"></div>
-                  <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div>
-                      <div className="flex items-center mb-4">
-                        <svg className="w-6 h-6 text-emerald-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest">AI Guidance</span>
-                      </div>
-                      <h3 className="text-2xl font-bold mb-3">{guides[0].title}</h3>
-                      <p className="text-gray-400 text-sm leading-relaxed line-clamp-3 mb-6">{guides[0].summary}</p>
-                    </div>
-                    <div className="flex items-center text-emerald-400 text-sm font-bold">
-                      Read Guide <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                    </div>
-                  </div>
-                </Link>
-                
-                {guides.length > 1 && (
-                  <Link to={`/guides/${guides[1].id}`} className="bg-gradient-to-br from-emerald-800 to-emerald-950 rounded-[32px] p-8 text-white relative overflow-hidden group shadow-xl hover:-translate-y-1 transition-transform">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mt-10 -mr-10"></div>
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                      <div>
-                        <div className="flex items-center mb-4">
-                          <svg className="w-6 h-6 text-emerald-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                          <span className="text-emerald-200 text-xs font-bold uppercase tracking-widest">Farm Tip</span>
-                        </div>
-                        <h3 className="text-2xl font-bold mb-3">{guides[1].title}</h3>
-                        <p className="text-emerald-100/70 text-sm leading-relaxed line-clamp-3 mb-6">{guides[1].summary}</p>
-                      </div>
-                      <div className="flex items-center text-emerald-200 text-sm font-bold">
-                        Read Guide <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-              </div>
-            )}
+
           
           {/* Seasons List Area */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -519,25 +482,40 @@ export function Dashboard() {
             </div>
 
             <div className="space-y-6">
-              <div className="bg-[#0a0a0a] rounded-[24px] p-6 shadow-xl relative overflow-hidden min-h-[250px] text-white">
+              <div className="bg-[#0a0a0a] rounded-[24px] p-6 shadow-xl relative overflow-hidden min-h-[250px] text-white flex flex-col justify-between">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#1B5E20]/20 to-black pointer-events-none" />
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-emerald-500 opacity-20 rounded-full blur-3xl"></div>
                 
-                <div className="relative z-10 h-full flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-xl mb-2">AI Guidance</h3>
-                    <p className="text-sm text-white/60 leading-relaxed">
-                      Check out the recommended best practices for your current active seasons to maximize yield.
-                    </p>
+                <div className="relative z-10 flex-1 flex flex-col">
+                  <div className="flex items-center mb-4">
+                    <svg className="w-5 h-5 text-emerald-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <h3 className="font-bold text-xl">AI Guidance</h3>
                   </div>
                   
-                  <button 
-                    onClick={() => navigate('/guides')}
-                    className="w-full mt-6 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-between group">
-                    <span>Get more guidance</span>
-                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </button>
+                  <div className="flex-1">
+                    {isLoadingTip ? (
+                      <div className="animate-pulse space-y-2 mt-2">
+                        <div className="h-4 bg-white/20 rounded w-full"></div>
+                        <div className="h-4 bg-white/20 rounded w-5/6"></div>
+                        <div className="h-4 bg-white/20 rounded w-4/6"></div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-white/80 leading-relaxed font-medium italic">
+                        "{weeklyTip || 'Check out the recommended best practices for your current active seasons to maximize yield.'}"
+                      </p>
+                    )}
+                  </div>
                 </div>
+                
+                <button 
+                  onClick={() => {
+                    const event = new CustomEvent('open-farmbot', { detail: { initialMessage: "Can you give me more guidance based on my latest tip?" } });
+                    window.dispatchEvent(event);
+                  }}
+                  className="relative z-10 w-full mt-6 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-between group">
+                  <span>Get more guidance</span>
+                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </button>
               </div>
             </div>
           </div>

@@ -87,7 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     intentionalSignOut.current = true;
-    await authApi.signOut();
+    try {
+      await authApi.signOut();
+    } catch (e) {
+      console.warn('Sign out API error (user may already be deleted):', e);
+    }
     setUser(null);
     setProfile(null);
   }, []);

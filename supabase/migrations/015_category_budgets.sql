@@ -35,6 +35,11 @@ create index if not exists category_budgets_season_id_idx on category_budgets(se
 
 alter table category_budgets enable row level security;
 
+-- CREATE POLICY has no IF NOT EXISTS in Postgres, so drop-then-create is
+-- what makes this migration safely re-runnable (see supabase/migrations/
+-- README pattern used elsewhere — matches the rest of this project's
+-- migrations being re-applied directly rather than tracked by the CLI).
+drop policy if exists category_budgets_own on category_budgets;
 create policy category_budgets_own on category_budgets for all to authenticated
   using (exists (
     select 1 from seasons s join farms f on f.id = s.farm_id

@@ -72,6 +72,11 @@ html.dark, html.dark body {
   html.dark, html.dark body { background: #fff; color: #111827; }
 }
 
+@keyframes revealIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
 .reveal-on-scroll {
   /* Fallback visibility in case IntersectionObserver fails to run or is interrupted */
   opacity: 1;
@@ -81,5 +86,11 @@ html.dark, html.dark body {
 .reveal-on-scroll.is-revealed {
   opacity: 1;
   transform: translateY(0);
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: revealIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* A slower, more deliberate entrance for section-level elements (headings,
+   hero copy) rather than the bento-card default — used sparingly. */
+.reveal-on-scroll-slow.is-revealed {
+  animation: revealIn 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

@@ -628,11 +628,36 @@ const BACKGROUND_VIDEOS = [
   "https://www.w3schools.com/html/mov_bbb.mp4"
 ];
 
+/** Tracks scroll position (0-1 progress, plus raw px) for the progress
+ * bar and the hero's parallax/fade, throttled to one update per frame. */
+function useScrollProgress() {
+  const [state, setState] = useState({ y: 0, progress: 0 });
+
+  useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        setState({ y, progress: max > 0 ? Math.min(1, y / max) : 0 });
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return state;
+}
+
 export function Landing() {
   useScrollReveal();
   const { user, isLoading } = useAuth();
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const { y: scrollY, progress: scrollProgress } = useScrollProgress();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -640,6 +665,12 @@ export function Landing() {
     }, 8000);
     return () => clearInterval(timer);
   }, []);
+
+  // Hero parallax: the video drifts slower than the page (classic
+  // parallax), the header/footer content fades and lifts away as it
+  // scrolls out — capped to the hero's own height so nothing keeps
+  // moving once it's off-screen.
+  const heroProgress = Math.min(1, scrollY / 700);
 
   if (isLoading) {
     return <div className="h-screen w-full flex items-center justify-center bg-black" />;
@@ -655,18 +686,29 @@ export function Landing() {
       {selectedFeature && (
         <InteractiveModal feature={selectedFeature} onClose={() => setSelectedFeature(null)} />
       )}
-      
+
+      {/* Scroll progress */}
+      <div className="fixed top-0 left-0 right-0 h-[3px] z-[60] bg-white/5">
+        <div
+          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-[width] duration-100 ease-out"
+          style={{ width: `${scrollProgress * 100}%` }}
+        />
+      </div>
+
       {/* Hero Section (100vh) */}
-      <section className="relative w-full min-h-[600px] h-screen flex flex-col justify-between">
-        
-        {/* Cinematic Video Carousel Background */}
-        <div className="absolute inset-0 w-full h-full z-0 overflow-hidden pointer-events-none bg-black flex items-center justify-center">
+      <section className="relative w-full min-h-[600px] h-screen flex flex-col justify-between overflow-hidden">
+
+        {/* Cinematic Video Carousel Background — drifts slower than the page (parallax) */}
+        <div
+          className="absolute inset-0 w-[100%] h-[130%] z-0 overflow-hidden pointer-events-none bg-black flex items-center justify-center"
+          style={{ transform: `translateY(${heroProgress * 90}px)` }}
+        >
           {BACKGROUND_VIDEOS.map((src, idx) => (
-            <video 
+            <video
               key={src}
-              autoPlay 
-              loop 
-              muted 
+              autoPlay
+              loop
+              muted
               playsInline
               poster={idx === 0 ? "/hero.jpg" : undefined}
               className={`absolute inset-0 w-full h-full object-cover scale-[1.05] transition-opacity duration-[2000ms] ease-in-out ${
@@ -681,7 +723,10 @@ export function Landing() {
         </div>
 
         {/* Header */}
-        <header className="relative z-10 w-full px-6 py-8 md:px-12 md:py-10 flex justify-between items-start">
+        <header
+          className="relative z-10 w-full px-6 py-8 md:px-12 md:py-10 flex justify-between items-start"
+          style={{ opacity: 1 - heroProgress * 0.9, transform: `translateY(${-heroProgress * 40}px)` }}
+        >
           <h1 className="text-[3.5rem] sm:text-[4.5rem] md:text-[6rem] lg:text-[7rem] xl:text-[9rem] font-light text-white tracking-tighter leading-none -mt-4 opacity-95 flex items-start">
             FARM PILOT<sup className="text-xl sm:text-2xl md:text-3xl xl:text-4xl mt-4 md:mt-8 ml-2">®</sup>
           </h1>
@@ -692,7 +737,10 @@ export function Landing() {
         </header>
 
         {/* Hero Footer */}
-        <footer className="relative z-10 w-full px-6 py-8 md:px-12 md:py-12 flex flex-col md:flex-row md:items-end justify-between">
+        <footer
+          className="relative z-10 w-full px-6 py-8 md:px-12 md:py-12 flex flex-col md:flex-row md:items-end justify-between"
+          style={{ opacity: 1 - heroProgress * 1.2, transform: `translateY(${heroProgress * 50}px)` }}
+        >
           <div className="mb-8 md:mb-0">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-wide opacity-90 mb-4">
               Your smart digital farm.
@@ -709,20 +757,31 @@ export function Landing() {
             >
               Start Building
             </Link>
-            <a 
-              href="#features" 
+            <a
+              href="#features"
               className="w-full py-4 text-center uppercase tracking-widest text-xs font-bold border border-white/30 text-white hover:bg-white/10 transition-colors"
             >
               Explore Features
             </a>
           </div>
         </footer>
+
+        {/* Scroll cue */}
+        <a
+          href="#features"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/50 hover:text-white transition-colors"
+          style={{ opacity: 1 - heroProgress * 3 }}
+          aria-label="Scroll to features"
+        >
+          <span className="text-[10px] uppercase tracking-[0.3em] font-bold">Scroll</span>
+          <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+        </a>
       </section>
 
       {/* Features Section - Premium Bento Grid */}
       <section id="features" className="relative w-full bg-black px-6 py-24 md:px-12 lg:py-32">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20 reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20 reveal-on-scroll-slow reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tighter mb-6 md:mb-0 text-white">
               Control every <br/> <span className="text-emerald-400">acre.</span>
             </h2>
@@ -865,7 +924,7 @@ export function Landing() {
       {/* What's Actually In The App — real, shipped features */}
       <section className="relative w-full bg-black px-6 py-24 md:px-12 lg:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20 reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20 reveal-on-scroll-slow reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tighter mb-6 md:mb-0 text-white">
               Built for the <br/> <span className="text-emerald-400">real season.</span>
             </h2>

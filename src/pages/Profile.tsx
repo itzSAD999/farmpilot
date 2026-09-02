@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProfile, updateProfile } from '../api/auth';
 import { updateFarm } from '../api/farms';
@@ -19,6 +20,9 @@ export function Profile() {
 
   // Individual Editing States
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   // Form State
   const [formData, setFormData] = useState<any>({
@@ -28,7 +32,8 @@ export function Profile() {
     farm_name: '',
     farm_region: '',
     farm_district: '',
-    farm_area: 0
+    farm_area: 0,
+    farm_check_in_day: 'Monday'
   });
 
   const { data: profile, isLoading } = useQuery({
@@ -46,10 +51,11 @@ export function Profile() {
         farm_name: farm?.name || '',
         farm_region: farm?.region || '',
         farm_district: farm?.district || '',
-        farm_area: farm?.total_area_acres || 0
+        farm_area: farm?.total_area_acres || 0,
+        farm_check_in_day: (farm as any)?.check_in_day || 'Monday'
       });
     }
-  }, [profile, farm, editingField]);
+  }, [profile, farm]);
 
   const profileMutation = useMutation({
     mutationFn: (updates: Partial<ProfileType>) => updateProfile(updates),
@@ -79,15 +85,34 @@ export function Profile() {
         region: formData.farm_region,
         district: formData.farm_district
       });
+      setIsLocationModalOpen(false);
       return;
     }
     const apiFieldMap: any = {
       'farm_name': 'name',
-      'farm_area': 'total_area_acres'
+      'farm_area': 'total_area_acres',
+      'farm_check_in_day': 'check_in_day'
     };
     await farmMutation.mutateAsync({
       [apiFieldMap[field]]: formData[field]
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'deletemyfarm') return;
+    
+    // Attempt to delete profile and farm data (cascades)
+    // Note: Full auth user deletion typically requires backend admin privileges.
+    try {
+      if (user?.id) {
+        await supabase.from('profiles').delete().eq('id', user.id);
+        await supabase.from('farms').delete().eq('user_id', user.id);
+      }
+      await signOut();
+    } catch (e) {
+      console.error('Failed to delete account data:', e);
+      alert('Failed to delete account data. Please try again.');
+    }
   };
 
   const getLanguageName = (code: string) => {
@@ -251,66 +276,30 @@ export function Profile() {
                 />
               </SettingRow>
 
-              <SettingRow
-                label="Location (Region & District)"
-                value={farm.region && farm.district ? `${farm.district}, ${farm.region}` : 'Not set'}
-                isEditing={editingField === 'farm_location'}
-                onEdit={() => setEditingField('farm_location')}
-                onCancel={() => setEditingField(null)}
-                onSave={() => handleSaveFarm('farm_location')}
-                isLoading={farmMutation.isPending}
-              >
-                <div className="space-y-6">
-                  <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-white/10">
-                    <GhanaMap 
-                      selectedRegion={formData.farm_region} 
-                      onSelect={(r) => {
-                        const changed = r !== formData.farm_region;
-                        setFormData({ 
-                          ...formData, 
-                          farm_region: r, 
-                          ...(changed ? { farm_district: '' } : {}) 
-                        });
-                      }} 
-                    />
+              <div className="p-5 sm:p-6 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors border-b border-gray-100 dark:border-white/10 group">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Location (Region & District)</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                      {farm.region && farm.district ? `${farm.district}, ${farm.region}` : 'Not set'}
+                    </p>
                   </div>
-                  
-                  <div className="relative z-[80] space-y-4 isolate">
-                    <div className="relative">
-                      <select
-                        value={formData.farm_region}
-                        onChange={(e) => {
-                          setFormData({ ...formData, farm_region: e.target.value, farm_district: '' });
-                        }}
-                        className="w-full appearance-none text-center text-base font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                      >
-                        <option value="">Select region</option>
-                        {Object.keys(GHANA_DISTRICTS).map((region) => (
-                          <option key={region} value={region}>{region}</option>
-                        ))}
-                      </select>
-                      <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
-                    </div>
-
-                    <div className="relative">
-                      <select
-                        value={formData.farm_district}
-                        onChange={(e) => {
-                          setFormData({ ...formData, farm_district: e.target.value });
-                        }}
-                        disabled={!formData.farm_region}
-                        className="w-full appearance-none text-center text-base font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Select district</option>
-                        {formData.farm_region && GHANA_DISTRICTS[formData.farm_region as keyof typeof GHANA_DISTRICTS]?.map((district) => (
-                          <option key={district} value={district}>{district}</option>
-                        ))}
-                      </select>
-                      <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
-                    </div>
-                  </div>
+                  <button 
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        farm_region: farm?.region || '',
+                        farm_district: farm?.district || ''
+                      });
+                      setIsLocationModalOpen(true);
+                    }}
+                    className="p-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-xl font-bold transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 sm:px-4 sm:py-2"
+                  >
+                    <span className="hidden sm:inline mr-2">Edit</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
                 </div>
-              </SettingRow>
+              </div>
 
               <SettingRow
                 label="Total Area (Acres)"
@@ -333,6 +322,31 @@ export function Profile() {
                 />
               </SettingRow>
 
+              <SettingRow
+                label="Check-in Day"
+                value={formData.farm_check_in_day || 'Monday'}
+                isEditing={editingField === 'farm_check_in_day'}
+                onEdit={() => setEditingField('farm_check_in_day')}
+                onCancel={() => setEditingField(null)}
+                onSave={() => handleSaveFarm('farm_check_in_day')}
+                isLoading={farmMutation.isPending}
+                isLast
+              >
+                <select
+                  value={formData.farm_check_in_day}
+                  onChange={(e) => setFormData({ ...formData, farm_check_in_day: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors appearance-none"
+                >
+                  <option value="Monday">Monday</option>
+                  <option value="Tuesday">Tuesday</option>
+                  <option value="Wednesday">Wednesday</option>
+                  <option value="Thursday">Thursday</option>
+                  <option value="Friday">Friday</option>
+                  <option value="Saturday">Saturday</option>
+                  <option value="Sunday">Sunday</option>
+                </select>
+              </SettingRow>
+
             </div>
           </div>
         )}
@@ -353,13 +367,13 @@ export function Profile() {
             </button>
             <button
               type="button"
-              className="w-full py-4 px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-gray-100 rounded-2xl font-bold transition-colors"
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="w-full py-4 px-6 flex items-center justify-between hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600 dark:text-red-400 rounded-2xl font-bold transition-colors"
             >
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                Delete Account
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Delete Account & Farm
               </div>
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
             <button
               type="button"
@@ -375,6 +389,134 @@ export function Profile() {
         </div>
 
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsDeleteModalOpen(false)}></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-[32px] shadow-2xl p-8 animate-fade-in-up">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            
+            <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-2">Delete Everything?</h3>
+            <p className="text-center text-gray-500 dark:text-gray-400 mb-6">
+              This action cannot be undone. All your farm data, logged costs, and seasons will be permanently deleted.
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                Type <span className="text-red-600 dark:text-red-400 select-all">deletemyfarm</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder="deletemyfarm"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all dark:text-white font-mono"
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteConfirmation('');
+                }}
+                className="flex-1 py-3 px-4 font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmation !== 'deletemyfarm'}
+                className="flex-1 py-3 px-4 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Location Selection Modal */}
+      {isLocationModalOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#F4F7F6] dark:bg-[#0a0a0a] overflow-y-auto animate-fade-in">
+          <div className="sticky top-0 z-40 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 px-4 h-16 flex items-center justify-between">
+            <button 
+              onClick={() => setIsLocationModalOpen(false)}
+              className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold flex items-center transition-colors"
+            >
+              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+              Cancel
+            </button>
+            <button 
+              onClick={() => handleSaveFarm('farm_location')}
+              disabled={!formData.farm_region || !formData.farm_district || farmMutation.isPending}
+              className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {farmMutation.isPending ? 'Saving...' : 'Save Location'}
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
+            <div className="text-center space-y-2 mb-10 w-full">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Where is it located?</h2>
+              <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Tap a region on the map, then choose your district from the list.</p>
+            </div>
+
+            <div className="w-full max-w-lg mb-8">
+              <GhanaMap 
+                selectedRegion={formData.farm_region} 
+                onSelect={(r) => {
+                  const changed = r !== formData.farm_region;
+                  setFormData({ 
+                    ...formData, 
+                    farm_region: r, 
+                    ...(changed ? { farm_district: '' } : {}) 
+                  });
+                }} 
+              />
+            </div>
+
+            <div className="relative z-10 w-full max-w-sm mx-auto space-y-4">
+              <div className="relative">
+                <select
+                  value={formData.farm_region}
+                  onChange={(e) => {
+                    setFormData({ ...formData, farm_region: e.target.value, farm_district: '' });
+                  }}
+                  className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
+                >
+                  <option value="">Select region</option>
+                  {Object.keys(GHANA_DISTRICTS).map((region) => (
+                    <option key={region} value={region}>{region}</option>
+                  ))}
+                </select>
+                <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={formData.farm_district}
+                  onChange={(e) => {
+                    setFormData({ ...formData, farm_district: e.target.value });
+                  }}
+                  disabled={!formData.farm_region}
+                  className="w-full appearance-none text-center text-lg font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-3.5 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">{formData.farm_region ? 'Select district' : 'Select a region first'}</option>
+                  {(GHANA_DISTRICTS[formData.farm_region as keyof typeof GHANA_DISTRICTS] || []).map((district: string) => (
+                    <option key={district} value={district}>{district}</option>
+                  ))}
+                </select>
+                <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

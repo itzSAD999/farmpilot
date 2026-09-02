@@ -1,14 +1,20 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getReport, checkProvisionalBenchmarks, getEstimateById } from '../api/estimates';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getReport, checkProvisionalBenchmarks, getEstimateById, updateEstimateLine } from '../api/estimates';
 import { getSeason } from '../api/seasons';
 import { getGuidesFor } from '../api/guides';
 import { Money } from '../components/ui/Money';
+import { pesewasToCedis, cedisToPesewas } from '../lib/money';
 import { CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
 
 export function EstimateReport() {
   const { estimateId } = useParams<{ estimateId: string }>();
+  const queryClient = useQueryClient();
+  
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState<string>('');
   
   const { data: reportLines, isLoading, isError, refetch } = useQuery({
     queryKey: ['report', estimateId],
@@ -42,6 +48,17 @@ export function EstimateReport() {
     queryKey: ['matchedGuides', rawSeasonId],
     queryFn: () => getGuidesFor(rawSeasonId!),
     enabled: !!rawSeasonId,
+  });
+
+  const updateLineMutation = useMutation({
+    mutationFn: (variables: { category: string; pesewas: number }) => 
+      updateEstimateLine(Number(estimateId), variables.category, variables.pesewas),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['report', estimateId] });
+      queryClient.invalidateQueries({ queryKey: ['estimate_raw', estimateId] });
+      queryClient.invalidateQueries({ queryKey: ['farm_summary'] });
+      setEditingCategory(null);
+    }
   });
 
   if (isLoading || isEstimateLoading) {
@@ -89,19 +106,79 @@ export function EstimateReport() {
     }
 
     return (
-      <div className="max-w-4xl mx-auto py-12 px-6 lg:px-8 animate-fade-in text-center mt-12">
-        <div className="w-24 h-24 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+      <div className="max-w-4xl mx-auto py-12 px-6 lg:px-8 animate-fade-in mt-12">
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100 dark:border-emerald-800/50">
+            <svg className="w-10 h-10 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 tracking-tight">Need More Data</h2>
+          <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            We don't have enough benchmark data for <span className="font-bold text-gray-700 dark:text-gray-300">{season?.crop_name || 'this crop'}</span> yet, and you haven't recorded historical costs. Add costs for this season to unlock estimates for next year!
+          </p>
         </div>
-        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 tracking-tight">Need More Data</h2>
-        <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-xl mx-auto">
-          We don't have enough benchmark data for {season?.crop_name || 'this crop'} yet, and you haven't recorded historical costs. Record actual costs for this season, and FarmPilot will use them for future estimates!
-        </p>
-        <Link to={`/season/${rawEstimate.season_id}`} className="px-8 py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 transition-colors inline-block shadow-lg shadow-emerald-900/20">
-          Back to Season
-        </Link>
+
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-[32px] p-8 shadow-xl border border-gray-100 dark:border-white/5 mb-10 max-w-2xl mx-auto relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+          
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+            Cost Tracking Checklist
+          </h3>
+          
+          <div className="space-y-4 relative z-10">
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <span className="text-lg">🌱</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Seeds & Planting</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Record your certified seed costs, planting labor, and equipment rental.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <span className="text-lg">🚜</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Land Preparation</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Track plowing, harrowing, and clearing expenses before the season starts.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <span className="text-lg">🧪</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Fertilizer & Chemicals</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Log NPK, Urea, and herbicide costs to understand your major input spend.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <span className="text-lg">👨‍🌾</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Labor & Management</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Don't forget to track weeding, harvesting labor, and even your own time.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <Link 
+            to={`/season/${rawEstimate?.season_id || seasonId}`} 
+            className="inline-flex items-center justify-center px-10 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-500 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-emerald-900/20"
+          >
+            Go to Season to Log Costs
+            <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -206,9 +283,58 @@ export function EstimateReport() {
                             </span>
                           )}
                         </span>
-                        <span className="text-sm text-gray-500 font-medium flex items-center print:text-gray-700">
-                          <span className="mr-1 text-xs text-gray-500 font-bold print:text-gray-600">GHS</span> 
-                          <Money pesewas={line.estimated_pesewas} />
+                        <span className="text-sm text-gray-500 font-medium flex items-center print:text-gray-700 h-8">
+                          {editingCategory === line.category ? (
+                            <form 
+                              className="flex items-center gap-2"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                if (!editAmount || isNaN(Number(editAmount))) return;
+                                updateLineMutation.mutate({ category: line.category, pesewas: cedisToPesewas(Number(editAmount)) });
+                              }}
+                            >
+                              <span className="text-xs text-gray-500 font-bold">GHS</span>
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                value={editAmount}
+                                onChange={(e) => setEditAmount(e.target.value)}
+                                className="w-24 px-2 py-1 text-sm font-bold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1a1a] border border-emerald-500 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                autoFocus
+                                disabled={updateLineMutation.isPending}
+                              />
+                              <button 
+                                type="submit"
+                                disabled={updateLineMutation.isPending}
+                                className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => setEditingCategory(null)}
+                                disabled={updateLineMutation.isPending}
+                                className="text-xs font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </form>
+                          ) : (
+                            <div className="flex items-center group/edit">
+                              <span className="mr-1 text-xs text-gray-500 font-bold print:text-gray-600">GHS</span> 
+                              <Money pesewas={line.estimated_pesewas} />
+                              <button
+                                onClick={() => {
+                                  setEditAmount(pesewasToCedis(line.estimated_pesewas).toString());
+                                  setEditingCategory(line.category);
+                                }}
+                                className="ml-2 opacity-0 group-hover/edit:opacity-100 focus:opacity-100 transition-opacity text-emerald-600 hover:text-emerald-700 print:hidden"
+                                title="Edit estimate"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                            </div>
+                          )}
                         </span>
                       </div>
                       <span className="text-3xl font-light text-gray-200 group-hover:text-emerald-500 transition-colors tracking-tighter print:text-black">

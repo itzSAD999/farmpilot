@@ -8,6 +8,7 @@ export interface CreateFarmInput {
   district?: string | null;
   region?: string | null;
   total_area_acres: number;
+  check_in_day?: string | null;
 }
 
 export type UpdateFarmInput = Partial<CreateFarmInput>;

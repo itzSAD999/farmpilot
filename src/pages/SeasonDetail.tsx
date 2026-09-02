@@ -4,13 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getSeason, completeSeason } from '../api/seasons';
+import { getSeason, completeSeason, updateSeason, deleteSeason } from '../api/seasons';
 import { listCosts } from '../api/costs';
 import { generateEstimate } from '../api/estimates';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { CostList } from '../components/features/CostList';
 import { Money } from '../components/ui/Money';
 import { useOnline } from '../hooks/useOnline';
+import { useAuth } from '../hooks/useAuth';
 const closeSeasonSchema = z.object({
   harvest_qty: z.number({ message: 'Please enter a valid quantity.' }).positive('Quantity must be greater than zero.'),
   harvest_unit: z.enum(['bag_100kg', 'bag_50kg', 'metric_tonnes']),
@@ -28,19 +29,57 @@ export function SeasonDetail() {
   const queryClient = useQueryClient();
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [isCostModalOpen, setIsCostModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+
+  const { user, isLoading: isAuthLoading } = useAuth();
+  
+  if (isNaN(seasonId)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Invalid Season ID</h2>
+        <p className="text-gray-500 mb-8 max-w-md">The season ID provided in the URL is not valid. ({id})</p>
+        <Link to="/" className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline">Back to Dashboard</Link>
+      </div>
+    );
+  }
+
+  const isReady = !isAuthLoading && !!user && !!seasonId;
 
   const { data: season, isLoading, isError, error: queryError } = useQuery({
     queryKey: ['season', seasonId],
     queryFn: () => getSeason(seasonId),
-    enabled: !!seasonId,
+    enabled: isReady,
   });
 
   const { data: seasonCosts } = useQuery({
     queryKey: ['seasonCosts', seasonId],
     queryFn: () => listCosts(seasonId),
-    enabled: !!seasonId,
+    enabled: isReady,
   });
+
+  const deleteSeasonMutation = useMutation({
+    mutationFn: () => deleteSeason(seasonId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seasons'] });
+      navigate('/seasons');
+    },
+  });
+
+  const editSeasonMutation = useMutation({
+    mutationFn: (data: { area_planted_acres: number, season_window: 'major' | 'minor' | 'dry', year: number }) => updateSeason(seasonId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['season', seasonId] });
+      queryClient.invalidateQueries({ queryKey: ['seasons'] });
+      setIsEditModalOpen(false);
+    },
+  });
+
+  const handleDeleteSeason = () => {
+    if (confirm('Are you sure you want to delete this season? This will permanently remove all associated costs and estimates. This action cannot be undone.')) {
+      deleteSeasonMutation.mutate();
+    }
+  };
 
   const generateMutation = useMutation({
     mutationFn: () => generateEstimate(seasonId),
@@ -87,7 +126,7 @@ export function SeasonDetail() {
     completeMutation.mutate(data);
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="flex-1 p-6 md:p-12 animate-pulse">
         <div className="w-32 h-6 bg-gray-200 rounded mb-8"></div>
@@ -99,12 +138,11 @@ export function SeasonDetail() {
   }
 
   if (isError || !season) {
-    const errorMessage = queryError ? (queryError as Error).message : "We couldn't load this season. This usually happens if your session has expired.";
     return (
       <div className="p-12 text-center mt-12 bg-red-50 rounded-[32px] border border-red-100 max-w-2xl mx-auto">
         <div className="text-6xl mb-4 opacity-50 inline-block bg-red-100 rounded-full p-6 text-red-500">⚠️</div>
-        <h2 className="text-2xl font-bold text-red-900 mb-2">Season not found</h2>
-        <p className="text-red-700 mb-8 max-w-md mx-auto">{errorMessage}</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Season not found</h2>
+        <p className="text-gray-500 mb-8 max-w-md">{queryError?.message || `We could not find the season you are looking for (ID: ${seasonId}).`}</p>
         <div className="flex gap-4 justify-center">
           <Link to="/" className="text-emerald-600 font-bold hover:underline py-3">Back to Dashboard</Link>
           <button onClick={() => window.location.reload()} className="bg-red-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-red-700 transition-colors">
@@ -136,10 +174,19 @@ export function SeasonDetail() {
 
         {/* Header Block */}
         <div className="bg-[#0a0a0a] rounded-[32px] p-8 md:p-12 text-white mb-8 relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/20 rounded-full blur-[100px] -mr-64 -mt-64"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/20 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -ml-32 -mb-32 pointer-events-none"></div>
           
-          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="absolute top-6 right-6 md:top-8 md:right-8 flex gap-2 z-20">
+            <button onClick={() => setIsEditModalOpen(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/80 hover:text-white transition-colors" title="Edit Season">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            </button>
+            <button onClick={handleDeleteSeason} disabled={deleteSeasonMutation.isPending} className="p-2 bg-white/10 hover:bg-red-500/20 rounded-lg text-white/80 hover:text-red-400 transition-colors disabled:opacity-50" title="Delete Season">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          </div>
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8 mt-4 md:mt-0">
             <div>
               <div className="flex items-center space-x-3 mb-3">
                 <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
@@ -356,6 +403,53 @@ export function SeasonDetail() {
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
         </button>
       )}
+    {/* Edit Season Modal */}
+    {isEditModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !editSeasonMutation.isPending && setIsEditModalOpen(false)}></div>
+        
+        <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-full">
+          <div className="p-8 overflow-y-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Season</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              editSeasonMutation.mutate({
+                area_planted_acres: Number(formData.get('area')),
+                season_window: formData.get('window') as 'major' | 'minor' | 'dry',
+                year: Number(formData.get('year')),
+              });
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Area Planted (acres)</label>
+                <input type="number" step="0.01" name="area" defaultValue={season.area_planted_acres} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Season Window</label>
+                <select name="window" defaultValue={season.season_window} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                  <option value="major">Major Season</option>
+                  <option value="minor">Minor Season</option>
+                  <option value="dry">Dry Season</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Year</label>
+                <input type="number" name="year" defaultValue={season.year} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+              </div>
+              
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 px-4 font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={editSeasonMutation.isPending} className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">
+                  {editSeasonMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
 
     </div>
   );

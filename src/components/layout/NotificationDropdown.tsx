@@ -42,7 +42,7 @@ export function NotificationDropdown({ align = 'right' }: NotificationDropdownPr
       </button>
 
       {isOpen && (
-        <div className={`fixed left-4 right-4 top-16 sm:absolute ${alignmentClass} sm:top-full sm:mt-2 sm:w-96 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in-up`}>
+        <div className={`fixed left-4 right-4 top-16 sm:absolute ${alignmentClass} sm:top-full sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-xl border border-gray-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in-up`}>
           <div className="p-4 border-b border-gray-100 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-white/5">
             <h3 className="font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
             {unreadCount > 0 && (
@@ -73,8 +73,8 @@ export function NotificationDropdown({ align = 'right' }: NotificationDropdownPr
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
                     )}
                     <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1" onClick={() => !notif.is_read && markAsRead(notif.id)}>
-                        <h4 className={`text-sm mb-1 ${!notif.is_read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      <div className="flex-1 cursor-pointer" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!notif.is_read) markAsRead(notif.id); }}>
+                        <h4 className={`text-sm mb-1 ${!notif.is_read ? 'font-bold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}>
                           {notif.title}
                         </h4>
                         <p className="text-xs text-gray-500 leading-relaxed mb-2">{notif.message}</p>
@@ -83,7 +83,8 @@ export function NotificationDropdown({ align = 'right' }: NotificationDropdownPr
                         </span>
                       </div>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteNotification(notif.id); }}
                         className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100"
                         title="Delete notification"
                       >

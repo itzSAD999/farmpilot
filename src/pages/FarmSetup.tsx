@@ -15,6 +15,7 @@ const farmSetupSchema = z.object({
   total_area_acres: z.number({
     message: 'Please enter a valid number greater than zero.'
   }).positive('Farm area must be greater than zero acres.'),
+  check_in_day: z.string().min(2, 'Please select a day.'),
 });
 
 type FarmSetupFormData = z.infer<typeof farmSetupSchema>;
@@ -40,7 +41,7 @@ export function FarmSetup() {
   const { register, handleSubmit, formState: { errors, isValid }, trigger, watch, setValue } = useForm<FarmSetupFormData>({
     resolver: zodResolver(farmSetupSchema),
     mode: 'onChange',
-    defaultValues: { name: '', region: '', district: '' },
+    defaultValues: { name: '', region: '', district: '', check_in_day: 'Monday' },
   });
 
   const watchRegion = watch('region');
@@ -50,6 +51,7 @@ export function FarmSetup() {
     let fieldsToValidate: (keyof FarmSetupFormData)[] = [];
     if (step === 1) fieldsToValidate = ['name'];
     if (step === 2) fieldsToValidate = ['region', 'district'];
+    if (step === 3) fieldsToValidate = ['total_area_acres'];
     
     const isStepValid = await trigger(fieldsToValidate);
     if (isStepValid) {
@@ -69,7 +71,7 @@ export function FarmSetup() {
       await createFarm(data);
       await queryClient.invalidateQueries({ queryKey: ['farm', user?.id] });
       sessionStorage.removeItem('farm-setup-in-progress');
-      setStep(4); // Success step
+      setStep(5); // Success step
       setTimeout(() => {
         navigate('/', { replace: true });
       }, 2000);
@@ -87,9 +89,9 @@ export function FarmSetup() {
     <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white/50 dark:bg-white/5 rounded-3xl relative overflow-visible">
       
       {/* Progress Indicator */}
-      {step < 4 && (
+      {step < 5 && (
         <div className="absolute top-8 left-1/2 -translate-x-1/2 flex space-x-3">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div 
               key={i} 
               className={`h-2 rounded-full transition-all duration-500 ${
@@ -245,8 +247,44 @@ export function FarmSetup() {
             </div>
           )}
 
-          {/* STEP 4: SUCCESS */}
+          {/* STEP 4: CHECK-IN DAY */}
           {step === 4 && (
+            <div className="animate-fade-in-up space-y-10">
+              <div className="text-center space-y-4">
+                <div className="inline-flex items-center justify-center p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-full mb-4">
+                  <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Weekly Check-in</h2>
+                <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Which day of the week would you like to track your expenses?</p>
+              </div>
+
+              <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                <label htmlFor="check_in_day" className="sr-only">Check-in Day</label>
+                <div className="relative w-full">
+                  <select
+                    id="check_in_day"
+                    className="w-full appearance-none text-center text-xl font-bold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/15 rounded-2xl px-10 py-4 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
+                    {...register('check_in_day')}
+                  >
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                  </select>
+                  <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+                {errors.check_in_day && (
+                  <p id="check_in_day-error" className="mt-4 text-base text-red-500 font-medium">{errors.check_in_day.message}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: SUCCESS */}
+          {step === 5 && (
             <div className="animate-fade-in-up flex flex-col items-center justify-center space-y-6 py-12">
               <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center animate-bounce">
                 <svg className="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,7 +297,7 @@ export function FarmSetup() {
           )}
 
           {/* Navigation Buttons */}
-          {step < 4 && (
+          {step < 5 && (
             <div className="pt-12 flex items-center justify-between animate-fade-in">
               <button
                 type="button"
@@ -269,7 +307,7 @@ export function FarmSetup() {
                 Back
               </button>
               
-              {step < 3 ? (
+              {step < 4 ? (
                 <button
                   type="button"
                   onClick={handleNext}

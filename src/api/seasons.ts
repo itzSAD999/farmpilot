@@ -145,7 +145,7 @@ export async function listSeasonsFiltered(farmId: number, filters: SeasonsFilter
       season_window,
       area_planted_acres,
       is_complete,
-      crops!inner ( name ),
+      crops ( name ),
       season_costs ( amount_pesewas ),
       estimates ( 
         total_pesewas, 
@@ -259,7 +259,7 @@ export async function getSeasonFilterOptions(farmId: number) {
     .select(`
       crop_id,
       year,
-      crops!inner ( name )
+      crops ( name )
     `)
     .eq('farm_id', farmId);
 
@@ -297,6 +297,28 @@ export async function createSeason(input: CreateSeasonInput): Promise<Season> {
   }
 
   return data;
+}
+
+export async function updateSeason(id: number, updates: Partial<CreateSeasonInput>): Promise<void> {
+  const { error } = await supabase
+    .from('seasons')
+    .update(updates)
+    .eq('id', id);
+
+  if (error) {
+    throw handleSeasonError(error);
+  }
+}
+
+export async function deleteSeason(id: number): Promise<void> {
+  const { error } = await supabase
+    .from('seasons')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw handleSeasonError(error);
+  }
 }
 
 export async function getSeason(id: number): Promise<SeasonDetail> {
@@ -339,14 +361,3 @@ export async function completeSeason(id: number, harvestQty: number, harvestUnit
   return data;
 }
 
-export async function deleteSeason(id: number): Promise<void> {
-  // Cascades to costs and estimates due to ON DELETE CASCADE at the database level.
-  const { error } = await supabase
-    .from('seasons')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    throw handleSeasonError(error);
-  }
-}

@@ -100,3 +100,18 @@ export async function getSeasonTotalPesewas(seasonId: number): Promise<number> {
   
   return data.reduce((total, cost) => total + cost.amount_pesewas, 0);
 }
+
+/** Auto-fills costs with expected categories and benchmark averages if available */
+export async function quickFillCosts(seasonId: number): Promise<void> {
+  const { error } = await supabase.rpc('quick_fill_costs', { p_season_id: seasonId });
+  if (error) throw handleCostError(error);
+}
+
+export async function getExpectedCategoriesForCrop(cropId: number): Promise<CostCategory[]> {
+  const { data, error } = await supabase
+    .from('crop_input_norms')
+    .select('category')
+    .eq('crop_id', cropId);
+  if (error) throw handleCostError(error);
+  return Array.from(new Set(data.map(d => d.category as CostCategory)));
+}

@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addCost } from '../../api/costs';
+import { addCost, updateCost } from '../../api/costs';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
-import { cedisToPesewas } from '../../lib/money';
+import { cedisToPesewas, pesewasToCedis } from '../../lib/money';
 
 const baseSchema = z.object({
   category: z.enum(['seeds', 'fertiliser', 'agrochem', 'land_prep', 'labour', 'transport', 'storage', 'other']),
@@ -31,6 +31,7 @@ type CostFormData = z.infer<typeof costSchema>;
 
 interface AddCostFormProps {
   seasonId: number;
+  initialData?: CostItem;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -46,14 +47,26 @@ const CategoryIcons: Record<string, React.ReactNode> = {
   other: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>,
 };
 
-export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps) {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [entryMode, setEntryMode] = useState<'total' | 'rate'>('total');
+export function AddCostForm({ seasonId, initialData, onSuccess, onCancel }: AddCostFormProps) {
+  const isEditing = !!initialData;
+  const [step, setStep] = useState<1 | 2>(isEditing ? 2 : 1);
+  const [entryMode, setEntryMode] = useState<'total' | 'rate'>(
+    initialData ? (initialData.quantity ? 'rate' : 'total') : 'total'
+  );
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }, getValues } = useForm<CostFormData>({
     resolver: zodResolver(costSchema),
-    defaultValues: {
+    defaultValues: initialData ? {
+      category: initialData.category,
+      description: initialData.description || '',
+      date_incurred: initialData.date_incurred ? initialData.date_incurred.split('T')[0] : new Date().toISOString().split('T')[0],
+      entry_mode: initialData.quantity ? 'rate' : 'total',
+      quantity: initialData.quantity || undefined,
+      unit: initialData.unit || undefined,
+      unit_cost: initialData.unit_cost_pesewas ? pesewasToCedis(initialData.unit_cost_pesewas) : undefined,
+      total_amount: pesewasToCedis(initialData.amount_pesewas),
+    } : {
       entry_mode: 'total',
       date_incurred: new Date().toISOString().split('T')[0],
     }
@@ -91,7 +104,7 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
         amountPesewas = cedisToPesewas(data.total_amount);
       }
 
-      return addCost({
+      const payload = {
         season_id: seasonId,
         category: data.category,
         description: data.description || undefined,
@@ -100,13 +113,19 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
         unit: unit,
         unit_cost_pesewas: unitCostPesewas,
         amount_pesewas: amountPesewas,
-      });
+      };
+
+      if (isEditing && initialData) {
+        return updateCost(initialData.id, payload);
+      } else {
+        return addCost(payload);
+      }
     },
     onMutate: async (newCost) => {
       await queryClient.cancelQueries({ queryKey: ['seasonCosts', seasonId] });
       const previousCosts = queryClient.getQueryData<CostItem[]>(['seasonCosts', seasonId]);
       
-      if (previousCosts) {
+      if (previousCosts && !isEditing) {
         let amountPesewas = 0;
         if (newCost.entry_mode === 'rate') {
           amountPesewas = cedisToPesewas(newCost.quantity * newCost.unit_cost);
@@ -128,6 +147,26 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
         };
         
         queryClient.setQueryData<CostItem[]>(['seasonCosts', seasonId], [...previousCosts, optimisticCost]);
+      } else if (previousCosts && isEditing && initialData) {
+        let amountPesewas = 0;
+        if (newCost.entry_mode === 'rate') {
+          amountPesewas = cedisToPesewas(newCost.quantity * newCost.unit_cost);
+        } else {
+          amountPesewas = cedisToPesewas(newCost.total_amount);
+        }
+
+        const optimisticCost: CostItem = {
+          ...initialData,
+          category: newCost.category,
+          description: newCost.description || null,
+          quantity: newCost.entry_mode === 'rate' ? newCost.quantity : null,
+          unit: newCost.entry_mode === 'rate' ? newCost.unit : null,
+          unit_cost_pesewas: newCost.entry_mode === 'rate' ? cedisToPesewas(newCost.unit_cost) : null,
+          amount_pesewas: amountPesewas,
+          date_incurred: newCost.date_incurred || null,
+        };
+
+        queryClient.setQueryData<CostItem[]>(['seasonCosts', seasonId], previousCosts.map(c => c.id === initialData.id ? optimisticCost : c));
       }
       
       return { previousCosts };
@@ -181,12 +220,12 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
       
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="pr-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Record Cost</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{isEditing ? 'Edit Cost' : 'Record Cost'}</h2>
           <p className="text-gray-500 font-medium text-sm mt-1">
             {step === 1 ? 'Select what type of cost you incurred.' : 'Enter the details for this cost.'}
           </p>
         </div>
-        {step === 2 && (
+        {step === 2 && !isEditing && (
           <button 
             type="button" 
             onClick={() => setStep(1)} 
@@ -404,7 +443,7 @@ export function AddCostForm({ seasonId, onSuccess, onCancel }: AddCostFormProps)
           disabled={isSubmitting || addMutation.isPending}
           className="w-full py-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl font-bold text-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-emerald-900/20"
         >
-          {isSubmitting || addMutation.isPending ? 'Saving...' : 'Save Cost Item'}
+          {isSubmitting || addMutation.isPending ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Cost Item')}
         </button>
       </div>
     )}

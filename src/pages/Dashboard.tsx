@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useFarm } from '../hooks/useFarm';
 import { listSeasons } from '../api/seasons';
 import { getFarmSummary, getCropSummary } from '../api/dashboard';
 import { generateEstimate } from '../api/estimates';
+import { listGuides } from '../api/guides';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Money } from '../components/ui/Money';
+import { WeeklyCatchUp } from '../components/features/WeeklyCatchUp';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -16,6 +18,38 @@ export function Dashboard() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'closed'>('all');
+  const [showCatchUp, setShowCatchUp] = useState(false);
+
+  useEffect(() => {
+    if (farm?.id) {
+      const targetDay = (farm as any).check_in_day || 'Monday';
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      
+      const lastCatchupStr = localStorage.getItem(`fp_last_catchup_${farm.id}`);
+      if (!lastCatchupStr) {
+        setShowCatchUp(true);
+      } else {
+        const lastCatchup = new Date(lastCatchupStr).getTime();
+        const daysSince = (Date.now() - lastCatchup) / (1000 * 60 * 60 * 24);
+        
+        // Show if it's been ~a week, OR if it's the target day and they haven't done it today
+        if (daysSince >= 6) {
+          setShowCatchUp(true);
+        } else if (today === targetDay && new Date(lastCatchupStr).toDateString() !== new Date().toDateString()) {
+          setShowCatchUp(true);
+        } else {
+          setShowCatchUp(false);
+        }
+      }
+    }
+  }, [farm]);
+
+  const handleCatchUpComplete = () => {
+    if (farm?.id) {
+      localStorage.setItem(`fp_last_catchup_${farm.id}`, new Date().toISOString());
+    }
+    setShowCatchUp(false);
+  };
   
   const estimateMutation = useMutation({
     mutationFn: generateEstimate,
@@ -40,6 +74,11 @@ export function Dashboard() {
     queryKey: ['crop_summary', farm?.id],
     queryFn: () => getCropSummary(farm!.id as number),
     enabled: !!farm?.id,
+  });
+
+  const { data: guides } = useQuery({
+    queryKey: ['dashboard_guides'],
+    queryFn: () => listGuides(),
   });
 
   const isLoading = isLoadingFarm || isLoadingSeasons || isLoadingSummary || isLoadingCrops;
@@ -141,6 +180,10 @@ export function Dashboard() {
         </div>
       ) : (
         <>
+          {showCatchUp && (
+            <WeeklyCatchUp onComplete={handleCatchUpComplete} />
+          )}
+
           {farmSummary && (
             <div className="bg-white dark:bg-white/5 rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-white/10 mb-10 overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none transition-transform group-hover:scale-110"></div>
@@ -166,14 +209,12 @@ export function Dashboard() {
                     <div>
                       <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total Recorded Spend</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
-                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mr-1">GHS</span>
                         <Money pesewas={Number(farmSummary.total_recorded_pesewas)} />
                       </p>
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total Estimated Cost</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
-                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400 mr-1">GHS</span>
                         <Money pesewas={Number(farmSummary.total_estimated_pesewas)} />
                       </p>
                     </div>
@@ -188,7 +229,6 @@ export function Dashboard() {
                       <h3 className="text-emerald-50 text-sm font-bold uppercase tracking-widest">Total Possible Saving</h3>
                     </div>
                     <div className="text-5xl font-light tracking-tighter text-white">
-                      <span className="text-2xl font-medium text-emerald-300 mr-1">GHS</span>
                       <Money pesewas={Number(farmSummary.total_possible_saving_pesewas)} />
                     </div>
                   </div>
@@ -294,6 +334,47 @@ export function Dashboard() {
                 </div>
               )}
             </div>
+
+            {/* AI Feedback / Guidance Area */}
+            {guides && guides.length > 0 && (
+              <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Link to={`/guides/${guides[0].id}`} className="bg-[#0a0a0a] rounded-[32px] p-8 text-white relative overflow-hidden group shadow-xl hover:-translate-y-1 transition-transform">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl -mt-10 -mr-10 group-hover:bg-emerald-500/30 transition-colors"></div>
+                  <div className="relative z-10 flex flex-col h-full justify-between">
+                    <div>
+                      <div className="flex items-center mb-4">
+                        <svg className="w-6 h-6 text-emerald-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest">AI Guidance</span>
+                      </div>
+                      <h3 className="text-2xl font-bold mb-3">{guides[0].title}</h3>
+                      <p className="text-gray-400 text-sm leading-relaxed line-clamp-3 mb-6">{guides[0].summary}</p>
+                    </div>
+                    <div className="flex items-center text-emerald-400 text-sm font-bold">
+                      Read Guide <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                    </div>
+                  </div>
+                </Link>
+                
+                {guides.length > 1 && (
+                  <Link to={`/guides/${guides[1].id}`} className="bg-gradient-to-br from-emerald-800 to-emerald-950 rounded-[32px] p-8 text-white relative overflow-hidden group shadow-xl hover:-translate-y-1 transition-transform">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mt-10 -mr-10"></div>
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                      <div>
+                        <div className="flex items-center mb-4">
+                          <svg className="w-6 h-6 text-emerald-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                          <span className="text-emerald-200 text-xs font-bold uppercase tracking-widest">Farm Tip</span>
+                        </div>
+                        <h3 className="text-2xl font-bold mb-3">{guides[1].title}</h3>
+                        <p className="text-emerald-100/70 text-sm leading-relaxed line-clamp-3 mb-6">{guides[1].summary}</p>
+                      </div>
+                      <div className="flex items-center text-emerald-200 text-sm font-bold">
+                        Read Guide <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+              </div>
+            )}
           
           {/* Seasons List Area */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -348,7 +429,7 @@ export function Dashboard() {
                       <svg className="w-5 h-5 text-emerald-500 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       <div>
                         <h4 className="font-bold mb-1">See how you're doing</h4>
-                        <p className="text-sm text-emerald-800">You've recorded costs! Tap 'Generate estimate' on a season below to see if your spending is on track.</p>
+                        <p className="text-sm text-emerald-800">You've recorded costs! Select a season below to view its details and generate an estimate to see if your spending is on track.</p>
                       </div>
                     </div>
                   </div>

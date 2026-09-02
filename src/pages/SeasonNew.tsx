@@ -27,7 +27,7 @@ export function SeasonNew() {
     queryFn: getCrops,
   });
 
-  const maxAcres = (farm?.total_area_acres as number) || 0;
+  const maxAcres = Number(farm?.total_area_acres) || 0;
 
   const seasonSchema = z.object({
     crop_id: z.number({ message: 'Please select a crop.' }).min(1),
@@ -103,14 +103,14 @@ export function SeasonNew() {
   return (
     <div className="max-w-3xl mx-auto py-12 px-6 lg:px-8 animate-fade-in">
       <div className="mb-10">
-        <button onClick={() => navigate('/')} className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors flex items-center mb-8 group">
-          <span className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 transition-colors">
+        <button onClick={() => navigate('/')} className="text-sm font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors flex items-center mb-8 group">
+          <span className="w-8 h-8 rounded-full bg-white dark:bg-white/5 shadow-sm flex items-center justify-center mr-3 group-hover:bg-gray-50 dark:group-hover:bg-white/10 transition-colors border border-transparent dark:border-white/10">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
           </span>
           Back to Dashboard
         </button>
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight mb-4">Start a new season</h1>
-        <p className="text-lg text-gray-500 font-medium">Record what you're planting to forecast yields and track costs.</p>
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 tracking-tight mb-4">Start a new season</h1>
+        <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">Record what you're planting to forecast yields and track costs.</p>
       </div>
 
       {serverError && (
@@ -119,25 +119,25 @@ export function SeasonNew() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-[32px] p-8 md:p-12 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-gray-100 space-y-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#1a1a1a] rounded-[32px] p-8 md:p-12 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-gray-100 dark:border-white/5 space-y-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         
         {/* Crop Selection */}
         <div className="relative group">
-          <label htmlFor="crop_id" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Crop</label>
+          <label htmlFor="crop_id" className="block text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold mb-3">Crop</label>
           <div className="relative">
             <select
               id="crop_id"
               aria-invalid={errors.crop_id ? 'true' : 'false'}
               aria-describedby={errors.crop_id ? 'crop_id-error' : undefined}
-              className={`w-full appearance-none text-2xl md:text-3xl font-bold text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors cursor-pointer ${
-                errors.crop_id ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
+              className={`w-full appearance-none text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors cursor-pointer ${
+                errors.crop_id ? 'border-red-500' : 'border-gray-100 dark:border-white/10 focus:border-emerald-500 hover:border-gray-200 dark:hover:border-white/20'
               }`}
               {...register('crop_id', { valueAsNumber: true })}
               defaultValue=""
             >
-              <option value="" disabled className="text-gray-300">Select a crop...</option>
+              <option value="" disabled className="text-gray-500 bg-white dark:bg-[#1a1a1a]">Select a crop...</option>
               {crops?.map((c: any) => (
-                <option key={c.id} value={c.id} className="text-lg">
+                <option key={c.id} value={c.id} className="text-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100">
                   {c.name} {c.local_name ? `(${c.local_name})` : ''}
                 </option>
               ))}
@@ -152,14 +152,14 @@ export function SeasonNew() {
         {/* Year & Season Window (Side by side on desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="relative group">
-            <label htmlFor="year" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Year</label>
+            <label htmlFor="year" className="block text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold mb-3">Year</label>
             <input
               id="year"
               type="number"
               aria-invalid={errors.year ? 'true' : 'false'}
               aria-describedby={errors.year ? 'year-error' : undefined}
-              className={`w-full text-2xl md:text-3xl font-bold text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors ${
-                errors.year ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
+              className={`w-full text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors ${
+                errors.year ? 'border-red-500' : 'border-gray-100 dark:border-white/10 focus:border-emerald-500 hover:border-gray-200 dark:hover:border-white/20'
               }`}
               {...register('year', { valueAsNumber: true })}
             />
@@ -167,22 +167,22 @@ export function SeasonNew() {
           </div>
 
           <div className="relative group">
-            <label htmlFor="season_window" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Season Window</label>
+            <label htmlFor="season_window" className="block text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold mb-3">Season Window</label>
             <div className="relative">
               <select
                 id="season_window"
                 aria-invalid={errors.season_window ? 'true' : 'false'}
                 aria-describedby={errors.season_window ? 'season_window-error' : undefined}
-                className={`w-full appearance-none text-2xl md:text-3xl font-bold text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors cursor-pointer ${
-                  errors.season_window ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
+                className={`w-full appearance-none text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors cursor-pointer ${
+                  errors.season_window ? 'border-red-500' : 'border-gray-100 dark:border-white/10 focus:border-emerald-500 hover:border-gray-200 dark:hover:border-white/20'
                 }`}
                 {...register('season_window')}
                 defaultValue=""
               >
-                <option value="" disabled className="text-gray-300">Select timing...</option>
-                {seasonWindows.map((w) => (
-                  <option key={w.value} value={w.value} className="text-lg">
-                    {w.label}
+                <option value="" disabled className="text-gray-500 bg-white dark:bg-[#1a1a1a]">Select timing...</option>
+                {seasonWindows.map((sw) => (
+                  <option key={sw.value} value={sw.value} className="bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100">
+                    {sw.label}
                   </option>
                 ))}
               </select>
@@ -204,17 +204,18 @@ export function SeasonNew() {
 
         {/* Area Planted */}
         <div className="relative group">
-          <label htmlFor="area_planted_acres" className="block text-sm uppercase tracking-widest text-gray-500 font-bold mb-3">Area Planted</label>
-          <div className="relative flex items-end">
+          <label htmlFor="area_planted_acres" className="block text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold mb-3">
+            Area to Plant <span className="text-gray-400 dark:text-gray-500 font-medium normal-case ml-1">(max {maxAcres} acres)</span>
+          </label>
+          <div className="relative">
             <input
               id="area_planted_acres"
               type="number"
               step="0.1"
-              placeholder="0.0"
               aria-invalid={errors.area_planted_acres ? 'true' : 'false'}
-              aria-describedby={errors.area_planted_acres ? 'area_planted-error' : undefined}
-              className={`w-full text-4xl md:text-5xl font-light text-gray-900 bg-transparent border-b-2 pb-4 focus:outline-none transition-colors ${
-                errors.area_planted_acres ? 'border-red-500' : 'border-gray-100 focus:border-emerald-500 hover:border-gray-200'
+              aria-describedby={errors.area_planted_acres ? 'area-error' : undefined}
+              className={`w-full text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 pb-4 pr-20 focus:outline-none transition-colors ${
+                errors.area_planted_acres ? 'border-red-500' : 'border-gray-100 dark:border-white/10 focus:border-emerald-500 hover:border-gray-200 dark:hover:border-white/20'
               }`}
               {...register('area_planted_acres', { valueAsNumber: true })}
             />

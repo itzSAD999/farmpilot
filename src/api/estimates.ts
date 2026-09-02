@@ -184,3 +184,31 @@ export async function checkProvisionalBenchmarks(seasonId: number): Promise<bool
 
   return benchmarks.some(b => b.source.includes('PLACEHOLDER'));
 }
+
+/**
+ * Updates a single line on an existing estimate and recalculates the total.
+ */
+export async function updateEstimateLine(estimateId: number, category: string, newPesewas: number): Promise<void> {
+  const { error: lineError } = await supabase
+    .from('estimate_lines')
+    .update({ estimated_pesewas: newPesewas })
+    .match({ estimate_id: estimateId, category: category });
+
+  if (lineError) throw handleEstimateError(lineError);
+
+  const { data: lines, error: fetchError } = await supabase
+    .from('estimate_lines')
+    .select('estimated_pesewas')
+    .eq('estimate_id', estimateId);
+
+  if (fetchError) throw handleEstimateError(fetchError);
+
+  const total = lines.reduce((sum, line) => sum + Number(line.estimated_pesewas), 0);
+
+  const { error: totalError } = await supabase
+    .from('estimates')
+    .update({ total_pesewas: total })
+    .eq('id', estimateId);
+
+  if (totalError) throw handleEstimateError(totalError);
+}

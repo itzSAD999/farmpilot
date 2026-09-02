@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getGuideById } from '../api/guides';
+import { listSeasons } from '../api/seasons';
 import { CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
 import { useState } from 'react';
@@ -13,6 +14,12 @@ export function GuideDetail() {
   const { farm } = useFarm();
   const [isPersonalizing, setIsPersonalizing] = useState(false);
   const [personalizedPlan, setPersonalizedPlan] = useState<string | null>(null);
+
+  const { data: seasons } = useQuery({
+    queryKey: ['seasons', farm?.id],
+    queryFn: () => listSeasons(farm?.id as number),
+    enabled: !!farm?.id,
+  });
 
   const { data: guide, isLoading, isError } = useQuery({
     queryKey: ['guide', id],
@@ -82,11 +89,16 @@ export function GuideDetail() {
                 if (isPersonalizing || personalizedPlan) return;
                 setIsPersonalizing(true);
                 try {
+                  const activeCrops = seasons 
+                    ? Array.from(new Set(seasons.map((s: any) => s.crop_name))).join(', ')
+                    : 'Unknown crops';
+                    
                   const plan = await generatePersonalizedGuide(
                     guide.title,
                     guide.summary,
                     guide.body_markdown,
-                    farm
+                    farm,
+                    activeCrops
                   );
                   setPersonalizedPlan(plan);
                 } catch (e) {
@@ -152,11 +164,16 @@ export function GuideDetail() {
           </div>
         )}
 
-        {/* Body Markdown (simulated as simple text with basic formatting for now since we don't have a markdown parser installed) */}
+        {/* Body Markdown */}
         <div className="prose prose-emerald dark:prose-invert prose-lg max-w-none mb-12">
-          {guide.body_markdown.split('\n\n').map((paragraph, i) => (
-            <p key={i} className="text-gray-700 dark:text-gray-300 leading-relaxed">{paragraph}</p>
-          ))}
+          {(guide.body_markdown || '').split('\n').map((line, i) => {
+            if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-bold mt-4 mb-2 text-emerald-800 dark:text-emerald-300">{line.replace('### ', '')}</h3>;
+            if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold mt-6 mb-3 text-emerald-900 dark:text-emerald-200">{line.replace('## ', '')}</h2>;
+            if (line.startsWith('# ')) return <h1 key={i} className="text-2xl font-bold mt-6 mb-4">{line.replace('# ', '')}</h1>;
+            if (line.startsWith('- ')) return <li key={i} className="ml-4 mb-1 text-gray-700 dark:text-gray-300">{line.substring(2)}</li>;
+            if (line.trim() === '') return <br key={i} />;
+            return <p key={i} className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{line}</p>;
+          })}
         </div>
 
         {/* Source citation */}

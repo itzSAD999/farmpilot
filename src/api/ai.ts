@@ -27,7 +27,8 @@ export async function generatePersonalizedGuide(
   guideTitle: string, 
   guideSummary: string, 
   guideBody: string, 
-  farmDetails: any
+  farmDetails: any,
+  activeCrops: string
 ): Promise<string> {
   const systemPrompt = `You are an expert agronomist AI assisting a farmer in Ghana.
 The farmer is reading a general agricultural guide. Your task is to personalize this guide for their specific farm.
@@ -37,6 +38,7 @@ Farmer's Profile:
 - Farm Size: ${farmDetails.total_area_acres || 'Unknown'} acres
 - Region: ${farmDetails.region || 'Unknown'}
 - District: ${farmDetails.district || 'Unknown'}
+- Active Crops: ${activeCrops}
 `;
 
   const userPrompt = `Please give me a personalized action plan based on this guide:

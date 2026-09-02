@@ -216,7 +216,7 @@ export function SignUp() {
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
         <div className="relative z-10 flex items-center">
-          <img src="/logo.png" alt="FarmPilot Logo" className="h-12 w-auto object-contain brightness-0 invert" />
+          <img src="/logo.png" alt="FarmPilot Logo" className="h-12 w-auto object-contain" />
         </div>
 
         <div className="relative z-10 my-auto pr-8 animate-fade-in" key={step}>

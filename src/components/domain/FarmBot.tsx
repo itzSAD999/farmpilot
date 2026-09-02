@@ -5,6 +5,7 @@ import { listSeasons } from '../../api/seasons';
 import { getFarmSummary } from '../../api/dashboard';
 import { chatWithFarmBot, Message } from '../../api/ai';
 import { getDetailedCostsForFarm } from '../../api/costs';
+import { getFlaggedInsightsForFarm } from '../../api/estimates';
 
 export function FarmBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,6 +32,15 @@ export function FarmBot() {
   const { data: detailedCosts } = useQuery({
     queryKey: ['farm_detailed_costs', farm?.id],
     queryFn: () => getDetailedCostsForFarm(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+
+  // Real overspend flags from each season's latest estimate (actual
+  // recorded costs vs. benchmark — see generate_estimate(), SDD §9.2),
+  // so FarmBot can name specific numbers instead of speaking generically.
+  const { data: flaggedInsights } = useQuery({
+    queryKey: ['flagged_insights', farm?.id],
+    queryFn: () => getFlaggedInsightsForFarm(farm!.id as number),
     enabled: !!farm?.id,
   });
 
@@ -65,15 +75,25 @@ export function FarmBot() {
       });
     }
 
+    if (flaggedInsights && flaggedInsights.length > 0) {
+      prompt += `\nOverspend Flags (from the estimation engine — actual recorded spend vs. the standard benchmark rate, only for categories the farmer has actually recorded a cost for this season):\n`;
+      flaggedInsights.forEach((f) => {
+        prompt += `- [${f.crop_name} ${f.season_window} ${f.year}] ${f.category} is ${f.variance_pct}% above the expected rate`;
+        if (f.potential_saving_pesewas) prompt += `, a possible saving of GHS ${(f.potential_saving_pesewas / 100).toFixed(2)}`;
+        prompt += `.${f.advice ? ` Suggested fix: ${f.advice}` : ''}\n`;
+      });
+    }
+
     prompt += `\nGuidelines for your responses:
 - Keep answers concise and extremely practical.
 - Speak in plain English, avoiding overly technical jargon.
-- If they ask about costs or where they are overspending, read their 'Detailed Expense History' above to provide specific, exact numbers and categories.
+- If they ask about costs or where they are overspending, lead with the 'Overspend Flags' above — those are real, computed comparisons against the benchmark, not a guess. Use their exact numbers and categories. If there are no flags, say their recorded spending looks on track rather than inventing a concern.
+- Read 'Detailed Expense History' for anything not covered by a flag.
 - Mention Ghanaian agricultural context (e.g., MoFA subsidy, two seasons, specific local practices).
 - Format using simple markdown for readability.`;
 
     return prompt;
-  }, [farm, summary, seasons, detailedCosts]);
+  }, [farm, summary, seasons, detailedCosts, flaggedInsights]);
 
   // Initialize with greeting
   useEffect(() => {
@@ -133,7 +153,7 @@ export function FarmBot() {
       {/* Floating Action Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 bg-[#1B5E20] hover:bg-[#144718] text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-105 z-40 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-6 md:bottom-8 md:right-8 w-16 h-16 bg-[#1B5E20] hover:bg-[#144718] text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-105 z-40 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
         aria-label="Open FarmBot"
       >
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>

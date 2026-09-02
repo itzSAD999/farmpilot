@@ -395,11 +395,10 @@ export function Seasons() {
                           <p className="font-bold text-gray-700 dark:text-gray-300">{season.area_planted_acres} <span className="text-xs font-medium text-gray-400">ac</span></p>
                         </div>
                         <div className="md:col-span-2 text-right">
-                          <p className="font-bold text-gray-900 dark:text-gray-100 text-lg"><span className="text-xs font-medium text-gray-400 mr-1">GHS</span><Money pesewas={season.total_recorded_pesewas} /></p>
+                          <p className="font-bold text-gray-900 dark:text-gray-100 text-lg"><Money pesewas={season.total_recorded_pesewas} /></p>
                         </div>
                         <div className="md:col-span-3 text-right">
                           <p className="font-extrabold text-emerald-600 dark:text-emerald-400 text-2xl tracking-tight bg-emerald-50 dark:bg-emerald-900/10 inline-block px-3 py-1 rounded-xl">
-                            <span className="text-sm font-bold text-emerald-400 dark:text-emerald-600 mr-1">GHS</span>
                             <Money pesewas={season.cost_per_acre_pesewas} />
                           </p>
                         </div>
@@ -427,13 +426,12 @@ export function Seasons() {
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cost per Acre</p>
                         <p className="font-extrabold text-emerald-600 dark:text-emerald-400 text-xl tracking-tight">
-                          <span className="text-xs font-bold text-emerald-400 dark:text-emerald-600 mr-1">GHS</span>
                           <Money pesewas={season.cost_per_acre_pesewas} />
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total</p>
-                        <p className="font-bold text-gray-900 dark:text-gray-100 text-base"><span className="text-xs font-medium text-gray-400 mr-1">GHS</span><Money pesewas={season.total_recorded_pesewas} /></p>
+                        <p className="font-bold text-gray-900 dark:text-gray-100 text-base"><Money pesewas={season.total_recorded_pesewas} /></p>
                       </div>
                       <div className="col-span-2 flex items-center justify-between mt-2 pt-2 border-t border-gray-50 dark:border-white/5">
                         <p className="text-sm font-bold text-gray-600 dark:text-gray-400">{season.area_planted_acres} acres</p>
@@ -465,7 +463,7 @@ export function Seasons() {
 
       {/* Comparison Sticky Bar */}
       {selectedIds.size >= 2 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 z-40 animate-fade-in-up pointer-events-none">
+        <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 p-4 md:p-6 z-40 animate-fade-in-up pointer-events-none">
           <div className="max-w-2xl mx-auto bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl shadow-2xl p-4 flex items-center justify-between pointer-events-auto border border-gray-800 dark:border-gray-200">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gray-800 dark:bg-gray-100 rounded-xl flex items-center justify-center font-black text-xl">

@@ -6,8 +6,9 @@ Department of Computer Science · Mini Project 2025/2026
 | | |
 |---|---|
 | **Document type** | Product Requirements Document (PRD) |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Status** | Approved for build |
+| **Changes in 1.2** | Estimation engine now compares this season's *actually recorded* costs against benchmark, not just a prediction against itself (see §7.6, BR-5/BR-6); per-category "don't know this cost" benchmark fill (FR-4.13); interactive cost-tracking checklist on the report's cold-start screen (FR-9.10); quick-add-cost entry point from the dashboard (FR-4.14); weekly check-in day added to farm setup (FR-2.6, §7.4A); fixed a data bug that had silently 5×'d every Maize benchmark figure (§8.4) |
 | **Changes in 1.1** | Phone-first auth · dashboard rollups · offline capture · local languages |
 | **Product** | FarmPilot — farm cost estimation and reduction tool |
 | **Team** | Osmond Abdul-Karim Woriwi (21034402) · Aboagye Jeffery Ohene (21013336) · Ayisha Abdullah (20950630) |
@@ -294,6 +295,7 @@ a provider; numbers are already stored and normalised.
 | FR-2.3 | Total area must be greater than zero | P0 |
 | FR-2.4 | A user can edit farm details after creation | P1 |
 | FR-2.5 | A user can hold multiple farms | P2 |
+| FR-2.6 | A user picks a day of the week during farm setup as their weekly check-in day (§7.4A) | P1 |
 
 ### 7.3 Season
 
@@ -326,6 +328,36 @@ a provider; numbers are already stored and normalised.
 | FR-4.10 | A user can edit an existing item | P1 |
 | FR-4.11 | A date may be attached to any item | P1 |
 | FR-4.12 | Common inputs are offered as suggestions when a category is selected | P1 |
+| FR-4.13 | Where a benchmark exists for the season's crop and the selected category, the add-cost form offers to fill the amount with the standard rate scaled to the season's planted acreage, for a farmer who does not know what a category actually cost | P1 |
+| FR-4.14 | A cost item can be added from the dashboard without first opening a season, when the farm has exactly one active season; where it has more than one, the farmer is asked which season the cost belongs to first | P1 |
+
+### 7.4A Weekly check-in
+
+A farmer rarely opens the app mid-season unless prompted — costs that
+should be logged as they happen (labour, transport) get forgotten and
+either lost or dumped into memory-based guesses weeks later. The weekly
+check-in is a standing prompt that asks, per category, "did you spend
+anything on X this week?" so recurring costs get captured close to when
+they happened, feeding the same `season_costs` rows the normal add-cost
+form does.
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-4A.1 | The dashboard prompts a weekly check-in when it has been roughly a week since the last one, or when today is the farmer's chosen check-in day (FR-2.6) and they have not completed one today | P1 |
+| FR-4A.2 | The check-in asks one question per expected category across all of the farmer's active seasons, not per season — where two active seasons share an expected category, one question covers both | P1 |
+| FR-4A.3 | A farmer can answer "Nothing" to skip a category for that week without it counting as zero spend recorded | P1 |
+| FR-4A.4 | An amount entered against a category shared by multiple active seasons is split evenly across those seasons | P2 |
+| FR-4A.5 | Check-in entries are recorded as ordinary cost items — they are indistinguishable from normally-recorded costs to the estimation engine and appear in the same lists and totals | P0 |
+| FR-4A.6 | The farmer can dismiss a check-in without answering every question | P1 |
+
+**Accepted limitation (FR-4A.4).** Splitting evenly rather than by
+planted acreage is a simplification: a 1-acre and a 5-acre active season
+sharing a "labour" question receive the same split regardless of size,
+which skews the per-acre figure for both until the farmer corrects it
+with an ordinary edit. Splitting proportionally by acreage is documented
+as future work (SDD §18) rather than built now, because it adds a second
+mental model (equal vs. proportional) to a screen designed to be
+answerable in seconds standing in a field.
 
 ### 7.5 Cost categories
 
@@ -357,6 +389,18 @@ total but carries no advice, and the report says so. See ADR-004.
 | FR-6.8 | Estimate generation is unavailable until at least one cost item exists | P0 |
 | FR-6.9 | Re-running an estimate creates a new record rather than overwriting | P0 |
 | FR-6.10 | A user can view previous estimates for a season | P1 |
+| FR-6.11 | Where the farmer has already recorded an actual cost for a category this season, the estimate line for that category shows that recorded figure rather than a prediction, and is labelled "Recorded"; categories not yet recorded are labelled "Predicted" | P0 |
+| FR-6.12 | Overspend flagging (FR-7.x) applies only to "Recorded" lines — a still-predicted line has nothing real to compare yet | P0 |
+
+**Why FR-6.11/6.12 exist.** The original engine computed the "estimate"
+and the "benchmark" for a first-time crop from the exact same figures, so
+they were always equal — variance was always 0% and nothing could ever be
+flagged, regardless of what a farmer actually recorded that season. This
+silently defeated FR-7 and FR-8 for every farmer growing a crop with no
+prior completed season of their own, which is every farmer's first
+season. The fix makes the estimate line for a category switch from a
+prediction to the farmer's own recorded figure the moment they record it,
+so the comparison in BR-6 has something real to compare once it exists.
 
 ### 7.7 Overspend detection
 
@@ -392,6 +436,8 @@ total but carries no advice, and the report says so. See ADR-004.
 | FR-9.7 | The report notes when benchmark rather than history was used | P0 |
 | FR-9.8 | The report fits one scrollable screen at 360px width | P0 |
 | FR-9.9 | The report is printable or exportable to PDF | P2 |
+| FR-9.10 | Where a season has nothing to estimate yet (no benchmark for the crop, no history, no recorded costs), the report screen shows an interactive checklist of the categories a farmer should track, each marked as fixed (recorded) or needing fixing (not yet recorded); tapping a category opens the add-cost form directly, pre-set to that category | P0 |
+| FR-9.11 | The checklist in FR-9.10 uses the crop's own expected categories where benchmark norms exist for it; where they do not, it falls back to the same general checklist (seeds, land preparation, fertiliser, labour) used on the season screen, so every crop gets an actionable checklist | P1 |
 
 ### 7.10 Data integrity
 
@@ -476,6 +522,7 @@ audio. See ADR-009.
 | FR-14.3 | FarmBot has access to the user's active and completed seasons, along with crop and area planted details | P0 |
 | FR-14.4 | FarmBot provides specific, actionable agricultural advice tailored to the user's current farm data | P0 |
 | FR-14.5 | FarmBot handles network errors gracefully without crashing the application | P0 |
+| FR-14.6 | FarmBot has access to the real overspend flags computed by the estimation engine (category, variance percentage, potential saving, advice) for the most recent estimate on each of the user's seasons, and is instructed to lead with them — not a generic guess — when asked about overspending | P0 |
 
 ---
 
@@ -492,7 +539,7 @@ audio. See ADR-009.
 | Reference — settings | Price multiplier, flag threshold |
 | Reference — translations | Cached Khaya translations of advice, with a reviewed flag |
 | Farmer — profile | Phone, linked email, full name, preferred language, auth method |
-| Farmer — farm | Name, district, region, total area |
+| Farmer — farm | Name, district, region, total area, weekly check-in day |
 | Farmer — season | Crop, year, window, area planted, harvest quantity and unit, revenue, completion status |
 | Farmer — costs | Category, description, quantity, unit, unit price, amount, date |
 | Output — estimate | Method, seasons used, area, total, settings snapshot, timestamp |
@@ -539,7 +586,23 @@ Verification: setting a placeholder to an absurd value (ploughing at GHS
 5 per acre) must visibly change the report total. If it does not, a value
 has been hardcoded somewhere and the requirement is violated.
 
-### 8.4 Data collection responsibility
+### 8.4 Known data-integrity issue, fixed
+
+`crop_input_norms` carries a uniqueness constraint on
+`(crop_id, benchmark_id, season_window)` so the same input cannot be
+seeded twice for a crop. Postgres never treats two `NULL` values as
+equal for uniqueness purposes, and every seeded row has
+`season_window = NULL` (it applies to every window) — so the constraint
+silently permitted unlimited duplicate rows. Re-running the seed script
+against the live database five times over the project's iteration left
+five copies of every Maize input, inflating every benchmark and
+"estimated cost" figure in the app by 5×. Fixed by de-duplicating the
+existing rows and replacing the constraint with two partial unique
+indexes — one for a specific window, one for `season_window IS NULL` —
+which is the correct way to enforce "NULL counts as a real, comparable
+value" in Postgres. See SDD §6.5.
+
+### 8.5 Data collection responsibility
 
 Collecting §8.2 rows marked "to collect" is a task with a named owner and
 a deadline, tracked separately from the build. The build does not block on
@@ -581,6 +644,9 @@ mechanism, not a general instruction.
 | No costs on a season | "Add what you have spent so far. You need at least one item before we can estimate." |
 | Estimate from benchmark | "Based on standard rates for maize. Record this season and next year's estimate will use your own figures." |
 | No flags raised | "Nothing stands out as high this season." |
+| Estimate requested with nothing to show yet | An interactive checklist of expected categories, each marked fixed or needing fixing, so the farmer knows exactly what to record next instead of a dead end |
+| Recorded cost category on the report | Labelled "Recorded" |
+| Not-yet-recorded cost category on the report | Labelled "Predicted" |
 
 ---
 
@@ -666,10 +732,10 @@ through form design, but never required.
 | 1 | Sign up | Email, password, confirm password, link to sign in | Create account |
 | 2 | Sign in | Email, password, link to sign up | Sign in |
 | 3 | Farm setup | Farm name, district, region, total acres | Save and continue |
-| 4 | Dashboard | Farm-level totals (seasons, crops, planted acres, recorded, estimated, possible saving); per-crop table with cost per acre; season cards showing crop, year, window, recorded total, status; empty state | New season |
+| 4 | Dashboard | Farm-level totals (seasons, crops, planted acres, recorded, estimated, possible saving); per-crop table with cost per acre; season cards showing crop, year, window, recorded total, status; quick "Add Cost" entry (season picker if more than one active season); empty state | New season |
 | 5 | New season | Crop select, year, window select, area planted with farm total shown for reference | Create season |
-| 6 | Season detail | Season header; cost item list with category, description, amount, delete; add-cost form; running total; close-season control | Generate estimate |
-| 7 | Report | Estimated total; method note; category breakdown with amount and share; flagged categories first and visually distinct, each with variance, possible saving, and advice; audio playback where a local language is selected; total possible saving | Back to season |
+| 6 | Season detail | Season header; cost item list with category, description, amount, delete; add-cost form (with per-category "don't know this cost" benchmark fill); running total; close-season control | Generate estimate |
+| 7 | Report | Estimated total; method note; category breakdown with amount, share, and a Recorded/Predicted label per category; flagged categories first and visually distinct, each with variance, possible saving, and advice; audio playback where a local language is selected; total possible saving; where there is nothing to show yet, an interactive cost-tracking checklist in place of a dead end | Back to season |
 | 8 | Settings | Preferred language; link an email address to a phone account | Save |
 
 ### 11.1 Report layout requirement
@@ -707,6 +773,12 @@ through form design, but never required.
 └─────────────────────────────────────────────────────┘
 ```
 
+Each line in "Where Your Money Goes" additionally carries a small
+Recorded/Predicted label (omitted from the mockup for space) — Recorded
+where the farmer has actually logged that category this season,
+Predicted where the figure is still the standard rate or their own
+history. Only Recorded lines can be flagged.
+
 ### 11.2 Responsive requirement
 
 Every screen must be usable at 360px width. The report must not require
@@ -722,8 +794,8 @@ horizontal scrolling. Tables become stacked rows below 480px.
 | BR-2 | A farmer may plant the same crop in two different windows of one year |
 | BR-3 | Area planted may not exceed the farm's total area |
 | BR-4 | A season contributes to history only when marked complete and holding at least one cost item |
-| BR-5 | Method is `history` where one or more prior completed seasons of the same crop exist on the same farm; otherwise `benchmark` |
-| BR-6 | Comparison is always against benchmark, in both methods |
+| BR-5 | Method is `history` where one or more prior completed seasons of the same crop exist on the same farm; otherwise `benchmark`. Method governs the *prediction* shown for a category the farmer has not yet recorded a cost for this season — it does not change what a recorded category is compared against |
+| BR-6 | Comparison is always against benchmark, never against the farmer's own history — history informs the prediction only. Comparison happens only for a category the farmer has actually recorded a cost for this season (`is_actual = true`); a category still showing a prediction has no comparison to make yet |
 | BR-7 | A category is flagged where variance exceeds the threshold, default 30% |
 | BR-8 | A category with no benchmark is displayed but never flagged |
 | BR-9 | Potential saving is the amount above benchmark, never negative |
@@ -744,7 +816,7 @@ horizontal scrolling. Tables become stacked rows below 480px.
 | # | Situation | Required behaviour |
 |---|---|---|
 | E1 | Estimate requested with no cost items | Action disabled with explanatory text; no error state |
-| E2 | Crop selected has no benchmark norms | Estimate returns only categories the farmer recorded; report states the comparison is incomplete for this crop |
+| E2 | Crop selected has no benchmark norms | Estimate returns only categories the farmer has actually recorded, each shown as "Recorded" with no benchmark comparison (`other`-category treatment); if nothing has been recorded either, the report shows the interactive checklist (FR-9.10/9.11) using the general fallback categories instead of a dead end |
 | E3 | Farmer records a category with no benchmark, e.g. "other" | Included in total, shown in breakdown, never flagged |
 | E4 | Area planted entered as zero | Rejected client-side and by database constraint |
 | E5 | Area planted exceeds farm total | Rejected with a message naming the farm total |

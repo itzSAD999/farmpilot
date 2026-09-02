@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFarm } from '../hooks/useFarm';
 import { listSeasons } from '../api/seasons';
 import { getFarmSummary, getCropSummary } from '../api/dashboard';
@@ -9,16 +9,20 @@ import { generateWeeklyTip } from '../api/ai';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Money } from '../components/ui/Money';
 import { WeeklyCatchUp } from '../components/features/WeeklyCatchUp';
+import { AddCostForm } from '../components/domain/AddCostForm';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export function Dashboard() {
   const { farm, isLoading: isLoadingFarm, hasFarm } = useFarm();
   const navigate = useNavigate();
-  
+  const queryClient = useQueryClient();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'closed'>('all');
   const [showCatchUp, setShowCatchUp] = useState(false);
+  const [showSeasonPicker, setShowSeasonPicker] = useState(false);
+  const [costModalSeasonId, setCostModalSeasonId] = useState<number | null>(null);
 
   useEffect(() => {
     if (farm?.id) {
@@ -140,12 +144,76 @@ export function Dashboard() {
           <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mt-1">Manage your farm's seasons and track costs.</p>
         </div>
         <div className="flex space-x-3">
+          {seasons && seasons.filter(s => !s.is_complete).length > 0 && (
+            <button
+              onClick={() => {
+                const activeSeasons = seasons.filter(s => !s.is_complete);
+                if (activeSeasons.length === 1) {
+                  setCostModalSeasonId(activeSeasons[0].id);
+                } else {
+                  setShowSeasonPicker(true);
+                }
+              }}
+              className="bg-white dark:bg-white/5 text-gray-900 dark:text-gray-100 font-bold py-2.5 px-4 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
+            >
+              <svg className="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              Add Cost
+            </button>
+          )}
           <Link to="/season/new" className="bg-[#1B5E20] text-white font-bold py-2.5 px-4 rounded-xl shadow-sm hover:bg-[#144718] transition-colors flex items-center justify-center">
             <svg className="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Start New Season
           </Link>
         </div>
       </div>
+
+      {/* Season Picker (only shown when there's more than one active season) */}
+      {showSeasonPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowSeasonPicker(false)}></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up p-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Which season?</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">You have more than one active season. Pick the one this cost belongs to.</p>
+            <div className="space-y-2">
+              {seasons?.filter(s => !s.is_complete).map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setShowSeasonPicker(false);
+                    setCostModalSeasonId(s.id);
+                  }}
+                  className="w-full text-left p-4 rounded-2xl border border-gray-100 dark:border-white/10 hover:border-emerald-300 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10 transition-colors flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-900 dark:text-gray-100">{s.crop_name}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 capitalize">{s.season_window} {s.year} &middot; {s.area_planted_acres} acres</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowSeasonPicker(false)} className="mt-6 w-full py-3 font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Cost Modal */}
+      {costModalSeasonId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setCostModalSeasonId(null)}></div>
+          <div className="relative w-full max-w-2xl z-10 animate-fade-in-up">
+            <AddCostForm
+              seasonId={costModalSeasonId}
+              onSuccess={() => {
+                setCostModalSeasonId(null);
+                queryClient.invalidateQueries({ queryKey: ['seasons', farm?.id] });
+                queryClient.invalidateQueries({ queryKey: ['farm_summary', farm?.id] });
+                queryClient.invalidateQueries({ queryKey: ['crop_summary', farm?.id] });
+              }}
+              onCancel={() => setCostModalSeasonId(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {isError ? (
         <div className="bg-red-50 rounded-[32px] p-12 text-center border border-red-100">
@@ -441,7 +509,7 @@ export function Dashboard() {
                         <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                           <div className="text-left sm:text-right">
                             <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Recorded</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-gray-100"><span className="text-sm font-medium text-gray-500 dark:text-gray-400 mr-1">GHS</span><Money pesewas={season.total_cost_pesewas} /></p>
+                            <p className="text-lg font-bold text-gray-900 dark:text-gray-100"><Money pesewas={season.total_cost_pesewas} /></p>
                           </div>
                           
                           {/* Generate Estimate Shortcut */}

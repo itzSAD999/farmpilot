@@ -82,7 +82,7 @@ export function FarmSetup() {
     setIsSubmitting(true);
 
     try {
-      await createFarm(user!.id, data);
+      await createFarm(data);
       await queryClient.invalidateQueries({ queryKey: ["farm", user?.id] });
       sessionStorage.removeItem("farm-setup-in-progress");
       setStep(5); // Success step

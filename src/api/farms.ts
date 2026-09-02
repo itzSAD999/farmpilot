@@ -79,7 +79,7 @@ export async function getFarm(userId: string): Promise<Farm | null> {
 /**
  * Creates a new farm for the current user.
  */
-export async function createFarm(userId: string, input: CreateFarmInput): Promise<Farm> {
+export async function createFarm(input: CreateFarmInput): Promise<Farm> {
   // Client-side validation for area
   if (input.total_area_acres <= 0) {
     throw new Error("Farm area must be greater than zero acres.");

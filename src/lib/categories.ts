@@ -58,5 +58,13 @@ export const CATEGORIES: Record<CostCategory, CategoryConfig> = {
   },
 };
 
-export const OTHER_CATEGORY_EXPLANATION = 
+/**
+ * Fallback checklist for crops with no seeded crop_input_norms (i.e. no
+ * crop-specific benchmark data yet). Used anywhere we'd otherwise show
+ * getExpectedCategoriesForCrop() results, so every crop gets a sensible
+ * "what should I be tracking" checklist even before norms exist for it.
+ */
+export const ESSENTIAL_CATEGORIES: CostCategory[] = ['seeds', 'land_prep', 'fertiliser', 'labour'];
+
+export const OTHER_CATEGORY_EXPLANATION =
   "Costs placed in 'Other' count toward your total but cannot be compared against standard rates, so no specific advice will be given. Try to use specific categories if possible.";

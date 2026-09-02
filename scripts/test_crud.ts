@@ -28,12 +28,12 @@ async function runTest() {
     
     // 3. Get Farm
     console.log('3. Fetching the farm...');
-    const fetchedFarm = await farmsApi.getFarm();
+    const fetchedFarm = await farmsApi.getFarm(authData.session?.user?.id as string);
     console.log('   Fetched farm name:', fetchedFarm?.name);
     
     // 4. Update Farm
     console.log('4. Updating farm area...');
-    const updatedFarm = await farmsApi.updateFarm(farm.id, { total_area_acres: 10 });
+    const updatedFarm = await farmsApi.updateFarm(authData.session?.user?.id as string, farm.id, { total_area_acres: 10 });
     console.log('   Updated area:', updatedFarm.total_area_acres);
     
     // 5. Check Crops

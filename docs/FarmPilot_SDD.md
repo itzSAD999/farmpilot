@@ -6,7 +6,8 @@ Department of Computer Science · Mini Project 2025/2026
 | | |
 |---|---|
 | **Document type** | Software Design Document (SDD) / System Architecture Document |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
+| **Changes in 1.2** | `generate_estimate()` rewritten to compare this season's actually-recorded costs against benchmark, not a prediction against itself (§9.2); `estimate_lines.is_actual` added; `get_category_benchmark_pesewas()` RPC for per-category "don't know this cost" fill (§7.1); fixed `crop_input_norms` duplicate-row bug via partial unique indexes (§6.5); interactive cost-tracking checklist replaces the report's dead-end empty state (§13.1) |
 | **Changes in 1.1** | Phone-first auth (profiles) · sync columns · rollup views · translation cache |
 | **Project** | FarmPilot — farm cost estimation and reduction tool |
 | **Team** | Osmond Abdul-Karim Woriwi (21034402) · Aboagye Jeffery Ohene (21013336) · Ayisha Abdullah (20950630) |
@@ -257,7 +258,8 @@ src/
 ├── components/
 │   ├── layout/                 AppShell, Header, ProtectedRoute
 │   ├── ui/                     Button, Input, Select, Card, Table, Money
-│   └── domain/                 SeasonCard, CostRow, CategoryBar, FlagBadge, FarmBot
+│   ├── features/                WeeklyCatchUp, CostList
+│   └── domain/                 SeasonCard, CostRow, CategoryBar, FlagBadge, FarmBot, AddCostForm
 ├── pages/
 │   ├── SignIn.tsx
 │   ├── SignUp.tsx
@@ -281,7 +283,8 @@ src/
 | `Dashboard` | Lists seasons with status and total recorded so far |
 | `SeasonNew` | Crop, year, season_window, area planted |
 | `SeasonDetail` | Cost list plus the add-cost form; triggers estimate generation |
-| `EstimateReport` | Total, per-category breakdown, flags, advice, potential saving |
+| `WeeklyCatchUp` | Standing weekly prompt on the dashboard; asks per expected category across all active seasons, writes ordinary `season_costs` rows on answer |
+| `EstimateReport` | Total, per-category breakdown (Recorded/Predicted), flags, advice, potential saving; interactive checklist when there is nothing to show yet |
 | `Money` | Renders pesewas as `GHS 1,234.56`; the only place formatting occurs |
 
 ### 5.3 The money rule
@@ -326,6 +329,7 @@ write access, which makes the layer boundary the security boundary.
                       │ name         │
                       │ district     │
                       │ total_area   │
+                      │ check_in_day │
                       └──────┬───────┘
                              │ 1
                              ▼ N
@@ -378,6 +382,12 @@ write access, which makes the layer boundary the security boundary.
                       └──────────────┘
 ```
 
+`estimate_lines` also carries `is_actual boolean` (added in migration
+010, omitted from the diagram above for space): true when
+`estimated_pesewas` is the farmer's own recorded `season_costs` sum for
+that category this season, false when it is still a prediction. See
+§9.2.
+
 ### 6.3 Enumerated types
 
 | Enum | Values |
@@ -412,6 +422,7 @@ write access, which makes the layer boundary the security boundary.
 | `amount_pesewas >= 0`, NOT NULL | The only mandatory field on a cost entry |
 | `app_settings` single-row check | Prevents multiple conflicting configurations |
 | `cost_benchmarks` unique (name, unit, year, basis) | Allows the same input at subsidised and open-market prices |
+| `crop_input_norms` two partial unique indexes: `(crop_id, benchmark_id, season_window) WHERE season_window IS NOT NULL`, and `(crop_id, benchmark_id) WHERE season_window IS NULL` | Prevents duplicate norm rows. Originally a single `UNIQUE (crop_id, benchmark_id, season_window)` constraint — but Postgres never treats two `NULL`s as equal for uniqueness, and every seeded row has `season_window = NULL`, so the constraint silently allowed unlimited duplicates. Discovered when re-seeding had left five copies of every Maize input, 5×-inflating every benchmark figure in the app. Splitting into two partial indexes is the standard fix for "NULL should still count as a comparable value" |
 
 ### 6.6 Design decisions
 
@@ -526,6 +537,9 @@ No component calls `supabase` directly.
 | `deleteCost(id)` | delete from `season_costs` | `void` |
 | `generateEstimate(seasonId)` | rpc `generate_estimate` | `estimateId` |
 | `getReport(estimateId)` | select from `v_estimate_report` | `ReportLine[]` |
+| `getCategoryBenchmarkPesewas(seasonId, category)` | rpc `get_category_benchmark_pesewas` | `number` — the standard rate for one category, scaled to the season's acreage; 0 where no benchmark exists. Powers the add-cost form's "don't know this cost?" fill (FR-4.13). Reuses the exact same per-acre math as `generate_estimate()`, so the number offered always matches what the estimate would show |
+| `getExpectedCategoriesForCrop(cropId)` | select distinct category from `crop_input_norms` | `CostCategory[]` — drives both the season-detail checklist and the report's cold-start checklist (FR-9.10); falls back to `ESSENTIAL_CATEGORIES` client-side where a crop has no norms yet |
+| `getFlaggedInsightsForFarm(farmId)` | select from `v_estimate_report` where `farm_id` matches, keep each season's latest estimate, filter `is_flagged` | `FlaggedInsight[]` — feeds FarmBot's system prompt (FR-14.6) so it can name real, computed variance and advice instead of speaking generically |
 | `getFarmSummary(farmId)` | select from `v_farm_summary` | `FarmSummary` |
 | `getCropSummary(farmId)` | select from `v_crop_summary` | `CropSummary[]` |
 | `signUpWithPhone(...)` | normalise, synthesise email, `auth.signUp` | `Session` |
@@ -632,6 +646,19 @@ Returns the id of the estimate created.
 
 ### 9.2 Algorithm
 
+**Design history.** The first implementation computed `estimated` and
+`comparison` (the benchmark) from the exact same source whenever
+`method = 'benchmark'` — so for any farmer's first season of a crop, the
+two were always identical by construction, variance was always 0%, and
+step 6 could never flag anything, no matter what the farmer actually
+recorded in `season_costs` that season. This silently defeated overspend
+detection (FR-7/FR-8, BR-6) for every first season — the common case.
+Live testing during the project confirmed it: a fertiliser cost recorded
+60% above benchmark produced `variance = 0%`, `flagged = false`. The
+algorithm below is the fix — it adds a third input, `actual`, drawn from
+the season being estimated itself, and lets a recorded cost override the
+prediction line-by-line.
+
 ```
 INPUT   season_id
 
@@ -649,23 +676,53 @@ INPUT   season_id
 
 5  COMPUTE history_per_acre[category]:
        Σ(cost.amount) / Σ(season.area_planted_acres)
-       ACROSS prior completed seasons of same farm + crop
+       ACROSS prior completed seasons of same farm + crop (excludes this season)
        GROUP BY category
 
-6  FOR EACH category present in either set:
-       estimated  ← (method = 'history' ? history : benchmark) × area
-       comparison ← benchmark × area
-       variance   ← (estimated − comparison) / comparison × 100
-       flagged    ← variance > settings.flag_threshold_pct
-       advice     ← flagged ? advice_rules[category] : NULL
-       saving     ← MAX(estimated − comparison, 0)
+6  COMPUTE actual_total[category]:
+       Σ(cost.amount)
+       FROM season_costs WHERE season_costs.season_id = season_id   ← THIS season, live
+       GROUP BY category
 
-7  INSERT estimates (total = Σ estimated, method, seasons_used,
+7  FOR EACH category present in benchmark, history, OR actual:
+       is_actual  ← actual_total[category] > 0
+       predicted  ← (method = 'history' ? history : benchmark) × area
+       estimated  ← is_actual ? actual_total[category] : predicted
+       comparison ← benchmark × area
+       IF is_actual AND comparison > 0:
+           variance ← (estimated − comparison) / comparison × 100
+           flagged  ← variance > settings.flag_threshold_pct
+           advice   ← flagged ? advice_rules[category] : NULL
+           saving   ← MAX(estimated − comparison, 0)
+       ELSE:
+           variance ← NULL, flagged ← false, advice ← NULL, saving ← 0
+           (a still-predicted line has nothing real to compare yet)
+
+8  INSERT estimates (total = Σ estimated, method, seasons_used,
                      area, price_multiplier)
-8  INSERT estimate_lines — one row per category
+9  INSERT estimate_lines — one row per category, including is_actual
 
 OUTPUT  estimate_id
 ```
+
+**What changed and why:**
+
+- Step 6 is new. Without it the function never read the season it was
+  estimating at all — only *other* completed seasons (step 5) and fixed
+  reference data (step 4).
+- Step 7's `estimated` now prefers the farmer's live recorded figure over
+  a prediction, category by category — WeeklyCatchUp and the normal
+  add-cost form both just insert rows into `season_costs`, so either one
+  flips a category from predicted to actual the moment a cost lands.
+- `method` (history vs. benchmark) still governs the *prediction* shown
+  for whatever the farmer has not recorded yet this season — it never
+  changes what a recorded category is compared against. Comparison is
+  always against the fixed benchmark, exactly as BR-6 always specified;
+  the bug was that the comparison operands could end up equal by
+  construction, not that the wrong thing was being compared.
+- Flagging/advice/saving now require `is_actual` — a category still
+  showing a prediction is not "spending," so it cannot be over- or
+  under-spending yet.
 
 ### 9.3 Worked example
 
@@ -707,6 +764,15 @@ rather than subsidised price.
 Fertiliser exceeds the 30% threshold. The report shows a potential saving
 of GHS 1,240 and the fertiliser advice: check the district MoFA office
 for the subsidy window before buying at market price.
+
+Fertiliser is flagged here specifically because Kwame *recorded* it
+(`is_actual = true`) — its "Estimated (2 ac)" column is his own logged
+GHS 3,600, not a prediction, so there is something real to compare
+against the GHS 2,360 benchmark. A category he has not yet recorded this
+season — say storage — would show `is_actual = false`, its "estimated"
+figure would be the GHS 216 prediction itself, and it could not be
+flagged even if his eventual real storage spend turns out high, until he
+actually logs it.
 
 ### 9.4 Configurable parameters
 
@@ -933,7 +999,9 @@ Farmer        React         GoTrue        PostgREST      Postgres
 | Seed load | Crops, benchmarks, norms, advice rules populated |
 | Estimate, no history | `method = 'benchmark'`, total > 0, one line per category with norms |
 | Estimate, with history | `method = 'history'`, `seasons_used` correct |
-| Flagging | Category inflated 50% above benchmark is flagged; 10% is not |
+| Flagging | A *recorded* category (`is_actual = true`) inflated 50% above benchmark is flagged; 10% is not; a category with no recorded cost yet is never flagged regardless of how its prediction compares to benchmark |
+| Actual-vs-benchmark regression | Recording a cost 60% above benchmark for a fresh season with no history produces `variance_pct = 60`, `is_flagged = true`, non-null advice — confirmed live after the 010 migration; before it, the same input produced `variance_pct = 0`, `is_flagged = false` |
+| Norm de-duplication | `crop_input_norms` has exactly one row per `(crop_id, benchmark_id, season_window)`, including where `season_window IS NULL`; re-running the seed insert does not add a second row |
 | Absurd-value test | Ploughing set to GHS 5/acre produces a visibly wrong total, confirming values flow through rather than being hardcoded |
 | RLS isolation | User B receives zero rows for every one of User A's tables |
 | Constraint enforcement | Duplicate (farm, crop, year, season_window) rejected; negative amount rejected; zero area rejected |
@@ -989,14 +1057,30 @@ JWT passing RLS. The service-role key is never used in this project.
 farmpilot/
 ├── supabase/migrations/
 │   ├── 001_schema.sql
-│   └── 002_seed_benchmarks.sql     ← replaced with real data in week 2
+│   ├── 002_seed_benchmarks.sql             ← replaced with real data in week 2
+│   ├── 003_profiles_and_views.sql          phone identity, sync columns, rollup views
+│   ├── 004_notifications.sql
+│   ├── 005_guides.sql
+│   ├── 006_fix_profile_trigger.sql
+│   ├── 007_quick_fill_costs.sql            benchmark-based "fill every category" RPC
+│   ├── 008_delete_account_rpc.sql
+│   ├── 008_weekly_checkin.sql              farms.check_in_day
+│   ├── 009_fix_views_and_seed_crops.sql
+│   ├── 010_estimate_actual_vs_benchmark.sql    generate_estimate() actual-vs-benchmark fix, is_actual
+│   ├── 011_category_benchmark_estimate.sql     get_category_benchmark_pesewas() RPC
+│   └── 012_fix_crop_input_norms_duplicates.sql dedup + partial unique indexes (§6.5)
 ├── src/
 ├── .env.example
 └── README.md
 ```
 
 Seed data is a separate migration precisely so it can be replaced without
-touching schema definitions.
+touching schema definitions. Migrations in this project have generally
+been applied directly against the shared Supabase project (via the SQL
+editor, or the Supabase CLI's `db query -f`) rather than through
+`supabase db push`, which is why the CLI's own migration-history table
+does not reflect them — a known gap, not evidence the changes are
+missing from the live database.
 
 ### 16.4 Branching
 
@@ -1031,6 +1115,8 @@ pushes to `main`.
 | Additional crops | Requires norms per crop; the schema already supports it |
 | Two-way offline sync | Current design queues writes only; pulling server-side changes while offline is not handled |
 | Reviewed translations | Machine output checked by native speakers per language |
+| Weekly check-in split by acreage | Currently splits a shared category evenly across active seasons; splitting proportionally to `area_planted_acres` would remove the skew for farms growing differently-sized plots of different crops |
+| Per-category "not yet recorded" reminder cadence | The check-in currently re-asks every expected category every week regardless of whether it is a one-time input (seeds, land prep) or a recurring one (labour); distinguishing the two would reduce repetitive "Nothing" answers |
 
 ---
 

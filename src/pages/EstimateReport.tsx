@@ -1,20 +1,25 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getReport, checkProvisionalBenchmarks, getEstimateById, updateEstimateLine } from '../api/estimates';
+import { getReport, checkProvisionalBenchmarks, getEstimateById, updateEstimateLine, generateEstimate } from '../api/estimates';
 import { getSeason } from '../api/seasons';
+import { getExpectedCategoriesForCrop, listCosts } from '../api/costs';
 import { getGuidesFor } from '../api/guides';
 import { Money } from '../components/ui/Money';
 import { pesewasToCedis, cedisToPesewas } from '../lib/money';
-import { CATEGORIES } from '../lib/categories';
+import { CATEGORIES, ESSENTIAL_CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
+import { AddCostForm } from '../components/domain/AddCostForm';
 
 export function EstimateReport() {
   const { estimateId } = useParams<{ estimateId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
+  const [costModalCategory, setCostModalCategory] = useState<CostCategory | undefined>(undefined);
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false);
   
   const { data: reportLines, isLoading, isError, refetch } = useQuery({
     queryKey: ['report', estimateId],
@@ -48,6 +53,33 @@ export function EstimateReport() {
     queryKey: ['matchedGuides', rawSeasonId],
     queryFn: () => getGuidesFor(rawSeasonId!),
     enabled: !!rawSeasonId,
+  });
+
+  const needsSetup = !reportLines || reportLines.length === 0;
+
+  const { data: expectedCategories } = useQuery({
+    queryKey: ['expectedCategories', season?.crop_id],
+    queryFn: () => getExpectedCategoriesForCrop(season!.crop_id),
+    enabled: !!season?.crop_id && needsSetup,
+  });
+
+  const { data: seasonCosts } = useQuery({
+    queryKey: ['seasonCosts', rawSeasonId],
+    queryFn: () => listCosts(rawSeasonId!),
+    enabled: !!rawSeasonId && needsSetup,
+  });
+
+  // Crop-specific expected categories when norms exist for this crop; otherwise
+  // fall back to the same general checklist used elsewhere (CostList's Quick Fill).
+  const checklistCategories = (expectedCategories && expectedCategories.length > 0) ? expectedCategories : ESSENTIAL_CATEGORIES;
+  const recordedCategories = new Set((seasonCosts || []).map(c => c.category));
+  const missingCategories = checklistCategories.filter(c => !recordedCategories.has(c));
+
+  const regenerateMutation = useMutation({
+    mutationFn: () => generateEstimate(rawSeasonId!),
+    onSuccess: (newEstimateId) => {
+      navigate(`/report/${newEstimateId}`, { replace: true });
+    },
   });
 
   const updateLineMutation = useMutation({
@@ -105,6 +137,9 @@ export function EstimateReport() {
       );
     }
 
+    const usingCropSpecificChecklist = (expectedCategories?.length || 0) > 0;
+    const allExpectedRecorded = missingCategories.length === 0;
+
     return (
       <div className="max-w-4xl mx-auto py-12 px-6 lg:px-8 animate-fade-in mt-12">
         <div className="text-center mb-10">
@@ -115,70 +150,105 @@ export function EstimateReport() {
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-4 tracking-tight">Need More Data</h2>
           <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            We don't have enough benchmark data for <span className="font-bold text-gray-700 dark:text-gray-300">{season?.crop_name || 'this crop'}</span> yet, and you haven't recorded historical costs. Add costs for this season to unlock estimates for next year!
+            Record the categories below for <span className="font-bold text-gray-700 dark:text-gray-300">{season?.crop_name || 'this crop'}</span> to unlock a real estimate — tap any red item to fix it.
+            {!usingCropSpecificChecklist && " We don't have crop-specific benchmark rates for this crop yet, so this uses the essentials every farmer tracks — once you record them, we'll build future estimates from your own figures."}
           </p>
         </div>
 
         <div className="bg-white dark:bg-[#1a1a1a] rounded-[32px] p-8 shadow-xl border border-gray-100 dark:border-white/5 mb-10 max-w-2xl mx-auto relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-          
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
-            <svg className="w-6 h-6 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-            Cost Tracking Checklist
-          </h3>
-          
-          <div className="space-y-4 relative z-10">
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <span className="text-lg">🌱</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Seeds & Planting</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Record your certified seed costs, planting labor, and equipment rental.</p>
-              </div>
-            </div>
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <span className="text-lg">🚜</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Land Preparation</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Track plowing, harrowing, and clearing expenses before the season starts.</p>
-              </div>
-            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+              Cost Tracking Checklist
+              <span className="ml-auto text-sm font-medium text-gray-500 bg-gray-100 dark:bg-white/5 px-3 py-1 rounded-full">
+                {(checklistCategories.length - missingCategories.length)} / {checklistCategories.length} recorded
+              </span>
+            </h3>
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <span className="text-lg">🧪</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Fertilizer & Chemicals</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Log NPK, Urea, and herbicide costs to understand your major input spend.</p>
-              </div>
+            <div className="space-y-3 relative z-10">
+              {checklistCategories.map(cat => {
+                const isMissing = missingCategories.includes(cat);
+                const config = CATEGORIES[cat];
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      if (!isMissing) return;
+                      setCostModalCategory(cat);
+                      setIsCostModalOpen(true);
+                    }}
+                    disabled={!isMissing}
+                    className={`w-full flex items-start gap-4 p-4 rounded-2xl border text-left transition-colors ${
+                      isMissing
+                        ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 hover:border-red-400 hover:bg-red-100/60 dark:hover:bg-red-500/20 cursor-pointer'
+                        : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 cursor-default'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isMissing ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-emerald-500 text-white'}`}>
+                      {isMissing ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+                        {config?.label || cat}
+                        {isMissing ? (
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-red-600 dark:text-red-400">Needs fixing</span>
+                        ) : (
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 dark:text-emerald-400">Fixed</span>
+                        )}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{config?.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <span className="text-lg">👨‍🌾</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Labor & Management</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Don't forget to track weeding, harvesting labor, and even your own time.</p>
-              </div>
-            </div>
-          </div>
         </div>
-        
-        <div className="text-center">
-          <Link 
-            to={`/season/${rawEstimate?.season_id || seasonId}`} 
-            className="inline-flex items-center justify-center px-10 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-500 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-emerald-900/20"
+
+        <div className="text-center flex flex-col sm:flex-row gap-3 justify-center">
+          {allExpectedRecorded ? (
+            <button
+              onClick={() => regenerateMutation.mutate()}
+              disabled={regenerateMutation.isPending}
+              className="inline-flex items-center justify-center px-10 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-500 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-emerald-900/20 disabled:opacity-50"
+            >
+              {regenerateMutation.isPending ? 'Generating...' : 'Generate Estimate Now'}
+              {!regenerateMutation.isPending && <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+            </button>
+          ) : null}
+          <Link
+            to={`/season/${rawEstimate?.season_id || seasonId}`}
+            className="inline-flex items-center justify-center px-10 py-4 bg-white dark:bg-white/5 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-white/10 font-bold rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all"
           >
-            Go to Season to Log Costs
-            <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            Go to Season
           </Link>
         </div>
+
+        {isCostModalOpen && rawSeasonId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+            <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsCostModalOpen(false)}></div>
+            <div className="relative w-full max-w-2xl z-10 animate-fade-in-up">
+              <AddCostForm
+                seasonId={rawSeasonId}
+                initialCategory={costModalCategory}
+                onSuccess={() => {
+                  setIsCostModalOpen(false);
+                  setCostModalCategory(undefined);
+                  queryClient.invalidateQueries({ queryKey: ['seasonCosts', rawSeasonId] });
+                }}
+                onCancel={() => {
+                  setIsCostModalOpen(false);
+                  setCostModalCategory(undefined);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -235,7 +305,6 @@ export function EstimateReport() {
             <div className="mt-8 mb-4">
               <p className="text-gray-500 font-medium mb-1 tracking-widest text-xs uppercase print:text-gray-600">Estimated cost for this season</p>
               <div className="text-6xl md:text-7xl font-light tracking-tighter text-white print:text-black">
-                <span className="text-3xl font-medium text-emerald-500 mr-2 align-top print:text-gray-800">GHS</span>
                 <Money pesewas={totalPesewas} />
               </div>
             </div>
@@ -261,7 +330,7 @@ export function EstimateReport() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Cost Breakdown */}
-        <div className={`lg:col-span-${flaggedLines.length > 0 ? '7' : '12'} print:col-span-12`}>
+        <div className={`${flaggedLines.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'} print:col-span-12`}>
           <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 print:shadow-none print:border-none print:p-0">
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-10 print:text-black">Where Your Money Goes</h2>
             
@@ -276,6 +345,16 @@ export function EstimateReport() {
                       <div className="flex flex-col">
                         <span className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors print:text-black flex items-center">
                           {readableCategory}
+                          <span
+                            className={`ml-2 inline-flex items-center text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border print:hidden ${
+                              line.is_actual
+                                ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                                : 'text-gray-500 bg-gray-50 border-gray-200'
+                            }`}
+                            title={line.is_actual ? 'From costs you recorded this season' : 'A prediction — record this cost to replace it with your real spend'}
+                          >
+                            {line.is_actual ? 'Recorded' : 'Predicted'}
+                          </span>
                           {line.is_flagged && (
                             <span className="ml-2 inline-flex items-center text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 print:border-black print:text-black print:bg-transparent">
                               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -321,7 +400,6 @@ export function EstimateReport() {
                             </form>
                           ) : (
                             <div className="flex items-center group/edit">
-                              <span className="mr-1 text-xs text-gray-500 font-bold print:text-gray-600">GHS</span> 
                               <Money pesewas={line.estimated_pesewas} />
                               <button
                                 onClick={() => {
@@ -392,7 +470,7 @@ export function EstimateReport() {
                     
                     {line.potential_saving_pesewas != null && (
                       <p className="text-xl font-light text-orange-800 dark:text-orange-200 mb-5 print:text-black">
-                        Possible saving: <span className="font-bold text-orange-600 dark:text-orange-400 print:text-black">GHS <Money pesewas={line.potential_saving_pesewas} /></span>
+                        Possible saving: <span className="font-bold text-orange-600 dark:text-orange-400 print:text-black"><Money pesewas={line.potential_saving_pesewas} /></span>
                       </p>
                     )}
                     
@@ -434,7 +512,6 @@ export function EstimateReport() {
                 <div className="relative z-10 w-full flex items-center justify-between">
                   <p className="text-emerald-100 text-sm font-bold uppercase tracking-widest print:text-black">Total possible saving</p>
                   <div className="text-3xl font-bold tracking-tight print:text-black">
-                    <span className="text-emerald-300 font-medium text-lg mr-1 print:text-black">GHS</span>
                     <Money pesewas={totalSavings} />
                   </div>
                 </div>

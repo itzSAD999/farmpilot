@@ -235,7 +235,6 @@ export function SeasonDetail() {
               <div className="mt-8 mb-4">
                 <p className="text-gray-500 font-medium mb-1 tracking-widest text-xs uppercase">Total Recorded Cost</p>
                 <div className="text-5xl md:text-7xl font-light tracking-tighter text-white">
-                  <span className="text-3xl font-medium text-emerald-500 mr-2 align-top">GHS</span>
                   <Money pesewas={totalCostPesewas} />
                 </div>
               </div>
@@ -508,7 +507,7 @@ export function SeasonDetail() {
             setInitialCategory(undefined);
             setIsCostModalOpen(true);
           }}
-          className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-900/30 z-40 active:scale-95 transition-transform"
+          className="md:hidden fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-6 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-900/30 z-40 active:scale-95 transition-transform"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
         </button>

@@ -135,7 +135,7 @@ export function CostsOverview() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div className="bg-white dark:bg-white/5 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Spend</p>
-              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100"><span className="text-sm font-bold text-gray-400 mr-1">GHS</span><Money pesewas={grandTotal} /></p>
+              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100"><Money pesewas={grandTotal} /></p>
             </div>
             <div className="bg-white dark:bg-white/5 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Entries</p>
@@ -190,7 +190,6 @@ export function CostsOverview() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-extrabold text-gray-900 dark:text-gray-100">
-                          <span className="text-xs font-bold text-gray-400 mr-1">GHS</span>
                           <Money pesewas={total} />
                         </p>
                         <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{pct}% of total</p>
@@ -225,7 +224,6 @@ export function CostsOverview() {
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-extrabold text-gray-900 dark:text-gray-100">
-                          <span className="text-sm font-bold text-gray-400 mr-1">GHS</span>
                           <Money pesewas={seasonTotal} />
                         </p>
                         <p className="text-xs font-medium text-gray-400">{costs.length} items</p>

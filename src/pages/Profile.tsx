@@ -12,7 +12,7 @@ import { GhanaMap } from "../components/domain/GhanaMap";
 import { GHANA_DISTRICTS } from "../lib/districts";
 
 export function Profile() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, linkEmail } = useAuth();
   const { farm } = useFarm();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -22,8 +22,14 @@ export function Profile() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isLinkEmailModalOpen, setIsLinkEmailModalOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [linkEmailValue, setLinkEmailValue] = useState("");
   const deleteInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,6 +86,44 @@ export function Profile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["farm", user?.id] });
       setEditingField(null);
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setIsPasswordModalOpen(false);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setPasswordError(null);
+    },
+    onError: (error: any) => {
+      setPasswordError(error.message || "Could not update your password. Please try again.");
+    },
+  });
+
+  const handleChangePassword = () => {
+    setPasswordError(null);
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+    passwordMutation.mutate(newPassword);
+  };
+
+  const linkEmailMutation = useMutation({
+    mutationFn: (email: string) => linkEmail(email),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+      setIsLinkEmailModalOpen(false);
+      setLinkEmailValue("");
     },
   });
 
@@ -437,6 +481,7 @@ export function Profile() {
           <div className="bg-white dark:bg-white/5 rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden p-2 space-y-2">
             <button
               type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
               className="w-full py-4 px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-gray-100 rounded-2xl font-bold transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -453,7 +498,7 @@ export function Profile() {
                     d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
                   />
                 </svg>
-                Reset Password
+                Change Password
               </div>
               <svg
                 className="w-5 h-5 text-gray-400"
@@ -469,6 +514,44 @@ export function Profile() {
                 />
               </svg>
             </button>
+
+            {profile?.auth_method === "phone" && !profile?.email && (
+              <button
+                type="button"
+                onClick={() => setIsLinkEmailModalOpen(true)}
+                className="w-full py-4 px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-gray-100 rounded-2xl font-bold transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Link an Email Address
+                </div>
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setIsDeleteModalOpen(true)}
@@ -745,6 +828,151 @@ export function Profile() {
                   />
                 </svg>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              if (passwordMutation.isPending) return;
+              setIsPasswordModalOpen(false);
+              setNewPassword("");
+              setConfirmNewPassword("");
+              setPasswordError(null);
+            }}
+          ></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-[32px] shadow-2xl p-8 animate-fade-in-up">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Change Password
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Choose a new password for your account.
+            </p>
+
+            {passwordError && (
+              <div className="mb-4 p-4 rounded-xl bg-red-50 text-red-700 text-sm font-medium border border-red-100">
+                {passwordError}
+              </div>
+            )}
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={passwordMutation.isPending}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  disabled={passwordMutation.isPending}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsPasswordModalOpen(false);
+                  setNewPassword("");
+                  setConfirmNewPassword("");
+                  setPasswordError(null);
+                }}
+                disabled={passwordMutation.isPending}
+                className="flex-1 py-3 px-4 font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangePassword}
+                disabled={!newPassword || !confirmNewPassword || passwordMutation.isPending}
+                className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {passwordMutation.isPending ? "Saving..." : "Save Password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link Email Modal */}
+      {isLinkEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              if (linkEmailMutation.isPending) return;
+              setIsLinkEmailModalOpen(false);
+              setLinkEmailValue("");
+            }}
+          ></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-[32px] shadow-2xl p-8 animate-fade-in-up">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Link an Email Address
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Add an email address to your phone account. You'll still sign in
+              with your phone number.
+            </p>
+
+            {linkEmailMutation.isError && (
+              <div className="mb-4 p-4 rounded-xl bg-red-50 text-red-700 text-sm font-medium border border-red-100">
+                {(linkEmailMutation.error as any)?.message || "Could not link this email. Please try again."}
+              </div>
+            )}
+
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                value={linkEmailValue}
+                onChange={(e) => setLinkEmailValue(e.target.value)}
+                disabled={linkEmailMutation.isPending}
+                placeholder="farmer@example.com"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white disabled:opacity-50"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsLinkEmailModalOpen(false);
+                  setLinkEmailValue("");
+                }}
+                disabled={linkEmailMutation.isPending}
+                className="flex-1 py-3 px-4 font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => linkEmailMutation.mutate(linkEmailValue)}
+                disabled={!linkEmailValue || linkEmailMutation.isPending}
+                className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {linkEmailMutation.isPending ? "Saving..." : "Link Email"}
+              </button>
             </div>
           </div>
         </div>

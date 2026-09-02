@@ -94,7 +94,11 @@ from (values
 join cost_benchmarks b
   on b.input_name = n.input_name and b.basis = 'open_market' and b.year = 2018
 join crops c on c.name = 'Maize'
-ON CONFLICT ON CONSTRAINT crop_input_norms_crop_id_benchmark_id_season_window_key DO UPDATE SET 
+-- Conflict target matches the partial unique index added in migration
+-- 012 (crop_input_norms_all_windows_key) — plain UNIQUE constraints
+-- never treat two NULL season_window rows as conflicting, which is
+-- what let this insert silently duplicate on every re-run before.
+ON CONFLICT (crop_id, benchmark_id) WHERE season_window is null DO UPDATE SET
   quantity_per_acre = EXCLUDED.quantity_per_acre,
   source = EXCLUDED.source;
 

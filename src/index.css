@@ -35,6 +35,13 @@ html.dark, html.dark body {
   animation: fadeInUp 0.6s ease-out forwards;
 }
 
+/* Was referenced as `pb-safe` on the mobile bottom nav but never defined,
+   so the home-indicator area on notched phones was never actually
+   reserved — this makes it a real utility. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 .reveal-on-scroll {
   /* Fallback visibility in case IntersectionObserver fails to run or is interrupted */
   opacity: 1;

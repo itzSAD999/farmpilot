@@ -140,8 +140,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Keep the current user during token refresh / init so the setup page
-      // is not bounced to the homepage while the session is still valid.
+      // TOKEN_REFRESHED just rotates the access token — the user/profile
+      // haven't changed, so skip the profile re-fetch. Refetching here
+      // (which internally calls getSession() again) turns any client/server
+      // clock skew into a self-reinforcing refresh storm: each refresh
+      // fires TOKEN_REFRESHED, which re-fetched the profile, which called
+      // getSession(), which saw a token that (per the skewed clock) looked
+      // already expired and refreshed again, forever.
+      if (event === 'TOKEN_REFRESHED') {
+        if (session?.user) setUser(session.user);
+        setIsLoading(false);
+        return;
+      }
+
+      // Keep the current user during init so the setup page is not bounced
+      // to the homepage while the session is still valid.
       if (session?.user) {
         applySessionUser(session.user);
       }

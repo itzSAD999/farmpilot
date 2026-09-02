@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listCosts, deleteCost, quickFillCosts } from '../../api/costs';
-import type { CostItem } from '../../api/costs';
+import type { CostItem, CostCategory } from '../../api/costs';
 import { useState } from 'react';
-import { CATEGORIES } from '../../lib/categories';
+import { CATEGORIES, ESSENTIAL_CATEGORIES } from '../../lib/categories';
 import { Money } from '../ui/Money';
 import { AddCostForm } from '../domain/AddCostForm';
 
@@ -68,7 +68,7 @@ export function CostList({ seasonId }: CostListProps) {
     );
   }
 
-  const expectedCategories = ['seeds', 'land_prep', 'fertiliser', 'labour'];
+  const expectedCategories = ESSENTIAL_CATEGORIES;
 
   // Initialize with expected categories to ensure they always render
   const costsByCategory = (costs || []).reduce((acc, cost) => {
@@ -108,7 +108,7 @@ export function CostList({ seasonId }: CostListProps) {
       
       {sortedCategories.map(category => {
         const categoryCosts = costsByCategory[category];
-        const isExpectedButEmpty = expectedCategories.includes(category) && categoryCosts.length === 0;
+        const isExpectedButEmpty = expectedCategories.includes(category as CostCategory) && categoryCosts.length === 0;
         const subtotalPesewas = categoryCosts.reduce((sum, c) => sum + c.amount_pesewas, 0);
         const categoryLabel = CATEGORIES[category as keyof typeof CATEGORIES]?.label || category;
         
@@ -126,7 +126,7 @@ export function CostList({ seasonId }: CostListProps) {
               </h3>
               {!isExpectedButEmpty && (
                 <span className="text-lg font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg">
-                  ₵<Money pesewas={subtotalPesewas} />
+                  <Money pesewas={subtotalPesewas} />
                 </span>
               )}
             </div>
@@ -156,7 +156,7 @@ export function CostList({ seasonId }: CostListProps) {
                       
                       {(cost.quantity || cost.unit_cost_pesewas) ? (
                         <div className="inline-flex items-center text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded-md mt-1">
-                          {cost.quantity || '?'} {cost.unit || 'units'} × ₵<Money pesewas={cost.unit_cost_pesewas || 0} />
+                          {cost.quantity || '?'} {cost.unit || 'units'} × <Money pesewas={cost.unit_cost_pesewas || 0} />
                         </div>
                       ) : (
                         <div className="inline-flex items-center text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">
@@ -166,7 +166,7 @@ export function CostList({ seasonId }: CostListProps) {
                     </div>
                     
                     <div className="flex flex-col items-end pl-4">
-                      <span className="text-lg font-bold text-gray-900 mb-2">₵<Money pesewas={cost.amount_pesewas} /></span>
+                      <span className="text-lg font-bold text-gray-900 mb-2"><Money pesewas={cost.amount_pesewas} /></span>
                       <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => setEditingCost(cost)}

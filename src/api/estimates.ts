@@ -23,6 +23,8 @@ export interface ReportLine {
   is_flagged: boolean;
   advice: string | null;
   potential_saving_pesewas: number | null;
+  /** True when estimated_pesewas is what the farmer actually recorded this season; false when it's still a prediction (benchmark or history). */
+  is_actual: boolean;
 }
 
 /** Summary for listing previous estimates (no per-category detail). */
@@ -153,6 +155,54 @@ export async function getEstimateById(estimateId: number): Promise<EstimateSumma
   }
 
   return data as EstimateSummary | null;
+}
+
+export interface FlaggedInsight {
+  season_id: number;
+  crop_name: string;
+  season_window: 'major' | 'minor' | 'dry';
+  year: number;
+  category: string;
+  variance_pct: number | null;
+  potential_saving_pesewas: number | null;
+  advice: string | null;
+}
+
+/**
+ * Overspend flags across every season on a farm, from each season's most
+ * recent estimate only. Feeds FarmBot so it can reference real,
+ * actual-vs-benchmark variance rather than just totals — see SDD §9.2.
+ */
+export async function getFlaggedInsightsForFarm(farmId: number): Promise<FlaggedInsight[]> {
+  const { data, error } = await supabase
+    .from('v_estimate_report')
+    .select('season_id, crop_name, season_window, year, category, variance_pct, potential_saving_pesewas, advice, estimate_id, created_at, is_flagged')
+    .eq('farm_id', farmId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw handleEstimateError(error);
+  if (!data) return [];
+
+  // Keep only each season's most recent estimate, then its flagged lines.
+  const latestEstimateIdBySeason = new Map<number, number>();
+  for (const row of data as any[]) {
+    if (!latestEstimateIdBySeason.has(row.season_id)) {
+      latestEstimateIdBySeason.set(row.season_id, row.estimate_id);
+    }
+  }
+
+  return (data as any[])
+    .filter(row => row.is_flagged && latestEstimateIdBySeason.get(row.season_id) === row.estimate_id)
+    .map(row => ({
+      season_id: row.season_id,
+      crop_name: row.crop_name,
+      season_window: row.season_window,
+      year: row.year,
+      category: row.category,
+      variance_pct: row.variance_pct,
+      potential_saving_pesewas: row.potential_saving_pesewas,
+      advice: row.advice,
+    }));
 }
 
 /**

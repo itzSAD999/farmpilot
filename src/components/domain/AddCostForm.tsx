@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addCost, updateCost } from '../../api/costs';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { addCost, updateCost, getCategoryBenchmarkPesewas } from '../../api/costs';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
 import { cedisToPesewas, pesewasToCedis } from '../../lib/money';
@@ -81,9 +81,24 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
 
   const selectedCategoryConfig = watchCategory ? CATEGORIES[watchCategory as CostCategory] : null;
 
-  const computedTotal = (entryMode === 'rate' && watchQty && watchUnitCost) 
-    ? (watchQty * watchUnitCost) 
+  const computedTotal = (entryMode === 'rate' && watchQty && watchUnitCost)
+    ? (watchQty * watchUnitCost)
     : 0;
+
+  // "I don't know this cost" — offer the standard benchmark rate for this
+  // category, scaled to the season's acreage, so the farmer can accept it
+  // instead of typing a number they don't actually know.
+  const { data: categoryBenchmarkPesewas } = useQuery({
+    queryKey: ['categoryBenchmark', seasonId, watchCategory],
+    queryFn: () => getCategoryBenchmarkPesewas(seasonId, watchCategory as CostCategory),
+    enabled: step === 2 && !!watchCategory && watchCategory !== 'other',
+  });
+
+  const useEstimatedAverage = () => {
+    if (!categoryBenchmarkPesewas) return;
+    handleModeSwitch('total');
+    setValue('total_amount', pesewasToCedis(categoryBenchmarkPesewas), { shouldValidate: true });
+  };
 
   const handleModeSwitch = (mode: 'total' | 'rate') => {
     setEntryMode(mode);
@@ -341,6 +356,27 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
               </button>
             </div>
           </div>
+
+          {!!categoryBenchmarkPesewas && categoryBenchmarkPesewas > 0 && (
+            <button
+              type="button"
+              onClick={useEstimatedAverage}
+              className="w-full mb-6 flex items-center justify-between gap-3 p-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/60 hover:bg-emerald-50 dark:bg-emerald-500/10 dark:border-emerald-500/40 dark:hover:bg-emerald-500/20 transition-colors text-left animate-fade-in-up"
+            >
+              <span className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </span>
+                <span>
+                  <span className="block text-sm font-bold text-emerald-900 dark:text-emerald-300">Don't know this cost?</span>
+                  <span className="block text-xs text-emerald-700 dark:text-emerald-400">Use the estimated average for your farm size</span>
+                </span>
+              </span>
+              <span className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                GHS {(categoryBenchmarkPesewas / 100).toFixed(2)}
+              </span>
+            </button>
+          )}
 
           {entryMode === 'rate' ? (
             <div className="space-y-6 animate-fade-in-up">

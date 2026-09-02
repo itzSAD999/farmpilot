@@ -107,6 +107,21 @@ export async function quickFillCosts(seasonId: number): Promise<void> {
   if (error) throw handleCostError(error);
 }
 
+/**
+ * Returns the standard benchmark cost for ONE category, scaled to this
+ * season's planted acreage — for the "I don't know this cost" quick-fill
+ * inside AddCostForm. Returns 0 when no benchmark exists for this crop
+ * and category (e.g. a crop with no crop_input_norms yet).
+ */
+export async function getCategoryBenchmarkPesewas(seasonId: number, category: CostCategory): Promise<number> {
+  const { data, error } = await supabase.rpc('get_category_benchmark_pesewas', {
+    p_season_id: seasonId,
+    p_category: category,
+  });
+  if (error) throw handleCostError(error);
+  return (data as number) ?? 0;
+}
+
 export async function getExpectedCategoriesForCrop(cropId: number): Promise<CostCategory[]> {
   const { data, error } = await supabase
     .from('crop_input_norms')

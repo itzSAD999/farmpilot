@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Course** | BSc Computer Science — Mini Project, Year 3 |
+| **Course** | CSM 366 — Mini Project (BSc Computer Science, Year 3) |
 | **Academic Year** | 2025/2026 |
-| **Supervisor** | *[Insert supervisor's name]* |
+| **Supervisor** | Dr. Najim Ussiph |
 | **Date of Submission** | 3 September 2026 |
 | **Repository** | https://github.com/itzSAD999/farmpilot (see Appendix A) |
 

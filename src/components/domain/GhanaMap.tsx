@@ -15,6 +15,7 @@ export function GhanaMap({ selectedRegion, onSelect }: GhanaMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelect);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   onSelectRef.current = onSelect;
 
   useEffect(() => {
@@ -39,6 +40,12 @@ export function GhanaMap({ selectedRegion, onSelect }: GhanaMapProps) {
             event.stopPropagation();
             const mapped = mapRegionName(path.getAttribute('name'));
             if (mapped) onSelectRef.current(mapped);
+          });
+          path.addEventListener('mouseenter', () => {
+            setHoveredRegion(mapRegionName(path.getAttribute('name')));
+          });
+          path.addEventListener('mouseleave', () => {
+            setHoveredRegion(null);
           });
         });
 
@@ -89,7 +96,14 @@ export function GhanaMap({ selectedRegion, onSelect }: GhanaMapProps) {
             <span className="text-2xl font-black text-[#1B5E20] dark:text-emerald-400 tracking-tight bg-white/80 dark:bg-[#1a1a1a]/80 px-3 py-1 rounded-lg backdrop-blur-sm shadow-sm">{selectedRegion}</span>
           </div>
         )}
-        
+
+        {hoveredRegion && (
+          <div className="absolute top-6 right-6 z-20 animate-fade-in pointer-events-none text-right">
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block mb-1">Tap to select</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight bg-white/80 dark:bg-[#1a1a1a]/80 px-3 py-1 rounded-lg backdrop-blur-sm shadow-sm">{hoveredRegion}</span>
+          </div>
+        )}
+
         <div
           ref={containerRef}
           className="ghana-svg-container w-full relative z-10"

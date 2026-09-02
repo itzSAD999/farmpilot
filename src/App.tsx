@@ -20,6 +20,7 @@ import { GuideLibrary } from './pages/GuideLibrary';
 import { GuideDetail } from './pages/GuideDetail';
 import { CostsOverview } from './pages/CostsOverview';
 import { Lab } from './pages/Lab';
+import { CategoryDetail } from './pages/CategoryDetail';
 
 export function App() {
   return (
@@ -141,6 +142,16 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <SeasonDetail />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/season/:id/category/:category"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <CategoryDetail />
               </AppShell>
             </ProtectedRoute>
           }

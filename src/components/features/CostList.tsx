@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { listCosts, deleteCost, quickFillCosts } from '../../api/costs';
 import type { CostItem, CostCategory } from '../../api/costs';
 import { useState } from 'react';
@@ -12,7 +13,9 @@ interface CostListProps {
 
 export function CostList({ seasonId }: CostListProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [editingCost, setEditingCost] = useState<CostItem | null>(null);
+  const [quickAddCategory, setQuickAddCategory] = useState<CostCategory | null>(null);
 
   const { data: costs, isLoading, isError } = useQuery<CostItem[]>({
     queryKey: ['seasonCosts', seasonId],
@@ -114,14 +117,20 @@ export function CostList({ seasonId }: CostListProps) {
         
         return (
           <div key={category} className={`bg-white rounded-[32px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.02)] border ${isExpectedButEmpty ? 'border-amber-200 bg-amber-50/20' : 'border-gray-100'}`}>
-            <div className={`flex justify-between items-center px-2 ${isExpectedButEmpty ? '' : 'mb-4 border-b border-gray-100 pb-4'}`}>
+            <button
+              type="button"
+              onClick={() => isExpectedButEmpty ? setQuickAddCategory(category as CostCategory) : navigate(`/season/${seasonId}/category/${category}`)}
+              className={`w-full flex justify-between items-center px-2 text-left hover:opacity-80 transition-opacity ${isExpectedButEmpty ? '' : 'mb-4 border-b border-gray-100 pb-4'}`}
+            >
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 {categoryLabel}
-                {isExpectedButEmpty && (
-                  <span className="inline-flex items-center text-xs font-bold text-amber-700 bg-amber-100/50 px-2.5 py-1 rounded-md border border-amber-200" title="This is a required cost for a complete estimate">
+                {isExpectedButEmpty ? (
+                  <span className="inline-flex items-center text-xs font-bold text-amber-700 bg-amber-100/50 px-2.5 py-1 rounded-md border border-amber-200" title="This is a required cost for a complete estimate — tap to set it up">
                     <svg className="w-4 h-4 mr-1.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     Needs to be setup
                   </span>
+                ) : (
+                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
                 )}
               </h3>
               {!isExpectedButEmpty && (
@@ -129,7 +138,7 @@ export function CostList({ seasonId }: CostListProps) {
                   <Money pesewas={subtotalPesewas} />
                 </span>
               )}
-            </div>
+            </button>
 
             {!isExpectedButEmpty && (
               <div className="space-y-3">
@@ -197,15 +206,29 @@ export function CostList({ seasonId }: CostListProps) {
         );
       })}
 
+      {quickAddCategory && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setQuickAddCategory(null)}></div>
+          <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in-up">
+            <AddCostForm
+              seasonId={seasonId}
+              initialCategory={quickAddCategory}
+              onSuccess={() => setQuickAddCategory(null)}
+              onCancel={() => setQuickAddCategory(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {editingCost && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditingCost(null)}></div>
           <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in-up">
-            <AddCostForm 
-              seasonId={seasonId} 
-              initialData={editingCost} 
-              onSuccess={() => setEditingCost(null)} 
-              onCancel={() => setEditingCost(null)} 
+            <AddCostForm
+              seasonId={seasonId}
+              initialData={editingCost}
+              onSuccess={() => setEditingCost(null)}
+              onCancel={() => setEditingCost(null)}
             />
           </div>
         </div>

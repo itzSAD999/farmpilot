@@ -787,6 +787,21 @@ export type Database = {
           category: Database["public"]["Enums"]["cost_category"]
         }[]
       }
+      get_crop_benchmark_lines: {
+        Args: {
+          p_area_acres: number
+          p_crop_id: number
+          p_season_window: Database["public"]["Enums"]["season_window"]
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["cost_category"]
+          input_name: string
+          quantity_per_acre: number
+          quantity_total: number
+          unit: string
+          unit_price_pesewas: number
+        }[]
+      }
       quick_fill_costs: { Args: { p_season_id: number }; Returns: undefined }
     }
     Enums: {

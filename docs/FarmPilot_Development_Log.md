@@ -669,6 +669,85 @@ white page.
 
 ---
 
+### Issue #28 — Farm creation 400 with no visible cause
+**Severity:** Medium (reported directly: a `POST .../farms 400 (Bad
+Request)` in the console during farm-setup onboarding). Extensive live
+reproduction attempts — fresh phone-signup accounts, the region select,
+direct SVG-map clicks, non-default check-in days, against both the dev
+server and the live Vercel deployment — all completed successfully
+(`201`), so the exact trigger could not be reproduced in this pass. The
+real defect found in the process was in the *handling*, not necessarily
+the cause: `handleFarmError()`'s fallback swallowed the actual
+Postgres/PostgREST error text behind a fully generic "something went
+wrong," which is exactly what made a report like this unreprodicible
+after the fact — there's no way to tell a numeric overflow from an RLS
+issue from a null value from the console line alone.
+
+**Fix.** `createFarm()` now rejects a non-finite or absurdly large
+`total_area_acres` client-side before sending it (`JSON.stringify`
+silently turns `NaN` into `null`, which would otherwise reach a `NOT
+NULL numeric` column as an unexplained 400). `handleFarmError()`'s
+fallback now includes the real Postgres message, `details`, and `hint`
+rather than discarding them — the next time this happens, the error
+banner itself will say why instead of requiring guesswork.
+
+**Evidence.** `npx tsc -b --noEmit` clean; confirmed the guard rejects
+`NaN`/`Infinity`/values over 999,999 before any network call.
+
+---
+
+### Issue #29 — GhanaMap had no hover feedback
+**Severity:** Low (usability, requested directly). `GhanaMap.tsx` wired
+a `click` listener per region `<path>` but no `mouseenter`/`mouseleave`,
+so hovering a region gave no indication of what it was before clicking
+— the map is used identically in `FarmSetup.tsx` and `Profile.tsx`.
+
+**Fix.** Added hover state and a "Tap to select" label (mirroring the
+existing "Selected Region" badge) that shows the hovered region's name
+live, using the same `mapRegionName()` correction already in place for
+the one real name mismatch between the SVG (`"Northern East"`) and the
+app's canonical region list (`"North East"`).
+
+**Evidence.** `npx tsc -b --noEmit` clean; fixed in both call sites by
+construction, since both consume the same `GhanaMap` component.
+
+---
+
+### Issue #30 — Cost Lab used abstract cedi sliders instead of real quantities; category cards had nowhere to click through to
+**Severity:** N/A (product feedback on two already-shipped pieces of
+this session's own work, not a defect). Two related requests: (1) Cost
+Lab's sliders moved a lump cedi amount per category, so "explore
+different labour costs" meant dragging an abstract number rather than
+something a farmer thinks in (people, days, bags); (2) `CostList.tsx`'s
+per-category cards — both the amber "needs setup" ones and the normal
+populated ones — had no click behaviour at all, so there was no way to
+either fix a missing category or see how an already-recorded one's
+total was built up.
+
+**Fix.** New migration `016_crop_benchmark_lines.sql`:
+`get_crop_benchmark_lines()` returns one row per underlying input (e.g.
+"NPK 15-15-15, 5 x 50kg bags, GHS 461.25/bag") instead of a
+per-category sum. Cost Lab was rewritten around this — each slider now
+drags a real quantity, with cost shown live as quantity &times; rate,
+grouped by category, plus a plain-language interpretation sentence
+("that's 12% more than the standard rate ... GHS 84.00 above it") below
+the summary numbers. Separately, a new page (`/season/:id/category/:category`,
+`CategoryDetail.tsx`) shows a category's total, its variance against the
+benchmark, and every individual cost entry that built up to that total,
+each editable/deletable in place. `CostList.tsx`'s category cards are
+now buttons: an empty "needs setup" card opens the add-cost form
+pre-scoped to that category; a populated card navigates to its new
+detail page.
+
+**Evidence.** `npx tsc -b --noEmit` clean; live SQL query against Maize
+at 2.5 acres confirms `get_crop_benchmark_lines()` returns the same
+correct per-line figures (e.g. GHS 461.25 for one 50kg bag of NPK) that
+feed the rest of the app; live Puppeteer walkthrough clicking a
+populated "Land work" card landed on `/season/58/category/land_prep`
+showing its one recorded entry and +33% benchmark variance.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table. Full evidence for
@@ -731,6 +810,7 @@ that are lower priority than what shipped in this pass:
 | `supabase/migrations/013_seed_additional_crop_norms.sql` | Issue #17 |
 | `supabase/migrations/014_crop_benchmark_breakdown.sql` | Issue #24 (Cost Lab) |
 | `supabase/migrations/015_category_budgets.sql` | Issue #26 (Category Budgets) |
+| `supabase/migrations/016_crop_benchmark_lines.sql` | Issue #30 (Cost Lab quantity-based redesign) |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |
 | `docs/DECISIONS.md` | Full ADR text |

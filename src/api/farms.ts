@@ -52,7 +52,22 @@ function handleFarmError(error: any): Error {
     return new Error("Farm area must be greater than zero acres.");
   }
 
-  return new Error("Something went wrong saving your farm. Please try again.");
+  if (msg.toLowerCase().includes("numeric field overflow") || error.code === "22003") {
+    return new Error("That farm size is too large to store. Please enter a realistic number of acres.");
+  }
+
+  if (msg.toLowerCase().includes("null value") && msg.toLowerCase().includes("total_area_acres")) {
+    return new Error("Please enter a valid farm size before continuing.");
+  }
+
+  // Fall back to whatever Postgres/PostgREST actually said (details/hint
+  // included) rather than a fully generic message — a silently-swallowed
+  // real cause is what made an earlier "something went wrong" 400 here
+  // unreproducible when investigated after the fact.
+  const detail = [error.details, error.hint].filter(Boolean).join(' — ');
+  return new Error(
+    `Something went wrong saving your farm${msg ? `: ${msg}` : ''}${detail ? ` (${detail})` : ''}. Please try again.`
+  );
 }
 
 /**
@@ -80,9 +95,14 @@ export async function getFarm(userId: string): Promise<Farm | null> {
  * Creates a new farm for the current user.
  */
 export async function createFarm(input: CreateFarmInput): Promise<Farm> {
-  // Client-side validation for area
-  if (input.total_area_acres <= 0) {
-    throw new Error("Farm area must be greater than zero acres.");
+  // Client-side validation for area. Guards against NaN specifically —
+  // JSON.stringify silently turns NaN into null, which would otherwise
+  // reach a NOT NULL column as a clean-looking but unexplained 400.
+  if (!Number.isFinite(input.total_area_acres) || input.total_area_acres <= 0) {
+    throw new Error("Please enter a valid farm size greater than zero acres.");
+  }
+  if (input.total_area_acres > 999999) {
+    throw new Error("That farm size is too large. Please enter a realistic number of acres.");
   }
 
   // Force the client to verify and refresh the session with the server 

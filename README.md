@@ -45,7 +45,7 @@ Everything about the project — not just the code — lives in `docs/`:
 | [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules |
 | [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model |
 | [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
-| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 27-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 30-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
 | [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |
 | `docs/adr/` | Additional standalone ADRs |
@@ -66,7 +66,7 @@ farmpilot/
 │   ├── lib/                  supabase client, database.types.ts (generated), money/categories helpers
 │   └── pages/                One file per route
 ├── supabase/
-│   ├── migrations/           Numbered, applied-in-order schema history (001–015)
+│   ├── migrations/           Numbered, applied-in-order schema history (001–016)
 │   └── demo_seed.sql         Reproducible demonstration account — see docs/…Report.md Appendix D
 ├── scripts/
 │   ├── test_crud.ts          Manual end-to-end CRUD smoke test
@@ -131,7 +131,7 @@ or `npx supabase db query --linked -f <file>`) rather than
 reflect them — see `FarmPilot_SDD.md` §16.3.
 
 **Setting up a brand-new Supabase project from scratch:** run every file
-in `supabase/migrations/` in numeric order (001 → 015) — either paste
+in `supabase/migrations/` in numeric order (001 → 016) — either paste
 each into the Supabase Dashboard's SQL Editor one at a time, or, once
 `npx supabase login` and `npx supabase link --project-ref <your-ref>`
 are done, run each with `npx supabase db query --linked -f <file>`. They

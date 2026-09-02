@@ -586,6 +586,73 @@
 <p>report / cost breakdown (including the donut chart) render cleanly on a</p>
 <p>white page.</p>
 <hr/>
+<h3 id="issue-28-farm-creation-400-with-no-visible-cause">Issue #28 — Farm creation 400 with no visible cause</h3>
+<p><strong>Severity:</strong> Medium (reported directly: a `POST .../farms 400 (Bad</p>
+<p>Request)` in the console during farm-setup onboarding). Extensive live</p>
+<p>reproduction attempts — fresh phone-signup accounts, the region select,</p>
+<p>direct SVG-map clicks, non-default check-in days, against both the dev</p>
+<p>server and the live Vercel deployment — all completed successfully</p>
+<p>(<code>201</code>), so the exact trigger could not be reproduced in this pass. The</p>
+<p>real defect found in the process was in the <em>handling</em>, not necessarily</p>
+<p>the cause: <code>handleFarmError()</code>'s fallback swallowed the actual</p>
+<p>Postgres/PostgREST error text behind a fully generic "something went</p>
+<p>wrong," which is exactly what made a report like this unreprodicible</p>
+<p>after the fact — there's no way to tell a numeric overflow from an RLS</p>
+<p>issue from a null value from the console line alone.</p>
+<p><strong>Fix.</strong> <code>createFarm()</code> now rejects a non-finite or absurdly large</p>
+<p><code>total_area_acres</code> client-side before sending it (<code>JSON.stringify</code></p>
+<p>silently turns <code>NaN</code> into <code>null</code>, which would otherwise reach a `NOT</p>
+<p>NULL numeric<code> column as an unexplained 400). </code>handleFarmError()`'s</p>
+<p>fallback now includes the real Postgres message, <code>details</code>, and <code>hint</code></p>
+<p>rather than discarding them — the next time this happens, the error</p>
+<p>banner itself will say why instead of requiring guesswork.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; confirmed the guard rejects</p>
+<p><code>NaN</code>/<code>Infinity</code>/values over 999,999 before any network call.</p>
+<hr/>
+<h3 id="issue-29-ghanamap-had-no-hover-feedback">Issue #29 — GhanaMap had no hover feedback</h3>
+<p><strong>Severity:</strong> Low (usability, requested directly). <code>GhanaMap.tsx</code> wired</p>
+<p>a <code>click</code> listener per region <code><path></code> but no <code>mouseenter</code>/<code>mouseleave</code>,</p>
+<p>so hovering a region gave no indication of what it was before clicking</p>
+<p>— the map is used identically in <code>FarmSetup.tsx</code> and <code>Profile.tsx</code>.</p>
+<p><strong>Fix.</strong> Added hover state and a "Tap to select" label (mirroring the</p>
+<p>existing "Selected Region" badge) that shows the hovered region's name</p>
+<p>live, using the same <code>mapRegionName()</code> correction already in place for</p>
+<p>the one real name mismatch between the SVG (<code>"Northern East"</code>) and the</p>
+<p>app's canonical region list (<code>"North East"</code>).</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; fixed in both call sites by</p>
+<p>construction, since both consume the same <code>GhanaMap</code> component.</p>
+<hr/>
+<h3 id="issue-30-cost-lab-used-abstract-cedi-sliders-instead-of-real-quantities-category-cards-had-nowhere-to-click-through-to">Issue #30 — Cost Lab used abstract cedi sliders instead of real quantities; category cards had nowhere to click through to</h3>
+<p><strong>Severity:</strong> N/A (product feedback on two already-shipped pieces of</p>
+<p>this session's own work, not a defect). Two related requests: (1) Cost</p>
+<p>Lab's sliders moved a lump cedi amount per category, so "explore</p>
+<p>different labour costs" meant dragging an abstract number rather than</p>
+<p>something a farmer thinks in (people, days, bags); (2) <code>CostList.tsx</code>'s</p>
+<p>per-category cards — both the amber "needs setup" ones and the normal</p>
+<p>populated ones — had no click behaviour at all, so there was no way to</p>
+<p>either fix a missing category or see how an already-recorded one's</p>
+<p>total was built up.</p>
+<p><strong>Fix.</strong> New migration <code>016_crop_benchmark_lines.sql</code>:</p>
+<p><code>get_crop_benchmark_lines()</code> returns one row per underlying input (e.g.</p>
+<p>"NPK 15-15-15, 5 x 50kg bags, GHS 461.25/bag") instead of a</p>
+<p>per-category sum. Cost Lab was rewritten around this — each slider now</p>
+<p>drags a real quantity, with cost shown live as quantity &times; rate,</p>
+<p>grouped by category, plus a plain-language interpretation sentence</p>
+<p>("that's 12% more than the standard rate ... GHS 84.00 above it") below</p>
+<p>the summary numbers. Separately, a new page (<code>/season/:id/category/:category</code>,</p>
+<p><code>CategoryDetail.tsx</code>) shows a category's total, its variance against the</p>
+<p>benchmark, and every individual cost entry that built up to that total,</p>
+<p>each editable/deletable in place. <code>CostList.tsx</code>'s category cards are</p>
+<p>now buttons: an empty "needs setup" card opens the add-cost form</p>
+<p>pre-scoped to that category; a populated card navigates to its new</p>
+<p>detail page.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live SQL query against Maize</p>
+<p>at 2.5 acres confirms <code>get_crop_benchmark_lines()</code> returns the same</p>
+<p>correct per-line figures (e.g. GHS 461.25 for one 50kg bag of NPK) that</p>
+<p>feed the rest of the app; live Puppeteer walkthrough clicking a</p>
+<p>populated "Land work" card landed on <code>/season/58/category/land_prep</code></p>
+<p>showing its one recorded entry and +33% benchmark variance.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table. Full evidence for</p>
 <p>each row:</p>
@@ -643,6 +710,7 @@
 <tr><td><code>supabase/migrations/013_seed_additional_crop_norms.sql</code></td><td>Issue #17</td></tr>
 <tr><td><code>supabase/migrations/014_crop_benchmark_breakdown.sql</code></td><td>Issue #24 (Cost Lab)</td></tr>
 <tr><td><code>supabase/migrations/015_category_budgets.sql</code></td><td>Issue #26 (Category Budgets)</td></tr>
+<tr><td><code>supabase/migrations/016_crop_benchmark_lines.sql</code></td><td>Issue #30 (Cost Lab quantity-based redesign)</td></tr>
 <tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
 <tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>

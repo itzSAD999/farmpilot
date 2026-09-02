@@ -355,9 +355,17 @@ before the fix, and as a clean two-column layout after.
 `SeasonCard.tsx`, `CostRow.tsx`, `CategoryBar.tsx`, `FlagBadge.tsx`
 (`src/components/domain/`) each contained only `{/* TODO */}` and were
 never imported by any page — the equivalent UI had been built directly
-inline instead. Left in place (file deletion is restricted in this
-environment); confirmed via a full-codebase import search that nothing
-references them, so they carry no functional risk.
+inline instead.
+
+**Resolved.** Initially left in place — file deletion was blocked by an
+environment permission restriction earlier in this session. Re-confirmed
+unused via a full-codebase import search (zero matches for any of the
+four, or for `components/domain/index.ts`, which only re-exported them),
+then deleted all five files with the user's explicit authorisation.
+`npx tsc -b --noEmit` and `npm run build` both stayed clean, and the
+production bundle hash was byte-identical before and after (`index-
+BmG2tmTF.css`, `index-DTTGXWk7.js`), confirming they contributed nothing
+to the shipped app.
 
 ---
 
@@ -880,7 +888,6 @@ that are lower priority than what shipped in this pass:
 | Automated regression suite around `generate_estimate()` | Medium | Issues #3 and #4 were both caught by manual testing; neither had an automated check |
 | Field-officer / aggregator role | Low | Explicitly out of scope for this project window (PRD §15) |
 | SMS OTP phone verification | Low | Explicitly deferred (PRD FR-1.13, ADR-006) — not implemented, and correctly documented as such throughout |
-| Delete the four dead stub components (Issue #15) | Low | Blocked by an environment permission restriction on file deletion during this session; zero functional risk in the meantime |
 | Region-specific and per-crop-scale (not just per-acre) budget defaults | Low | Category Budgets (Issue #26) are entirely farmer-set with no suggested starting value yet |
 | A saved/named history of Cost Lab scenarios | Low | Lab (Issue #24) is intentionally a stateless sandbox — nothing persists across a reload today |
 

@@ -259,7 +259,7 @@ src/
 │   ├── layout/                 AppShell, Header, ProtectedRoute
 │   ├── ui/                     Button, Input, Select, Card, Table, Money
 │   ├── features/                WeeklyCatchUp, CostList
-│   └── domain/                 SeasonCard, CostRow, CategoryBar, FlagBadge, FarmBot, AddCostForm
+│   └── domain/                 FarmBot, AddCostForm, GhanaMap
 ├── pages/
 │   ├── SignIn.tsx
 │   ├── SignUp.tsx

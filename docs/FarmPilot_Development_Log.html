@@ -322,9 +322,16 @@
 <p><code>SeasonCard.tsx</code>, <code>CostRow.tsx</code>, <code>CategoryBar.tsx</code>, <code>FlagBadge.tsx</code></p>
 <p>(<code>src/components/domain/</code>) each contained only <code>{/<em> TODO </em>/}</code> and were</p>
 <p>never imported by any page — the equivalent UI had been built directly</p>
-<p>inline instead. Left in place (file deletion is restricted in this</p>
-<p>environment); confirmed via a full-codebase import search that nothing</p>
-<p>references them, so they carry no functional risk.</p>
+<p>inline instead.</p>
+<p><strong>Resolved.</strong> Initially left in place — file deletion was blocked by an</p>
+<p>environment permission restriction earlier in this session. Re-confirmed</p>
+<p>unused via a full-codebase import search (zero matches for any of the</p>
+<p>four, or for <code>components/domain/index.ts</code>, which only re-exported them),</p>
+<p>then deleted all five files with the user's explicit authorisation.</p>
+<p><code>npx tsc -b --noEmit</code> and <code>npm run build</code> both stayed clean, and the</p>
+<p>production bundle hash was byte-identical before and after (`index-</p>
+<p>BmG2tmTF.css<code>, </code>index-DTTGXWk7.js`), confirming they contributed nothing</p>
+<p>to the shipped app.</p>
 <hr/>
 <h3 id="issue-16-weekly-check-in-split-a-shared-cost-evenly-not-by-acreage">Issue #16 — Weekly Check-in split a shared cost evenly, not by acreage</h3>
 <p><strong>Severity:</strong> Medium (data-accuracy, not a crash). When two active seasons</p>
@@ -771,7 +778,6 @@
 <tr><td>Automated regression suite around <code>generate_estimate()</code></td><td>Medium</td><td>Issues #3 and #4 were both caught by manual testing; neither had an automated check</td></tr>
 <tr><td>Field-officer / aggregator role</td><td>Low</td><td>Explicitly out of scope for this project window (PRD §15)</td></tr>
 <tr><td>SMS OTP phone verification</td><td>Low</td><td>Explicitly deferred (PRD FR-1.13, ADR-006) — not implemented, and correctly documented as such throughout</td></tr>
-<tr><td>Delete the four dead stub components (Issue #15)</td><td>Low</td><td>Blocked by an environment permission restriction on file deletion during this session; zero functional risk in the meantime</td></tr>
 <tr><td>Region-specific and per-crop-scale (not just per-acre) budget defaults</td><td>Low</td><td>Category Budgets (Issue #26) are entirely farmer-set with no suggested starting value yet</td></tr>
 <tr><td>A saved/named history of Cost Lab scenarios</td><td>Low</td><td>Lab (Issue #24) is intentionally a stateless sandbox — nothing persists across a reload today</td></tr>
 </tbody></table>

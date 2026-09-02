@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+  body { margin:0; background:#fff; font-family: Georgia, 'Times New Roman', serif; }
+  .sheet { background:#fff; padding:24px; display:inline-block; }
+  text { font-family: Georgia, 'Times New Roman', serif; }
+  .title { font-size:20px; font-weight:bold; fill:#111; }
+  .actor-label { font-size:14px; font-weight:bold; fill:#111; text-anchor:middle; }
+  .uc-text { font-size:12.5px; fill:#111; text-anchor:middle; }
+  .uc-oval { fill:#eef5ee; stroke:#1B5E20; stroke-width:1.6; }
+  .actor-fig line, .actor-fig circle { stroke:#111; stroke-width:2; fill:none; }
+  .boundary { fill:#fbfbfb; stroke:#333; stroke-width:1.6; stroke-dasharray:0; }
+  .rel { stroke:#555; stroke-width:1.3; fill:none; }
+  .rel-label { font-size:10.5px; fill:#555; font-style:italic; text-anchor:middle; }
+  .tbl-box { fill:#ffffff; stroke:#1B5E20; stroke-width:1.6; rx:6; }
+  .tbl-name { font-size:13px; font-weight:bold; fill:#fff; text-anchor:middle; }
+  .tbl-head { fill:#1B5E20; }
+  .tbl-field { font-size:11px; fill:#222; }
+  .tbl-pk { font-size:11px; fill:#111; font-weight:bold; }
+  .erd-rel { stroke:#555; stroke-width:1.3; fill:none; marker-end:url(#arrow); }
+  .card-label { font-size:10px; fill:#555; }
+</style>
+</head>
+<body>
+
+<div class="sheet" id="usecase">
+<svg width="1220" height="1000" viewBox="0 0 1220 1000">
+  <text x="610" y="34" text-anchor="middle" class="title">Figure 3.1 — Use Case Diagram</text>
+
+  <!-- Guest actor (top-left, only reaches Register/Sign In) -->
+  <g class="actor-fig">
+    <circle cx="70" cy="110" r="13"/>
+    <line x1="70" y1="123" x2="70" y2="168"/>
+    <line x1="47" y1="140" x2="93" y2="140"/>
+    <line x1="70" y1="168" x2="50" y2="200"/>
+    <line x1="70" y1="168" x2="90" y2="200"/>
+  </g>
+  <text x="70" y="218" class="actor-label">Unregistered</text>
+  <text x="70" y="232" class="actor-label">Visitor</text>
+
+  <!-- Farmer actor (vertically centred on the use-case column so its -->
+  <!-- association lines fan out from one point and never cross each other) -->
+  <g class="actor-fig">
+    <circle cx="70" cy="500" r="15"/>
+    <line x1="70" y1="515" x2="70" y2="568"/>
+    <line x1="43" y1="538" x2="97" y2="538"/>
+    <line x1="70" y1="568" x2="45" y2="608"/>
+    <line x1="70" y1="568" x2="95" y2="608"/>
+  </g>
+  <text x="70" y="628" class="actor-label">Farmer</text>
+
+  <!-- System boundary -->
+  <rect x="230" y="55" width="960" height="935" rx="10" class="boundary"/>
+  <text x="710" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">FarmPilot System</text>
+
+  <!-- Primary use cases: single column so actor associations cannot cross -->
+  <!-- cx=470, rx=130 → right edge 600; each 88px apart, starting y=110 -->
+  <ellipse cx="470" cy="110" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="115" class="uc-text">Register / Sign In</text>
+
+  <ellipse cx="470" cy="198" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="203" class="uc-text">Set Up Farm</text>
+
+  <ellipse cx="470" cy="286" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="291" class="uc-text">Start a Season</text>
+
+  <ellipse cx="470" cy="374" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="370" class="uc-text">Record a Cost Item</text>
+  <text x="470" y="386" class="uc-text" font-size="10.5" font-style="italic">(total, or quantity × rate)</text>
+
+  <ellipse cx="470" cy="462" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="467" class="uc-text">Generate Estimate</text>
+
+  <ellipse cx="470" cy="550" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="555" class="uc-text">Close a Season</text>
+
+  <ellipse cx="470" cy="638" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="634" class="uc-text">Compare Seasons /</text>
+  <text x="470" y="650" class="uc-text">Crops / Benchmark</text>
+
+  <ellipse cx="470" cy="726" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="731" class="uc-text">Chat with AI Assistant</text>
+
+  <ellipse cx="470" cy="814" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="819" class="uc-text">Read Agronomic Guides</text>
+
+  <ellipse cx="470" cy="902" rx="130" ry="32" class="uc-oval"/>
+  <text x="470" y="898" class="uc-text">Manage Account</text>
+  <text x="470" y="914" class="uc-text" font-size="10.5" font-style="italic">(profile, password, email, delete)</text>
+
+  <!-- Secondary use cases: «extend» satellites, placed beside the primary -->
+  <!-- use case they extend, connected only to it — not to the actor -->
+  <ellipse cx="880" cy="340" rx="150" ry="32" class="uc-oval"/>
+  <text x="880" y="345" class="uc-text">Weekly Cost Check-in</text>
+
+  <ellipse cx="880" cy="428" rx="150" ry="32" class="uc-oval"/>
+  <text x="880" y="424" class="uc-text">Fill Cost from</text>
+  <text x="880" y="440" class="uc-text">Standard Benchmark</text>
+
+  <ellipse cx="880" cy="516" rx="150" ry="32" class="uc-oval"/>
+  <text x="880" y="512" class="uc-text">View Flagged Overspend</text>
+  <text x="880" y="528" class="uc-text">&amp; Advice</text>
+
+  <!-- Farmer associations — single origin point, 10 distinct targets: -->
+  <!-- rays from one point to points on a shared vertical line can never -->
+  <!-- cross one another, by construction. -->
+  <path class="rel" d="M85,494 L340,110"/>
+  <path class="rel" d="M85,496 L340,198"/>
+  <path class="rel" d="M85,497 L340,286"/>
+  <path class="rel" d="M85,499 L340,374"/>
+  <path class="rel" d="M85,500 L340,462"/>
+  <path class="rel" d="M85,501 L340,550"/>
+  <path class="rel" d="M85,503 L340,638"/>
+  <path class="rel" d="M85,504 L340,726"/>
+  <path class="rel" d="M85,505 L340,814"/>
+  <path class="rel" d="M85,506 L340,902"/>
+
+  <!-- Guest association -->
+  <path class="rel" d="M85,110 L340,110"/>
+
+  <!-- «extend» relationships (secondary → primary) -->
+  <path class="rel" d="M730,374 L600,374" marker-end="url(#arrow2)"/>
+  <text x="700" y="366" class="rel-label">«extend»</text>
+
+  <path class="rel" d="M730,428 L600,390" marker-end="url(#arrow2)"/>
+  <text x="700" y="415" class="rel-label">«extend»</text>
+
+  <path class="rel" d="M730,516 L600,478" marker-end="url(#arrow2)"/>
+  <text x="700" y="505" class="rel-label">«extend»</text>
+
+  <defs>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+</svg>
+</div>
+
+<div class="sheet" id="erd">
+<svg width="1300" height="900" viewBox="0 0 1300 900">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+  <text x="650" y="30" text-anchor="middle" class="title">Figure 3.2 — Entity–Relationship Diagram</text>
+
+  <!-- farms -->
+  <g transform="translate(70,70)">
+    <rect width="200" height="150" class="tbl-box"/>
+    <rect width="200" height="26" class="tbl-head"/>
+    <text x="100" y="18" class="tbl-name">farms</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">FK user_id → auth.users</text>
+    <text x="10" y="80" class="tbl-field">name, region, district</text>
+    <text x="10" y="98" class="tbl-field">total_area_acres</text>
+    <text x="10" y="116" class="tbl-field">check_in_day</text>
+    <text x="10" y="134" class="tbl-field">created_at</text>
+  </g>
+
+  <!-- crops -->
+  <g transform="translate(70,290)">
+    <rect width="200" height="130" class="tbl-box"/>
+    <rect width="200" height="26" class="tbl-head"/>
+    <text x="100" y="18" class="tbl-name">crops</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">name (unique), local_name</text>
+    <text x="10" y="80" class="tbl-field">avg_yield_mt_ha</text>
+    <text x="10" y="98" class="tbl-field">potential_yield_mt_ha</text>
+    <text x="10" y="116" class="tbl-field">maturity_days</text>
+  </g>
+
+  <!-- seasons -->
+  <g transform="translate(370,190)">
+    <rect width="220" height="200" class="tbl-box"/>
+    <rect width="220" height="26" class="tbl-head"/>
+    <text x="110" y="18" class="tbl-name">seasons</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">FK farm_id, FK crop_id</text>
+    <text x="10" y="80" class="tbl-field">year, season_window</text>
+    <text x="10" y="98" class="tbl-field">area_planted_acres</text>
+    <text x="10" y="116" class="tbl-field">is_complete</text>
+    <text x="10" y="134" class="tbl-field">harvest_qty, harvest_unit</text>
+    <text x="10" y="152" class="tbl-field">revenue_pesewas</text>
+    <text x="10" y="170" class="tbl-field">client_id, updated_at</text>
+    <text x="10" y="188" class="tbl-field" font-style="italic">UQ(farm,crop,year,window)</text>
+  </g>
+
+  <!-- season_costs -->
+  <g transform="translate(680,180)">
+    <rect width="230" height="220" class="tbl-box"/>
+    <rect width="230" height="26" class="tbl-head"/>
+    <text x="115" y="18" class="tbl-name">season_costs</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">FK season_id</text>
+    <text x="10" y="80" class="tbl-field">category (enum, 8 values)</text>
+    <text x="10" y="98" class="tbl-field">description</text>
+    <text x="10" y="116" class="tbl-field">quantity, unit</text>
+    <text x="10" y="134" class="tbl-field">unit_cost_pesewas</text>
+    <text x="10" y="152" class="tbl-field">amount_pesewas (NOT NULL)</text>
+    <text x="10" y="170" class="tbl-field">date_incurred</text>
+    <text x="10" y="188" class="tbl-field">client_id, updated_at</text>
+    <text x="10" y="206" class="tbl-field">created_at</text>
+  </g>
+
+  <!-- crop_input_norms -->
+  <g transform="translate(370,440)">
+    <rect width="220" height="150" class="tbl-box"/>
+    <rect width="220" height="26" class="tbl-head"/>
+    <text x="110" y="18" class="tbl-name">crop_input_norms</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">FK crop_id, FK benchmark_id</text>
+    <text x="10" y="80" class="tbl-field">category, quantity_per_acre</text>
+    <text x="10" y="98" class="tbl-field">season_window (nullable)</text>
+    <text x="10" y="116" class="tbl-field">source</text>
+    <text x="10" y="134" class="tbl-field" font-style="italic">partial UQ idx (§6.5)</text>
+  </g>
+
+  <!-- cost_benchmarks -->
+  <g transform="translate(70,470)">
+    <rect width="220" height="130" class="tbl-box"/>
+    <rect width="220" height="26" class="tbl-head"/>
+    <text x="110" y="18" class="tbl-name">cost_benchmarks</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">input_name, category, unit</text>
+    <text x="10" y="80" class="tbl-field">year, price_pesewas</text>
+    <text x="10" y="98" class="tbl-field">basis (subsidised/open_market)</text>
+    <text x="10" y="116" class="tbl-field">source</text>
+  </g>
+
+  <!-- estimates -->
+  <g transform="translate(680,440)">
+    <rect width="230" height="150" class="tbl-box"/>
+    <rect width="230" height="26" class="tbl-head"/>
+    <text x="115" y="18" class="tbl-name">estimates</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">FK season_id</text>
+    <text x="10" y="80" class="tbl-field">method (benchmark/history)</text>
+    <text x="10" y="98" class="tbl-field">seasons_used, area_acres</text>
+    <text x="10" y="116" class="tbl-field">total_pesewas, price_multiplier</text>
+    <text x="10" y="134" class="tbl-field">created_at</text>
+  </g>
+
+  <!-- estimate_lines -->
+  <g transform="translate(1010,340)">
+    <rect width="230" height="240" class="tbl-box"/>
+    <rect width="230" height="26" class="tbl-head"/>
+    <text x="115" y="18" class="tbl-name">estimate_lines</text>
+    <text x="10" y="44" class="tbl-pk">PK id</text>
+    <text x="10" y="62" class="tbl-field">FK estimate_id</text>
+    <text x="10" y="80" class="tbl-field">category</text>
+    <text x="10" y="98" class="tbl-field">estimated_pesewas</text>
+    <text x="10" y="116" class="tbl-field">benchmark_pesewas</text>
+    <text x="10" y="134" class="tbl-field">variance_pct</text>
+    <text x="10" y="152" class="tbl-field">is_flagged</text>
+    <text x="10" y="170" class="tbl-field">is_actual  ← §4.2.4</text>
+    <text x="10" y="188" class="tbl-field">advice</text>
+    <text x="10" y="206" class="tbl-field">potential_saving_pesewas</text>
+    <text x="10" y="224" class="tbl-field" font-style="italic">UQ(estimate_id, category)</text>
+  </g>
+
+  <!-- advice_rules -->
+  <g transform="translate(680,650)">
+    <rect width="200" height="90" class="tbl-box"/>
+    <rect width="200" height="26" class="tbl-head"/>
+    <text x="100" y="18" class="tbl-name">advice_rules</text>
+    <text x="10" y="44" class="tbl-pk">PK category (unique)</text>
+    <text x="10" y="62" class="tbl-field">message</text>
+  </g>
+
+  <!-- app_settings -->
+  <g transform="translate(370,650)">
+    <rect width="200" height="110" class="tbl-box"/>
+    <rect width="200" height="26" class="tbl-head"/>
+    <text x="100" y="18" class="tbl-name">app_settings</text>
+    <text x="10" y="44" class="tbl-pk">PK id (boolean, single row)</text>
+    <text x="10" y="62" class="tbl-field">price_multiplier</text>
+    <text x="10" y="80" class="tbl-field">flag_threshold_pct</text>
+    <text x="10" y="98" class="tbl-field">updated_at</text>
+  </g>
+
+  <!-- Relationships -->
+  <path class="erd-rel" d="M270,140 L370,255"/>
+  <text x="300" y="180" class="card-label">1 farm : N seasons</text>
+
+  <path class="erd-rel" d="M270,340 L370,300"/>
+  <text x="280" y="310" class="card-label">1 crop : N seasons</text>
+
+  <path class="erd-rel" d="M590,270 L680,270"/>
+  <text x="605" y="262" class="card-label">1 : N costs</text>
+
+  <path class="erd-rel" d="M270,400 L370,470"/>
+  <text x="255" y="440" class="card-label">1 crop : N norms</text>
+
+  <path class="erd-rel" d="M290,545 L370,520"/>
+  <text x="270" y="520" class="card-label">1 benchmark : N norms</text>
+
+  <path class="erd-rel" d="M590,340 L680,470"/>
+  <text x="600" y="410" class="card-label">1 season : N estimates</text>
+
+  <path class="erd-rel" d="M910,500 L1010,460"/>
+  <text x="915" y="475" class="card-label">1 estimate : N lines</text>
+
+  <path class="erd-rel" d="M800,590 L800,650"/>
+  <text x="810" y="620" class="card-label">category FK</text>
+
+</svg>
+</div>
+
+</body>
+</html>

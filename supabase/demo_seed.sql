@@ -30,10 +30,12 @@
 --       - Land prep, agrochem and storage left UNRECORDED → shown as
 --         "Predicted" (history-based, since a completed season now
 --         exists), demonstrating the Recorded-vs-Predicted split.
---   • A second crop (Cassava, minor season, no benchmark norms
---     seeded) with its own recorded costs — demonstrates the
---     essentials-checklist fallback (FR-9.11) and populates
---     Crop-vs-Crop and Season-vs-Season comparisons.
+--   • A second crop (Cassava, minor season) with its own recorded
+--     costs — populates Crop-vs-Crop and Season-vs-Season comparisons.
+--     Cassava now has real seeded norms too (migration 013), so this
+--     also gets a genuine benchmark comparison rather than the
+--     essentials-checklist fallback (FR-9.11) — that fallback is now
+--     exercised only by a crop with no seeded norms at all.
 --   • Costs entered through BOTH paths (flat total AND quantity ×
 --     rate) and some tagged "Weekly catch-up", matching what the
 --     Weekly Check-in feature itself would write.

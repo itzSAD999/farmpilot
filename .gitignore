@@ -25,3 +25,8 @@ npm-debug.log*
 
 *.exe
 *.msi
+
+# Secrets — never commit these
+*recovery-codes*
+*.pem
+*.key

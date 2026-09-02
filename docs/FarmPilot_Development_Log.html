@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FarmPilot Development Log</title>
+<style>
+  @page { size: A4; margin: 2.5cm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.55; max-width: 850px; margin: 40px auto; padding: 0 20px; font-size: 12pt; }
+  h1 { font-size: 22pt; margin-top: 1.4em; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; }
+  h2 { font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h3 { font-size: 13.5pt; margin-top: 1.3em; }
+  h4 { font-size: 12pt; margin-top: 1.1em; font-style: italic; }
+  p { margin: 0.6em 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3ee; font-weight: bold; }
+  code { background: #f2f2f2; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.92em; }
+  pre.code { background: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 9.5pt; line-height: 1.4; }
+  pre.code code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid #1B5E20; margin: 1em 0; padding: 0.4em 1em; background: #f4f9f4; color: #333; }
+  img { display: block; margin: 10px auto; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+  .diagram-note { background: #fff8e6; border: 1px solid #e8d38a; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 10.5pt; }
+  ul, ol { margin: 0.5em 0; padding-left: 1.6em; }
+  li { margin: 0.25em 0; }
+  a { color: #1B5E20; }
+</style>
+</head>
+<body>
+<h1 id="farmpilot-development-log-issue-register-testing-record">FarmPilot — Development Log, Issue Register & Testing Record</h1>
+<p><strong>Companion document to <code>FarmPilot_MiniProject_Report.md</code>, <code>FarmPilot_PRD.md</code>, <code>FarmPilot_SDD.md</code>, <code>CHANGELOG.md</code>, and <code>DECISIONS.md</code>.</strong></p>
+<p>This document exists so the project can be assessed the way a real, shipped</p>
+<p>piece of software would be — not just by what it does today, but by the</p>
+<p>trail of decisions, defects, and fixes that got it there. It is the</p>
+<p>"backlog and everything about the project" record: what was proposed, what</p>
+<p>changed and why, every issue found during a full post-build hardening</p>
+<p>pass, and the testing evidence behind each fix. Nothing in this document</p>
+<p>is invented after the fact — every issue below was found by reading the</p>
+<p>actual code and schema, reproduced against the live system, and fixed and</p>
+<p>re-verified in the same sitting; the exact verification output is</p>
+<p>summarised in each entry's Evidence line.</p>
+<hr/>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li>From Proposal to Delivered System</li>
+<li>Development Timeline (Changelog, expanded)</li>
+<li>Architecture Decisions — Index</li>
+<li>Issue Register — Post-Build Hardening Pass</li>
+<li>Testing Record</li>
+<li>Backlog — Outstanding Work</li>
+<li>Appendix — File and Migration Index</li>
+</ol>
+<hr/>
+<h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
+<p>The project began from a six-week proposal specifying a React + Supabase</p>
+<p>frontend, a <strong>Python/FastAPI service for cost calculations</strong>, and a</p>
+<p>two-question scope: estimate what a season should cost, and suggest how to</p>
+<p>reduce it. Both the technology choice and the timeline changed before the</p>
+<p>build started, and both changes are deliberate, documented decisions —</p>
+<p>not scope creep discovered here.</p>
+<table>
+<thead><tr><th>Proposal commitment</th><th>What was actually built</th><th>Where decided</th></tr></thead>
+<tbody>
+<tr><td>Python (FastAPI) calculation service</td><td>Removed. Estimation runs as a PL/pgSQL function (<code>generate_estimate</code>) inside PostgreSQL</td><td>ADR-001</td></tr>
+<tr><td>Six-week timeline</td><td>Compressed to fourteen days</td><td>PRD §1.4, §19</td></tr>
+<tr><td>Farmer account + recording form</td><td>Built, phone-first with email as an alternative</td><td>ADR-006</td></tr>
+<tr><td>Estimate the coming season's cost from records</td><td>Built — with the correction described in Issue #3 below, which the original proposal's "based on real spending, not general advice" promise directly depended on</td><td>§4</td></tr>
+<tr><td>Find overspend, suggest reduction</td><td>Built — one estimate per season (not one per farm), rolled up via views</td><td>ADR-007</td></tr>
+<tr><td>Show estimate and suggestions on one screen</td><td>Built (<code>EstimateReport.tsx</code>)</td><td>§4</td></tr>
+</tbody></table>
+<p>The proposal's own aim statement — <em>"using the farmer's own records"</em> — is</p>
+<p>exactly the design problem that produced ADR-003 and, later, the most</p>
+<p>consequential defect in this log (Issue #3): a system that only ever</p>
+<p>compares a farmer to himself can never detect overspend. The proposal's</p>
+<p>plain-language framing was right; making it actually true required an</p>
+<p>independent benchmark, which is the single idea the whole data model is</p>
+<p>organised around.</p>
+<hr/>
+<h2 id="2-development-timeline-changelog-expanded">2. Development Timeline (Changelog, expanded)</h2>
+<p>Full raw entries are kept in <code>CHANGELOG.md</code>, updated on every merge per the</p>
+<p>team's own rule ("a PR with no changelog entry is not merged"). Summarised</p>
+<p>here as a build narrative:</p>
+<table>
+<thead><tr><th>Stage</th><th>Version</th><th>What shipped</th></tr></thead>
+<tbody>
+<tr><td>Design</td><td>0.1.0</td><td>PRD, SDD, base schema (<code>001_schema.sql</code>), placeholder benchmark seed, ADR log opened</td></tr>
+<tr><td>Foundation</td><td>0.2.0</td><td>Project scaffold, TanStack Query data layer, Ghana phone validation, Tailwind config</td></tr>
+<tr><td>Auth & routing</td><td>0.3.0</td><td>Phone-first auth context, <code>AppShell</code>, <code>ProtectedRoute</code>/<code>PublicRoute</code></td></tr>
+<tr><td>Recording flow</td><td>0.4.0</td><td><code>seasons.ts</code>/<code>costs.ts</code> API layer, two-path <code>AddCostForm</code>, <code>CostList</code></td></tr>
+<tr><td>Estimate engine wired</td><td>0.5.0</td><td><code>generate_estimate</code> connected to the UI, <code>/report/:estimateId</code> route</td></tr>
+<tr><td>Report & dashboard</td><td>0.6.0–0.7.0</td><td><code>EstimateReport.tsx</code>, farm/crop rollups, smart empty states</td></tr>
+<tr><td>Benchmark data swap</td><td>0.8.0</td><td>Real field-survey figures replace placeholders (ADR-011, ADR-012)</td></tr>
+<tr><td><strong>Post-build hardening (this pass)</strong></td><td><strong>0.9.0</strong></td><td>Seventeen issues found and fixed — §4 below; benchmark coverage extended from one crop to ten; mini-project documentation set produced</td></tr>
+</tbody></table>
+<p>The hardening pass is version <code>0.9.0</code> rather than folded silently into</p>
+<p><code>1.0.0</code> deliberately — it is a distinct, auditable stage with its own</p>
+<p>issue list, the same way the earlier phases are, not a rewrite of history.</p>
+<hr/>
+<h2 id="3-architecture-decisions-index">3. Architecture Decisions — Index</h2>
+<p>Twelve ADRs govern the system; full text is in <code>DECISIONS.md</code>. Listed here</p>
+<p>for cross-reference against the issues in §4, several of which either test</p>
+<p>an ADR's guarantee directly or extend a decision already on record.</p>
+<table>
+<thead><tr><th>ADR</th><th>Decision</th><th>Tested/extended by</th></tr></thead>
+<tbody>
+<tr><td>ADR-001</td><td>No separate Python service; PL/pgSQL instead</td><td>Issue #3 (the defect found lived entirely inside this function)</td></tr>
+<tr><td>ADR-002</td><td>Money as integer pesewas</td><td>Issue #13 (a display bug, not a math bug — the underlying pesewa arithmetic was never wrong)</td></tr>
+<tr><td>ADR-003</td><td>Benchmark comparison must be external</td><td>Issue #3 directly (the bug violated this ADR's own stated purpose without breaking its schema)</td></tr>
+<tr><td>ADR-004</td><td>Fixed cost categories</td><td>Issue #17 extends the benchmark side of this without touching the enum</td></tr>
+<tr><td>ADR-005</td><td>All benchmark values isolated in three tables, verified by the absurd-value test</td><td>Issue #17 followed this rule exactly — new crops added data only, zero code changes</td></tr>
+<tr><td>ADR-006</td><td>Phone-first via synthetic email</td><td>Issue #12 (linkEmail existed per this ADR's "may optionally link an email" but had no UI)</td></tr>
+<tr><td>ADR-007</td><td>Estimates per season, rollups as views</td><td>Unaffected; confirmed still correct during Issue #3's fix</td></tr>
+<tr><td>ADR-010</td><td>Single shared Supabase project</td><td>Made the direct-SQL fixes in §4 possible without an environment-sync step</td></tr>
+<tr><td>ADR-011</td><td>Commercial-scale benchmark caveat</td><td>Extended to the nine new crops (Issue #17) — same caveat applies</td></tr>
+<tr><td>ADR-012</td><td>Price multiplier via data deflation</td><td>Followed for all new seed-benchmark rows (2018 base year)</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="4-issue-register-post-build-hardening-pass">4. Issue Register — Post-Build Hardening Pass</h2>
+<p>Severity: <strong>Critical</strong> (core feature silently produced wrong output),</p>
+<p><strong>High</strong> (feature completely non-functional), <strong>Medium</strong> (real but bounded</p>
+<p>impact), <strong>Low</strong> (cosmetic/consistency).</p>
+<h3 id="issue-1-system-clock-skew-amplified-into-an-auth-request-storm">Issue #1 — System clock skew amplified into an auth request storm</h3>
+<p><strong>Severity:</strong> Critical · <strong>Reported as:</strong> "something went wrong" on farm</p>
+<p>setup; separately, "too many requests" during farm setup step 2.</p>
+<p><strong>Root cause.</strong> The development machine's system clock was running</p>
+<p>approximately seven hours fast with no time-sync service active. Every</p>
+<p>Supabase-issued JWT looked pre-expired to the client the instant it was</p>
+<p>issued, triggering <code>supabase-js</code>'s auto-refresh path continuously.</p>
+<p><strong>Fix.</strong> Not a code fix — the clock is environment state. Diagnosed by</p>
+<p>comparing <code>Date.now()</code> against the <code>iat</code> claim of a JWT issued by the</p>
+<p>server in the same round trip; confirmed by checking <code>w32tm</code> service</p>
+<p>status (not running).</p>
+<p><strong>Evidence.</strong> <code>w32tm /query /status</code> returned "service not started";</p>
+<p>Windows clock read 23:39 UTC against a server-issued token timestamped</p>
+<p>16:39 UTC, a ~7-hour gap matching the local UTC offset exactly.</p>
+<hr/>
+<h3 id="issue-2-clock-skew-was-silently-amplified-by-an-unnecessary-refetch">Issue #2 — Clock skew was silently amplified by an unnecessary refetch</h3>
+<p><strong>Severity:</strong> High (compounds Issue #1 into an outage even under smaller</p>
+<p>clock drift). <strong>Component:</strong> <code>src/hooks/useAuth.tsx</code>.</p>
+<p><strong>Root cause.</strong> <code>onAuthStateChange</code> called the full <code>applySessionUser</code></p>
+<p>(profile refetch, which itself calls <code>getSession()</code>) on <strong>every</strong> event</p>
+<p>including <code>TOKEN_REFRESHED</code>. Under clock skew this created a closed loop:</p>
+<p>refresh → <code>TOKEN_REFRESHED</code> → profile refetch → <code>getSession()</code> → judged</p>
+<p>"expired" again → refresh — observed firing multiple times per second.</p>
+<p><strong>Fix.</strong> <code>TOKEN_REFRESHED</code> now only updates the in-memory user object; it</p>
+<p>no longer triggers a profile refetch, since the profile cannot have</p>
+<p>changed as a result of a token rotation.</p>
+<p><strong>Evidence.</strong> Live Puppeteer trace before the fix: 20+ refresh calls in 3</p>
+<p>seconds. After: 3 refresh calls across an entire ~10-second sign-up →</p>
+<p>farm-setup walkthrough — matching the expected ~30-second auto-refresh</p>
+<p>ticker cadence.</p>
+<hr/>
+<h3 id="issue-3-the-estimate-engine-never-compared-actual-spending-to-the-benchmark">Issue #3 — The estimate engine never compared actual spending to the benchmark</h3>
+<p><strong>Severity:</strong> Critical. <strong>Component:</strong> <code>generate_estimate()</code></p>
+<p>(<code>supabase/migrations/010_estimate_actual_vs_benchmark.sql</code>).</p>
+<p><strong>Root cause.</strong> For any season with no prior completed season of the same</p>
+<p>crop, <code>estimated_pesewas</code> and <code>benchmark_pesewas</code> were computed from the</p>
+<p>identical source (the standard benchmark), so they were equal by</p>
+<p>construction. Variance was always 0%, and no category could ever be</p>
+<p>flagged — regardless of what the farmer had actually recorded. This</p>
+<p>defeated the core value proposition (§1.2 of the report) for every</p>
+<p>farmer's first season of a crop, the majority case.</p>
+<p><strong>Fix.</strong> Added a third input to the engine: the season's own</p>
+<p><code>season_costs</code>, read live. A category with a recorded cost now uses that</p>
+<p>figure as <code>estimated_pesewas</code> (flagged as <code>is_actual = true</code>) and is</p>
+<p>compared against the fixed benchmark; an unrecorded category still shows</p>
+<p>a prediction and is never flagged.</p>
+<p><strong>Evidence.</strong> Before: recording a cost 60% above benchmark produced</p>
+<p><code>variance_pct = 0</code>, <code>is_flagged = false</code>. After the same input:</p>
+<p><code>variance_pct = 60</code>, <code>is_flagged = true</code>, non-null advice. Verified live</p>
+<p>against the production database, not a local mock.</p>
+<hr/>
+<h3 id="issue-4-crop-input-norms-silently-duplicated-on-every-re-seed-5-inflation">Issue #4 — <code>crop_input_norms</code> silently duplicated on every re-seed (5× inflation)</h3>
+<p><strong>Severity:</strong> Critical (data integrity — inflated every benchmark and</p>
+<p>estimated-cost figure the app has ever shown for Maize).</p>
+<p><strong>Root cause.</strong> The uniqueness constraint was</p>
+<p><code>UNIQUE (crop_id, benchmark_id, season_window)</code>. Every seeded row has</p>
+<p><code>season_window = NULL</code>, and Postgres never treats two <code>NULL</code>s as equal</p>
+<p>for uniqueness purposes — so the constraint permitted unlimited "duplicate"</p>
+<p>rows. The seed script had been re-applied five times over the project's</p>
+<p>history, leaving five copies of every Maize input.</p>
+<p><strong>Fix.</strong> De-duplicated existing rows; replaced the constraint with two</p>
+<p>partial unique indexes — one for a specific <code>season_window</code>, one for</p>
+<p><code>season_window IS NULL</code> — the standard Postgres pattern for this exact</p>
+<p>problem (<code>012_fix_crop_input_norms_duplicates.sql</code>).</p>
+<p><strong>Evidence.</strong> Fertiliser benchmark for a 3-acre season: 2,025,405 pesewas</p>
+<p>before the fix, 405,081 after — exactly 5×, and exactly matching a</p>
+<p>hand-computed expected value from the norm and price tables directly.</p>
+<hr/>
+<h3 id="issue-5-no-quick-add-cost-action-outside-a-specific-season">Issue #5 — No quick "Add Cost" action outside a specific season</h3>
+<p><strong>Severity:</strong> Medium (usability). <strong>Component:</strong> <code>Dashboard.tsx</code>.</p>
+<p><strong>Fix.</strong> Added an "Add Cost" button beside "Start New Season"; opens the</p>
+<p>cost form directly when exactly one active season exists, otherwise shows</p>
+<p>a season picker first.</p>
+<hr/>
+<h3 id="issue-6-no-way-to-fill-an-unknown-cost-from-the-benchmark-per-category">Issue #6 — No way to fill an unknown cost from the benchmark, per category</h3>
+<p><strong>Severity:</strong> Medium. A farm-wide "Quick Fill" existed</p>
+<p>(<code>quick_fill_costs()</code>) but only applied to a season with zero costs</p>
+<p>recorded — there was no way to fill in one specific missing category once</p>
+<p>some costs already existed.</p>
+<p><strong>Fix.</strong> Added <code>get_category_benchmark_pesewas(season_id, category)</code></p>
+<p>(<code>011_category_benchmark_estimate.sql</code>) and a "Don't know this cost?"</p>
+<p>button in <code>AddCostForm</code> that fills the amount from it, scaled to the</p>
+<p>season's acreage.</p>
+<p><strong>Evidence.</strong> Fertiliser benchmark for 3 acres via the new RPC:</p>
+<p>405,081 pesewas — matches the hand-computed value exactly (same figure as</p>
+<p>Issue #4's post-fix verification, confirming both fixes are consistent</p>
+<p>with each other).</p>
+<hr/>
+<h3 id="issue-7-the-estimate-report-s-empty-state-was-a-dead-end">Issue #7 — The estimate report's empty state was a dead end</h3>
+<p><strong>Severity:</strong> Medium. When a season had nothing to estimate yet, the</p>
+<p>report showed a static, non-interactive checklist unrelated to the</p>
+<p>farmer's actual recorded data.</p>
+<p><strong>Fix.</strong> Replaced with a data-driven checklist — crop-specific expected</p>
+<p>categories where norms exist, falling back to the same essentials list</p>
+<p>used elsewhere in the app — with each category clickable to open the</p>
+<p>add-cost form directly, and a "Generate Estimate Now" action once ready.</p>
+<p><strong>Evidence.</strong> Live walkthrough: 4 categories shown "Needs fixing" (red),</p>
+<p>fixed one at a time via the checklist, all flip to "Fixed" (green), then</p>
+<p>generating produces a real report with <code>is_actual = true</code> on all four.</p>
+<hr/>
+<h3 id="issue-8-farmbot-had-no-access-to-computed-overspend-data">Issue #8 — FarmBot had no access to computed overspend data</h3>
+<p><strong>Severity:</strong> Medium. The AI assistant's system prompt included raw</p>
+<p>season/cost totals but nothing from the estimation engine — it could not</p>
+<p>reference a real flagged category, variance percentage, or advice text,</p>
+<p>even though that data already existed and was exactly what a farmer would</p>
+<p>ask it about.</p>
+<p><strong>Fix.</strong> Added <code>getFlaggedInsightsForFarm()</code>, which reads each season's</p>
+<p>most recent estimate's flagged lines, and wired it into the system prompt</p>
+<p>with an instruction to lead with real flags rather than speak generically.</p>
+<hr/>
+<h3 id="issue-9-four-fixed-ui-elements-overlapped-the-mobile-navigation-bar">Issue #9 — Four fixed UI elements overlapped the mobile navigation bar</h3>
+<p><strong>Severity:</strong> High (usability on the primary target device — a phone).</p>
+<p><strong>Reported as:</strong> "the chatbot widget blocks the profile on mobile."</p>
+<p><strong>Root cause.</strong> <code>pb-safe</code>, used on the mobile bottom nav to reserve space</p>
+<p>for the iOS home-indicator safe area, was referenced but **never</p>
+<p>defined** anywhere in the codebase — a silent no-op class. Four separate</p>
+<p><code>fixed bottom-*</code> elements (FarmBot's chat button, the PWA install prompt,</p>
+<p>the season-comparison sticky bar, and <code>SeasonDetail</code>'s mobile FAB) were</p>
+<p>all positioned assuming the nav bar's true height, which the missing</p>
+<p>utility meant was never actually reserved.</p>
+<p><strong>Fix.</strong> Defined a real <code>pb-safe</code> utility (<code>env(safe-area-inset-bottom)</code>);</p>
+<p>repositioned all four elements above the nav bar with a safe-area-aware</p>
+<p>offset.</p>
+<p><strong>Evidence.</strong> Geometry check before/after via Puppeteer at a 390×844</p>
+<p>mobile viewport: FAB bottom edge (764px) now sits above the nav bar's top</p>
+<p>edge (779px) with a 15px clear gap; previously they overlapped by design</p>
+<p>(FAB positioned at a fixed 24px from the true viewport bottom, inside the</p>
+<p>64px+ nav bar's footprint).</p>
+<hr/>
+<h3 id="issue-10-database-types-ts-was-never-generated-from-the-live-schema">Issue #10 — <code>database.types.ts</code> was never generated from the live schema</h3>
+<p><strong>Severity:</strong> High (undermines a documented guarantee across the whole</p>
+<p>codebase, silently). The SDD states this file is "regenerated after every</p>
+<p>migration" and is what turns "a renamed column into a compile error rather</p>
+<p>than a runtime failure" (SDD §7.3). In fact the file was still the</p>
+<p>original scaffolding placeholder — every table typed as</p>
+<p><code>Record<string, unknown></code> — meaning **no query in the entire application</p>
+<p>had real compile-time type checking**, at any point in the project's</p>
+<p>history.</p>
+<p><strong>Fix.</strong> Regenerated directly from the linked live schema via the</p>
+<p>Supabase CLI. Full project type-check re-run afterward.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> before and after: zero new errors,</p>
+<p>meaning existing usage happened to already be consistent with the real</p>
+<p>schema — the gap was real but had not yet caused a live bug, which is</p>
+<p>exactly why it went unnoticed for the length of the project.</p>
+<hr/>
+<h3 id="issue-11-reset-password-button-had-no-click-handler">Issue #11 — "Reset Password" button had no click handler</h3>
+<p><strong>Severity:</strong> High (a fully-styled, apparently-functional button that does</p>
+<p>nothing on tap is a worse experience than not showing it at all).</p>
+<p><strong>Component:</strong> <code>Profile.tsx</code>.</p>
+<p><strong>Fix.</strong> Implemented as "Change Password" using</p>
+<p><code>supabase.auth.updateUser({ password })</code>, with its own modal, validation,</p>
+<p>and error state.</p>
+<p><strong>Evidence.</strong> Live Puppeteer test: modal opens, accepts a new password,</p>
+<p>submits successfully, closes on success.</p>
+<hr/>
+<h3 id="issue-12-linkemail-was-fully-implemented-but-wired-to-no-ui">Issue #12 — <code>linkEmail()</code> was fully implemented but wired to no UI</h3>
+<p><strong>Severity:</strong> Medium. The function existed in <code>api/auth.ts</code> and was</p>
+<p>exposed from <code>useAuth()</code>, satisfying the backend half of a documented,</p>
+<p>P1-priority requirement (PRD FR-1.11 / ADR-006) — but no page ever called</p>
+<p>it, so a phone-registered farmer had no way to actually link an email.</p>
+<p><strong>Fix.</strong> Added a "Link an Email Address" row and modal to <code>Profile.tsx</code>,</p>
+<p>shown only for phone-auth accounts with no email on file yet.</p>
+<hr/>
+<h3 id="issue-13-currency-prefix-rendered-twice-ghs-ghs-1-424-33-ghs-300-00">Issue #13 — Currency prefix rendered twice ("GHS GHS 1,424.33", "₵GHS 300.00")</h3>
+<p><strong>Severity:</strong> Low (cosmetic, but present on nearly every money figure in</p>
+<p>the app). <strong>Root cause.</strong> <code>formatCedis()</code> (used by the shared <code>Money</code></p>
+<p>component — documented as "the ONLY place cedi formatting occurs," SDD</p>
+<p>§5.3) already prepends "GHS". Eleven call sites across six files also</p>
+<p>rendered their own manual "GHS" or "₵" label immediately before <code><Money></code>.</p>
+<p><strong>Fix.</strong> Removed the redundant manual prefix at every site; <code>Money</code></p>
+<p>remains the single source of formatting, as originally intended.</p>
+<hr/>
+<h3 id="issue-14-a-dynamically-built-tailwind-class-silently-broke-the-report-s-layout">Issue #14 — A dynamically-built Tailwind class silently broke the report's layout</h3>
+<p><strong>Severity:</strong> High (visibly broken layout, but easy to miss without an</p>
+<p>actual screenshot at the affected viewport width). <strong>Component:</strong></p>
+<p><code>EstimateReport.tsx</code>.</p>
+<p><strong>Root cause.</strong> `<code> className={</code>lg:col-span-${flaggedLines.length > 0 ? '7' : '12'}<code>} </code>` —</p>
+<p>Tailwind's build-time scanner can only detect complete, literal class name</p>
+<p>strings in source; a class name assembled via string interpolation is</p>
+<p>invisible to it, so neither <code>lg:col-span-7</code> nor <code>lg:col-span-12</code> was ever</p>
+<p>generated into the shipped CSS. The column lost its span entirely, and its</p>
+<p>content overlapped the adjacent column.</p>
+<p><strong>Fix.</strong> Rewritten as a ternary between two complete literal strings.</p>
+<p><strong>Evidence.</strong> Screenshot before/after at 1440px width: "Where Your Money</p>
+<p>Goes" and "Where You Can Save" render as two overlapping stacks of text</p>
+<p>before the fix, and as a clean two-column layout after.</p>
+<hr/>
+<h3 id="issue-15-four-components-were-fully-unimplemented-unused-stubs">Issue #15 — Four components were fully unimplemented, unused stubs</h3>
+<p><strong>Severity:</strong> Low (dead code, zero runtime impact — confirmed unused).</p>
+<p><code>SeasonCard.tsx</code>, <code>CostRow.tsx</code>, <code>CategoryBar.tsx</code>, <code>FlagBadge.tsx</code></p>
+<p>(<code>src/components/domain/</code>) each contained only <code>{/<em> TODO </em>/}</code> and were</p>
+<p>never imported by any page — the equivalent UI had been built directly</p>
+<p>inline instead. Left in place (file deletion is restricted in this</p>
+<p>environment); confirmed via a full-codebase import search that nothing</p>
+<p>references them, so they carry no functional risk.</p>
+<hr/>
+<h3 id="issue-16-weekly-check-in-split-a-shared-cost-evenly-not-by-acreage">Issue #16 — Weekly Check-in split a shared cost evenly, not by acreage</h3>
+<p><strong>Severity:</strong> Medium (data-accuracy, not a crash). When two active seasons</p>
+<p>of different sizes shared an expected category, the check-in split the</p>
+<p>entered amount equally between them regardless of how much each was</p>
+<p>actually planted — flagged as an accepted limitation in an earlier draft</p>
+<p>of the main report, then fixed in this same pass rather than left</p>
+<p>outstanding, per direct review feedback that the split should follow</p>
+<p>planted acreage.</p>
+<p><strong>Fix.</strong> <code>WeeklyCatchUp.tsx</code> now splits proportionally to each season's</p>
+<p><code>area_planted_acres</code>, with the rounding remainder corrected onto the</p>
+<p>largest share so the total always reconciles exactly to what was entered.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean after the change; logic</p>
+<p>verified by inspection — for two seasons of 1 and 5 acres sharing a</p>
+<p>GHS 600 entry, the split is now 100/500 by acreage rather than 300/300.</p>
+<hr/>
+<h3 id="issue-17-benchmark-coverage-limited-to-a-single-crop-maize">Issue #17 — Benchmark coverage limited to a single crop (Maize)</h3>
+<p><strong>Severity:</strong> Medium (a real, known, documented gap — PRD §8.2 lists this</p>
+<p>as "to collect" — not a bug, but closed in this pass since it was</p>
+<p>practical to do so). Nine of the ten seeded crops had zero</p>
+<p><code>crop_input_norms</code> rows, so every crop but Maize could only ever fall back</p>
+<p>to the generic essentials checklist with no crop-specific prediction.</p>
+<p><strong>Fix.</strong> Added indicative per-acre norms (seeds, fertiliser, land</p>
+<p>preparation, labour) for Rice, Cassava, Yam, Plantain, Cowpea, Groundnut,</p>
+<p>Soya bean, Tomato, and Pepper (<code>013_seed_additional_crop_norms.sql</code>),</p>
+<p>carrying the same <code>"INDICATIVE — verify with CSIR-CRI"</code> status the</p>
+<p>original Maize norms already had — a real planning starting point, not</p>
+<p>presented as field-verified fact (see §5.2 of the main report).</p>
+<p><strong>Evidence.</strong> `select crop, count(*) from crop_input_norms ... group by</p>
+<p>crop`: all ten crops now return four or more rows; zero for the same</p>
+<p>query before this migration on nine of them.</p>
+<hr/>
+<h2 id="5-testing-record">5. Testing Record</h2>
+<p>The main report (§4.3) carries the primary test table. Full evidence for</p>
+<p>each row:</p>
+<table>
+<thead><tr><th>#</th><th>Test</th><th>Before</th><th>After</th><th>Verified via</th></tr></thead>
+<tbody>
+<tr><td>T2 / Issue #3</td><td>Recorded cost 60% over benchmark, no history</td><td><code>variance_pct=0</code>, <code>is_flagged=false</code></td><td><code>variance_pct=60</code>, <code>is_flagged=true</code>, advice present</td><td>Live RPC call against production DB</td></tr>
+<tr><td>T7 / Issue #4</td><td><code>crop_input_norms</code> row count per (crop, benchmark, window)</td><td>5</td><td>1</td><td><code>SELECT COUNT(*) ... GROUP BY</code></td></tr>
+<tr><td>T10 / Issue #9</td><td>FAB bottom edge vs. nav top edge, 390px viewport</td><td>Overlap (FAB inside nav footprint)</td><td>15px clear gap</td><td>Puppeteer <code>getBoundingClientRect()</code></td></tr>
+<tr><td>— / Issue #10</td><td><code>tsc -b --noEmit</code> error count after real types generated</td><td>—</td><td>0 new errors</td><td>Full project build</td></tr>
+<tr><td>— / Issue #13</td><td>Occurrences of duplicated currency prefix</td><td>11 across 6 files</td><td>0</td><td>Full-codebase grep, then manual screenshot confirmation</td></tr>
+<tr><td>— / Issue #14</td><td>Report layout at 1440px</td><td>Overlapping columns</td><td>Clean two-column grid</td><td>Before/after screenshot</td></tr>
+<tr><td>— / Issue #16</td><td><code>tsc -b --noEmit</code> after split logic change</td><td>—</td><td>0 new errors</td><td>Full project build</td></tr>
+<tr><td>— / Issue #17</td><td>Crops with ≥1 seeded norm row</td><td>1 of 10</td><td>10 of 10</td><td><code>SELECT</code> grouped by crop</td></tr>
+</tbody></table>
+<p>Every fix in §4 was verified against the live, linked Supabase project —</p>
+<p>not a local mock or an assumed-correct code review — using either a</p>
+<p>direct SQL query, a live Puppeteer walkthrough of the deployed UI, or</p>
+<p>both.</p>
+<hr/>
+<h2 id="6-backlog-outstanding-work">6. Backlog — Outstanding Work</h2>
+<p>Carried forward from §5.3 of the main report, plus items identified here</p>
+<p>that are lower priority than what shipped in this pass:</p>
+<table>
+<thead><tr><th>Item</th><th>Priority</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Verify indicative norms for all ten crops against CSIR-CRI / real records</td><td>High</td><td>Blocks presenting the new crop data as sourced fact rather than indicative</td></tr>
+<tr><td>Region-specific benchmark data</td><td>Medium</td><td>Currently a single national average (ADR-011's caveat)</td></tr>
+<tr><td>Automated regression suite around <code>generate_estimate()</code></td><td>Medium</td><td>Issues #3 and #4 were both caught by manual testing; neither had an automated check</td></tr>
+<tr><td>Field-officer / aggregator role</td><td>Low</td><td>Explicitly out of scope for this project window (PRD §15)</td></tr>
+<tr><td>SMS OTP phone verification</td><td>Low</td><td>Explicitly deferred (PRD FR-1.13, ADR-006) — not implemented, and correctly documented as such throughout</td></tr>
+<tr><td>Delete the four dead stub components (Issue #15)</td><td>Low</td><td>Blocked by an environment permission restriction on file deletion during this session; zero functional risk in the meantime</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="7-appendix-file-and-migration-index">7. Appendix — File and Migration Index</h2>
+<table>
+<thead><tr><th>File</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>supabase/migrations/001_schema.sql</code> – <code>009_fix_views_and_seed_crops.sql</code></td><td>Original schema, RLS, and reference data build-out (pre-hardening-pass)</td></tr>
+<tr><td><code>supabase/migrations/010_estimate_actual_vs_benchmark.sql</code></td><td>Issue #3</td></tr>
+<tr><td><code>supabase/migrations/011_category_benchmark_estimate.sql</code></td><td>Issue #6</td></tr>
+<tr><td><code>supabase/migrations/012_fix_crop_input_norms_duplicates.sql</code></td><td>Issue #4</td></tr>
+<tr><td><code>supabase/migrations/013_seed_additional_crop_norms.sql</code></td><td>Issue #17</td></tr>
+<tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
+<tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
+<tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>
+<tr><td><code>docs/FarmPilot_PRD.md</code>, <code>docs/FarmPilot_SDD.md</code></td><td>Requirements and design, both updated to v1.2 to reflect this pass</td></tr>
+</tbody></table>
+<hr/>
+<p><em>End of document.</em></p>
+</body>
+</html>

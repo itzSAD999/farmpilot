@@ -13,6 +13,7 @@ interface CatchupStep {
   category: CostCategory;
   seasonIds: number[];
   cropNames: string[];
+  seasonAreas: number[];
 }
 
 export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
@@ -44,15 +45,16 @@ export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
       }
       
       try {
-        const categoryMap = new Map<CostCategory, { seasonIds: number[], cropNames: string[] }>();
+        const categoryMap = new Map<CostCategory, { seasonIds: number[], cropNames: string[], seasonAreas: number[] }>();
         for (const season of activeSeasons) {
           const cats = await getExpectedCategoriesForCrop(season.crop_id);
           for (const c of cats) {
             if (!categoryMap.has(c)) {
-              categoryMap.set(c, { seasonIds: [], cropNames: [] });
+              categoryMap.set(c, { seasonIds: [], cropNames: [], seasonAreas: [] });
             }
             categoryMap.get(c)!.seasonIds.push(season.id);
             categoryMap.get(c)!.cropNames.push(season.crop_name);
+            categoryMap.get(c)!.seasonAreas.push(Number(season.area_planted_acres) || 0);
           }
         }
         
@@ -92,19 +94,35 @@ export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
 
     setIsSubmitting(true);
     const amountPesewas = Math.round(amount * 100);
-    const amountPerSeason = Math.round(amountPesewas / currentStep.seasonIds.length);
+
+    // Split proportionally to each season's planted acreage, not evenly —
+    // a 1-acre and a 5-acre active season sharing a category should not
+    // absorb the same share of a combined cost. Falls back to an even
+    // split only if no season in the group has a usable area (e.g. 0).
+    const totalArea = currentStep.seasonAreas.reduce((a, b) => a + b, 0);
+    const shares = totalArea > 0
+      ? currentStep.seasonAreas.map(area => area / totalArea)
+      : currentStep.seasonIds.map(() => 1 / currentStep.seasonIds.length);
+    const amounts = shares.map(share => Math.round(amountPesewas * share));
+    // Rounding can leave the sum a pesewa or two off the entered total —
+    // correct it on the largest share so the total always reconciles.
+    const roundingDiff = amountPesewas - amounts.reduce((a, b) => a + b, 0);
+    if (roundingDiff !== 0) {
+      const largestIdx = shares.indexOf(Math.max(...shares));
+      amounts[largestIdx] += roundingDiff;
+    }
 
     try {
-      const promises = currentStep.seasonIds.map(seasonId => 
+      const promises = currentStep.seasonIds.map((seasonId, idx) =>
         addCost({
           season_id: seasonId,
           category: currentStep.category,
-          amount_pesewas: amountPerSeason,
-          description: currentStep.seasonIds.length > 1 ? 'Weekly catch-up (Split evenly)' : 'Weekly catch-up',
+          amount_pesewas: amounts[idx],
+          description: currentStep.seasonIds.length > 1 ? 'Weekly catch-up (split by planted acreage)' : 'Weekly catch-up',
           date_incurred: new Date().toISOString().split('T')[0],
         })
       );
-      
+
       await Promise.all(promises);
       
       await queryClient.invalidateQueries({ queryKey: ['seasonCosts'] });

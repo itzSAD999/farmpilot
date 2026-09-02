@@ -1,70 +1,129 @@
 # FarmPilot
 
-FarmPilot is a mobile-first web application designed for farmers to easily track their farm setup, seasons, estimated costs, and actual expenditures. It provides intelligent estimates based on standard regional benchmarks and allows farmers to track real spending to see where they are saving or overspending. 
+A web application that tells a small-scale Ghanaian farmer what a farming
+season should cost, and where they are spending more than they need to.
+Built as a Year 3 mini project for the Department of Computer Science,
+Kwame Nkrumah University of Science and Technology (2025/2026).
 
-## Features
-- **Mobile-first UI:** Built to be used in the field with a phone.
-- **Offline-capable design:** Can be enhanced with offline support for remote areas.
-- **Intelligent Estimates:** Estimates cost of seeds, fertilizers, and labor based on farm size and crop type.
-- **Expense Tracking:** Track real-time expenditures and compare them to estimates.
-- **Harvest Logging:** Log your yields and revenue at the end of each season.
+**Live app:** https://farmpilot-chi.vercel.app
+
+**Try it now** with the seeded demonstration account (see
+`docs/FarmPilot_MiniProject_Report.md`, Appendix D, for what it contains):
+
+```
+Email:    kwame.mensah@farmpilot.demo
+Password: FarmPilotDemo2026!
+```
+
+## How it works
+
+A farmer records their farm, a growing season, and what they spend on it —
+either a flat total or a quantity and rate. FarmPilot compares that
+spending, category by category, against an independent benchmark built
+from MoFA input-price data and per-acre application norms, flags any
+category more than 30% above the expected rate, and gives a specific,
+sourced suggestion for reducing it. A farmer with no history yet still
+gets a usable estimate from the benchmark alone — the whole design exists
+to make that true.
+
+## Documentation
+
+Everything about the project — not just the code — lives in `docs/`:
+
+| Document | What it's for |
+|---|---|
+| [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules |
+| [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model |
+| [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 17-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
+| [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |
+| `docs/adr/` | Additional standalone ADRs |
+| `docs/screenshots/`, `docs/diagrams/` | Assets referenced by the report (real app screenshots; the Use Case and ER diagrams) |
+
+Start with the PRD for *why*, the SDD for *how*, and the Development Log
+for *what changed and what was found wrong along the way*.
+
+## Project structure
+
+```
+farmpilot/
+├── docs/                    Everything documentation — see table above
+├── src/
+│   ├── api/                 Typed data-access layer — every Supabase call goes through here
+│   ├── components/          domain/ (feature UI), features/ (WeeklyCatchUp, CostList), layout/, ui/
+│   ├── hooks/                useAuth, useFarm, useTheme, useOnline, useOfflineStatus
+│   ├── lib/                  supabase client, database.types.ts (generated), money/categories helpers
+│   └── pages/                One file per route
+├── supabase/
+│   ├── migrations/           Numbered, applied-in-order schema history (001–013)
+│   └── demo_seed.sql         Reproducible demonstration account — see docs/…Report.md Appendix D
+├── scripts/
+│   ├── test_crud.ts          Manual end-to-end CRUD smoke test
+│   ├── run_mig.ts, test_*.ts/.sql   Ad-hoc scripts used during development
+│   └── report-tools/         Regenerates the ER/use-case diagram images and the report's .html build
+└── README.md                 This file
+```
 
 ## Environment Variables
 
-Create a `.env` file in the root of the project with the following variables:
+Create a `.env` file in the project root:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## Setup Steps
+## Setup
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
+```bash
+npm install
+npm run dev
+```
 
 ## Database Migrations
 
-The database is managed using Supabase. To run migrations locally and apply them:
+Schema and reference data are committed as numbered SQL files under
+`supabase/migrations/`, applied in order — the system is reproducible from
+source with no manual step. Migrations in this project have generally been
+applied directly against the shared Supabase project (via the SQL editor,
+or `npx supabase db query --linked -f <file>`) rather than
+`supabase db push`, since the CLI's own migration-history table doesn't
+reflect them — see `FarmPilot_SDD.md` §16.3.
 
-1. Link your project to Supabase:
-   ```bash
-   supabase link --project-ref your_project_ref
-   ```
-2. Apply migrations:
-   ```bash
-   supabase db push
-   ```
-
-Alternatively, you can run the SQL files in `supabase/migrations/` directly in the Supabase SQL Editor.
-
-## Running Tests
-
-To run the estimate calculation logic tests and ensure they match the data requirements:
+To seed the demonstration account (safe to re-run — it resets the account
+to a known clean state):
 
 ```bash
-npm run test
+npx supabase db query --linked -f supabase/demo_seed.sql
 ```
 
-*Note: You may need to ensure `vitest` is installed or run `npx vitest` if configured in package.json.*
+## Regenerating the report documents
+
+If `docs/FarmPilot_MiniProject_Report.md` or `FarmPilot_Development_Log.md`
+change, rebuild their `.html` twins (every screenshot embedded, openable
+directly in Word or a browser):
+
+```bash
+node scripts/report-tools/build_report_doc.mjs docs/FarmPilot_MiniProject_Report.md docs/FarmPilot_MiniProject_Report.html
+node scripts/report-tools/build_report_doc.mjs docs/FarmPilot_Development_Log.md docs/FarmPilot_Development_Log.html
+```
+
+To regenerate the Use Case / ER diagram images after editing
+`scripts/report-tools/diagrams.html`:
+
+```bash
+node scripts/report-tools/render_diagrams.mjs
+```
 
 ## Deployment
 
-The application is deployed on Vercel. 
+Deployed on Vercel, auto-deploying from `main`. If deploying your own
+instance:
 
-**Live URL:** [https://farmpilot.vercel.app](https://farmpilot.vercel.app) *(Update this with your actual Vercel domain once deployed)*
-
-### Vercel Deployment Checklist:
-1. Connect your GitHub repository to a new Vercel project.
-2. In the Vercel project settings, add the Environment Variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3. Deploy the project.
-4. **Crucial:** Go to your **Supabase Dashboard** -> **Authentication** -> **URL Configuration**. Add your new Vercel domain (e.g., `https://your-app.vercel.app`) to the **Redirect URLs** list. Otherwise, authentication will fail in production!
+1. Connect the GitHub repository to a new Vercel project.
+2. Add the environment variables above in the Vercel project settings.
+3. Deploy.
+4. In the **Supabase Dashboard → Authentication → URL Configuration**, add
+   your Vercel domain to the Redirect URLs list — authentication will
+   fail in production otherwise.

@@ -1,3 +1,5 @@
+![KNUST Seal](knust_logo.jpg)
+
 # FARMPILOT: A WEB-BASED FARM COST ESTIMATION AND OVERSPEND-DETECTION SYSTEM FOR SMALLHOLDER FARMERS IN GHANA
 
 **A Mini Project Report Submitted to the Department of Computer Science, Kwame Nkrumah University of Science and Technology**
@@ -6,12 +8,17 @@
 |---|---|
 | **Course** | BSc Computer Science — Mini Project, Year 3 |
 | **Academic Year** | 2025/2026 |
-| **Team** | Osmond Abdul-Karim Woriwi (21034402) |
-| | Aboagye Jeffery Ohene (21013336) |
-| | Ayisha Abdullah (20950630) |
 | **Supervisor** | *[Insert supervisor's name]* |
-| **Date of Submission** | *[Insert submission date]* |
+| **Date of Submission** | 3 September 2026 |
 | **Repository** | `farmpilot` (see Appendix A) |
+
+**Team**
+
+| Name | Student ID | Index Number |
+|---|---|---|
+| Osmond Abdul-Karim Woriwi | 21034402 | 8977223 |
+| Aboagye Jeffery Ohene | 21013336 | 8978023 |
+| Ayisha Abdullah | 20950630 | 3360622 |
 
 ---
 
@@ -120,13 +127,12 @@ Four categories of existing tool were reviewed against the two questions FarmPil
 
 ### 2.3 Comparative Summary
 
-| System | Records itemised costs | Compares against an external benchmark | Flags specific overspend with a saving figure | Actionable, specific advice per category |
-|---|---|---|---|---|
-| Esoko | No | No (market price only) | No | No |
-| AgroCenta | No | No | No | No |
-| Farmerline / Mergdata | No | No | No | Yes (agronomic, not financial) |
-| Generic expense trackers | Yes | No | No | No |
-| **FarmPilot** | **Yes** | **Yes** | **Yes** | **Yes** |
+| Criterion | Esoko | AgroCenta | Farmerline / Mergdata | Generic expense trackers | **FarmPilot** |
+|---|---|---|---|---|---|
+| Records itemised costs | No | No | No | Yes | **Yes** |
+| Compares against an external benchmark | No (market price only) | No | No | No | **Yes** |
+| Flags specific overspend with a saving figure | No | No | No | No | **Yes** |
+| Actionable, specific advice per category | No | No | Yes (agronomic, not financial) | No | **Yes** |
 
 ### 2.4 Gap Identified
 
@@ -166,108 +172,33 @@ A schema-first discipline was kept within that iterative process: the database s
 
 #### 3.3.1 Use Case Diagram
 
-```mermaid
-flowchart LR
-    Farmer((Farmer))
-    Guest((Unregistered Visitor))
+![Use Case Diagram](diagrams/use_case_diagram.png)
 
-    subgraph FarmPilot System
-        UC1[Register / Sign In]
-        UC2[Set Up Farm]
-        UC3[Start a Season]
-        UC4[Record a Cost Item]
-        UC5[Generate Estimate]
-        UC6[View Flagged Overspend & Advice]
-        UC7[Compare Seasons / Crops / Benchmark]
-        UC8[Weekly Cost Check-in]
-        UC9[Chat with AI Assistant]
-        UC10[Close a Season]
-        UC11[Read Agronomic Guides]
-    end
+The **Farmer** is the only actor with write access to owned data; reference data (crops, benchmark prices, application norms, advice text) is read-only to every signed-in user and is never writable through the application (§4.2, §8.2 of the SDD). The three use cases on the right are `«extend»`s of a primary use case rather than actions a farmer chooses directly: *Weekly Cost Check-in* and *Fill Cost from Standard Benchmark* both extend *Record a Cost Item* — all three write to the same underlying record, so a cost logged through either shortcut is indistinguishable from one logged through the normal form once saved — and *View Flagged Overspend & Advice* extends *Generate Estimate*, since a flag is never viewed except as part of a generated report.
 
-    Guest --> UC1
-    Farmer --> UC1
-    Farmer --> UC2
-    Farmer --> UC3
-    Farmer --> UC4
-    Farmer --> UC5
-    UC5 --> UC6
-    Farmer --> UC7
-    Farmer --> UC8
-    UC8 --> UC4
-    Farmer --> UC9
-    Farmer --> UC10
-    Farmer --> UC11
-```
+**Use case descriptions**
 
-The **Farmer** is the only actor with write access to owned data; reference data (crops, benchmark prices, application norms, advice text) is read-only to every signed-in user and is never writable through the application (§4.2, §8.2 of the SDD). *Weekly Cost Check-in* (UC8) is a specialised entry point into *Record a Cost Item* (UC4) — both write to the same underlying record, so a cost logged through the weekly prompt is indistinguishable from one logged through the normal form once saved.
+| ID | Use Case | Actor(s) | Description |
+|---|---|---|---|
+| UC-1 | Register / Sign In | Farmer, Unregistered Visitor | Create an account (phone or email) or sign in to an existing one |
+| UC-2 | Set Up Farm | Farmer | Record farm name, region, district, total acreage, and a preferred weekly check-in day; required once before any other screen is reachable |
+| UC-3 | Start a Season | Farmer | Record a season: crop, year, growing window, and area planted |
+| UC-4 | Record a Cost Item | Farmer | Log a cost against a season's fixed category list, as a flat total or a quantity × rate |
+| UC-4a | Weekly Cost Check-in *(extends UC-4)* | Farmer | Standing prompt that asks, per expected category across all active seasons, "did you spend anything this week?" — writes an ordinary cost item on answer |
+| UC-4b | Fill Cost from Standard Benchmark *(extends UC-4)* | Farmer | Where a category's cost is unknown, fill the amount from the benchmark rate, scaled to the season's acreage, instead of guessing |
+| UC-5 | Generate Estimate | Farmer | Run the estimation engine for a season: predicts unrecorded categories from history or benchmark, compares recorded categories against the benchmark |
+| UC-5a | View Flagged Overspend & Advice *(extends UC-5)* | Farmer | See which categories exceeded the benchmark by more than the threshold, the possible saving, and a specific suggestion |
+| UC-6 | Close a Season | Farmer | Mark a season complete with harvest quantity, unit, and optional revenue; makes it eligible as history for future estimates |
+| UC-7 | Compare Seasons / Crops / Benchmark | Farmer | Season-vs-season, crop-vs-crop, or "me vs standard" per-acre comparisons |
+| UC-8 | Chat with AI Assistant | Farmer | Ask FarmBot for advice; it has live access to the farmer's own farm, seasons, costs, and computed overspend flags |
+| UC-9 | Read Agronomic Guides | Farmer | Browse the guide library; optionally request an AI-personalised version for the farmer's own crop and farm size |
+| UC-10 | Manage Account | Farmer | Edit profile/farm details, change password, link an email to a phone account, or permanently delete the account and all farm data |
 
 #### 3.3.2 Entity–Relationship Diagram
 
-```
-                      ┌──────────────┐
-                      │  auth.users  │
-                      └──────┬───────┘
-                             │ 1
-                             ▼ N
-                      ┌──────────────┐
-                      │    farms     │
-                      │──────────────│
-                      │ id           │
-                      │ user_id  FK  │
-                      │ name         │
-                      │ district     │
-                      │ total_area   │
-                      │ check_in_day │
-                      └──────┬───────┘
-                             │ 1
-                             ▼ N
-   ┌──────────┐       ┌──────────────┐       ┌──────────────────┐
-   │  crops   │──1──N▶│   seasons    │◀─1──N─│   season_costs    │
-   │──────────│       │──────────────│       │──────────────────│
-   │ id       │       │ id           │       │ id               │
-   │ name     │       │ farm_id  FK  │       │ season_id    FK  │
-   │ avg_yield│       │ crop_id  FK  │       │ category   ENUM  │
-   │ potential│       │ year         │       │ description      │
-   └────┬─────┘       │ season_window│       │ quantity         │
-        │ 1           │ area_planted │       │ unit             │
-        │             │ harvest_qty  │       │ unit_cost_pesewas│
-        ▼ N           │ is_complete  │       │ amount_pesewas   │
-   ┌──────────────┐   └──────┬───────┘       └──────────────────┘
-   │crop_input_   │          │ 1
-   │    norms     │          ▼ N
-   │──────────────│   ┌──────────────┐
-   │ id           │   │  estimates   │
-   │ crop_id   FK │   │──────────────│
-   │ benchmark_id │   │ id           │
-   │ category     │   │ season_id FK │
-   │ qty_per_acre │   │ method  ENUM │
-   │ window       │   │ total_pesewas│
-   └──────┬───────┘   └──────┬───────┘
-          │ N                │ 1
-          ▼ 1                ▼ N
-   ┌──────────────┐   ┌────────────────────┐
-   │cost_         │   │  estimate_lines    │
-   │  benchmarks  │   │────────────────────│
-   │──────────────│   │ estimate_id    FK  │
-   │ id           │   │ category     ENUM  │
-   │ input_name   │   │ estimated_pesewas  │
-   │ price_pesewas│   │ benchmark_pesewas  │
-   │ basis   ENUM │   │ variance_pct       │
-   └──────────────┘   │ is_flagged         │
-                      │ is_actual          │
-   ┌──────────────┐   │ advice             │
-   │ advice_rules │   │ potential_saving   │
-   │──────────────│   └────────────────────┘
-   │ category  UQ │
-   │ message      │   ┌──────────────┐
-   └──────────────┘   │ app_settings │
-                      │ price_mult   │
-                      │ flag_thresh  │
-                      └──────────────┘
-```
+![Entity Relationship Diagram](diagrams/erd_diagram.png)
 
-`is_actual` on `estimate_lines` distinguishes a category the farmer has actually recorded this season from one still showing a prediction (§4.2.3) — added during implementation once testing revealed the original design's flagging logic needed it (§4.2.4).
+`auth.users` (Supabase's built-in identity table, one row per registered farmer) sits above `farms` and is omitted from the diagram for space — every `farms.user_id` is a foreign key into it, cascading on delete. `is_actual` on `estimate_lines` distinguishes a category the farmer has actually recorded this season from one still showing a prediction (§4.2.3) — added during implementation once testing revealed the original design's flagging logic needed it (§4.2.4).
 
 The full relationship cardinalities, ON DELETE behaviour, and constraint list are documented in the companion System Design Document, §6.
 
@@ -388,18 +319,18 @@ FarmPilot was built to answer two questions a smallholder farmer cannot currentl
 
 ### 5.2 Limitations
 
-- **Benchmark coverage is currently limited to one crop.** Only maize has seeded per-acre application norms; other crops fall back to a general checklist and can still be recorded and compared, but do not yet get a crop-specific predicted estimate before any cost is logged.
-- **Benchmark source data is nationally averaged and dated (2018 MoFA figures, inflated by a configurable multiplier).** It does not vary by region, and does not reflect farm-scale differences — figures partly informed by larger commercial-scale records may understate what is realistic for a true smallholder plot, which is stated plainly in the report rather than presented as precise.
+Two limitations identified during an earlier review of this report — benchmark coverage limited to one crop, and the weekly check-in splitting a shared cost evenly rather than by planted acreage — were corrected before submission and are recorded as resolved in the Development Log (Appendix E) rather than listed here as outstanding. What remains:
+
+- **Benchmark source data is nationally averaged and dated (2018 MoFA figures, inflated by a configurable multiplier).** It does not vary by region, and does not reflect farm-scale differences — figures partly informed by larger commercial-scale records may understate what is realistic for a true smallholder plot, which is stated plainly in the report rather than presented as precise (ADR-011, Appendix E).
+- **The newly added norms for the nine non-maize crops (§3.3.2) are indicative, not field-verified** — seeded from general smallholder agronomic knowledge, in the same "INDICATIVE — verify with CSIR-CRI" status the original maize norms already carried, and still need checking against extension records before being presented as sourced fact.
 - **Business logic implemented in PL/pgSQL is harder to unit-test in isolation** than the same logic in a general-purpose language; verification relied on integration-style tests run directly against the live database (§4.3) rather than a conventional unit-test suite.
 - **Phone-based identity is not SMS-verified.** A phone number functions as an account identifier, not a communication channel, in the current implementation.
-- **Weekly check-in splits a shared category cost evenly across active seasons, not proportionally to planted acreage** — a simplification that slightly skews the per-acre figure when a farm is growing more than one crop at once.
 - **No support for multiple farms per user or for a field-officer/aggregator role**, both of which were identified during design as valuable but out of scope for the project window.
 
 ### 5.3 Recommendations
 
-- Extend `crop_input_norms` to the remaining nationally significant crops, so the cold-start prediction is not maize-only.
+- Verify the indicative application-rate norms for all ten crops against CSIR-CRI extension recommendations or real farm records, replacing the "INDICATIVE" source label with a field-verified one crop by crop.
 - Source region-specific benchmark data where available, to remove the single-national-average approximation.
-- Split the weekly check-in's shared-category amount proportionally by planted acreage rather than evenly.
 - Introduce a lightweight aggregator/field-officer role, since farmer-side data entry is a known adoption barrier in comparable systems (§2.2), and the schema was designed not to preclude this extension.
 - Add automated regression tests around the estimation engine specifically (§4.3, T2 and T7), since both defects found during this project were in logic that had no earlier automated check and were caught only by deliberate, manual, database-level testing.
 
@@ -448,6 +379,16 @@ See Figures 4.1–4.8 in Chapter Four, and the full-resolution originals under `
 | `11_seasons_list.png` | Seasons list, all three demo seasons |
 | `12_compare_crops.png` | Crop vs Crop comparison (demo account) |
 
+### Appendix C — User Manual (Quick Start)
+
+1. Open the application and select **Sign Up**. Choose phone or email, enter a full name and password.
+2. Complete farm setup: farm name, region, district, total acreage, and a preferred weekly check-in day.
+3. From the dashboard, select **Start New Season**: choose a crop, year, growing window, and area planted.
+4. Open the season and select **Record Cost** (or **Add Cost** from the dashboard). Choose a category, then either enter a known total or a quantity and rate. If the exact figure is unknown, use the benchmark-fill option where available.
+5. Once at least one cost is recorded, select **Generate Estimate** to see the season's estimated total, the category breakdown, and any flagged overspend with its suggested fix.
+6. Use **Compare** to view season-vs-season, crop-vs-crop, or "me vs standard" comparisons at any time.
+7. Answer the weekly check-in prompt on the dashboard as it appears, to keep records current with minimal effort.
+
 ### Appendix D — Demonstration Account
 
 A permanent, fully-populated demo account is seeded on the live database for presentations, marking, and supervisor review, so the system can be evaluated without first stepping through empty-state onboarding.
@@ -462,7 +403,7 @@ The account belongs to "Kwame Mensah," the primary persona already described in 
 
 - A **completed** 2025 season (full cost history, so the 2026 season below genuinely uses `method = 'history'`, not just the benchmark).
 - An **active** 2026 Maize season with a deliberate fertiliser overspend (flagged, with a real possible-saving figure and advice — Figure 4.4), a category recorded comfortably under benchmark (labour, correctly not flagged), and several categories left unrecorded to show the "Predicted" state.
-- A **second crop** (Cassava) with no seeded benchmark data, showing the essentials-checklist fallback and populating the crop-vs-crop and season-vs-season comparisons.
+- A **second crop** (Cassava), populating the crop-vs-crop and season-vs-season comparisons — now with its own real benchmark norms too (§3.3.2, §5.2), so it demonstrates the history/benchmark engine a second time on an independent crop rather than the essentials-checklist fallback.
 - Costs entered through both recording paths (flat total and quantity × rate) and tagged consistently with what the Weekly Check-in feature itself writes.
 
 The account is fully reproducible from `supabase/demo_seed.sql` in the repository — the script is idempotent (it deletes and recreates the account each time it is run), documents the exact rationale for every seeded figure in its header comments, and can be re-applied at any point with:
@@ -471,15 +412,17 @@ The account is fully reproducible from `supabase/demo_seed.sql` in the repositor
 npx supabase db query --linked -f supabase/demo_seed.sql
 ```
 
-### Appendix C — User Manual (Quick Start)
+### Appendix E — Development Log, Issue Register & Testing Record
 
-1. Open the application and select **Sign Up**. Choose phone or email, enter a full name and password.
-2. Complete farm setup: farm name, region, district, total acreage, and a preferred weekly check-in day.
-3. From the dashboard, select **Start New Season**: choose a crop, year, growing window, and area planted.
-4. Open the season and select **Record Cost** (or **Add Cost** from the dashboard). Choose a category, then either enter a known total or a quantity and rate. If the exact figure is unknown, use the benchmark-fill option where available.
-5. Once at least one cost is recorded, select **Generate Estimate** to see the season's estimated total, the category breakdown, and any flagged overspend with its suggested fix.
-6. Use **Compare** to view season-vs-season, crop-vs-crop, or "me vs standard" comparisons at any time.
-7. Answer the weekly check-in prompt on the dashboard as it appears, to keep records current with minimal effort.
+A full account of the project treated as a real, shipped system rather
+than only a final snapshot: the six-week Python-based proposal versus
+what was actually built and why, a stage-by-stage development timeline,
+an index into all twelve architecture decisions, a seventeen-item issue
+register from a full post-build hardening pass (each with root cause, fix,
+and live verification evidence), the complete testing record behind
+Chapter Four's summary table, and the outstanding backlog. Kept as a
+separate document, `FarmPilot_Development_Log.md`, so this report stays
+readable as a report rather than a defect tracker.
 
 ---
 

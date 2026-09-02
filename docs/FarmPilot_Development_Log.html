@@ -6,10 +6,10 @@
 <style>
   @page { size: A4; margin: 2.5cm; }
   body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.55; max-width: 850px; margin: 40px auto; padding: 0 20px; font-size: 12pt; }
-  h1 { font-size: 22pt; margin-top: 1.4em; page-break-before: always; }
-  h1:first-of-type { page-break-before: avoid; }
+  h1 { font-size: 21pt; margin-top: 1.4em; padding-bottom: 0.3em; border-bottom: 2.5px solid #1B5E20; letter-spacing: 0.02em; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; text-align: center; border-bottom: none; font-size: 19pt; line-height: 1.35; letter-spacing: 0.01em; }
   h2 { font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-  h3 { font-size: 13.5pt; margin-top: 1.3em; }
+  h3 { font-size: 13.5pt; margin-top: 1.3em; color: #14461a; }
   h4 { font-size: 12pt; margin-top: 1.1em; font-style: italic; }
   p { margin: 0.6em 0; text-align: justify; }
   table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10.5pt; }
@@ -19,12 +19,22 @@
   pre.code { background: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 9.5pt; line-height: 1.4; }
   pre.code code { background: none; padding: 0; }
   blockquote { border-left: 3px solid #1B5E20; margin: 1em 0; padding: 0.4em 1em; background: #f4f9f4; color: #333; }
-  img { display: block; margin: 10px auto; }
+  img { display: block; margin: 10px auto; max-width: 100%; }
+  figure { margin: 1.4em 0; text-align: center; page-break-inside: avoid; }
+  figure img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  figcaption { margin-top: 0.5em; font-size: 10pt; font-style: italic; color: #555; }
+  .figure-wrap { text-align: center; margin: 1.4em 0; page-break-inside: avoid; }
+  .figure-wrap img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  /* A paragraph that is nothing but "*Figure N.M — ...*" is the report's
+     own manually-numbered caption — style it like one, sitting just above
+     its image (the caption line always precedes the image in the source). */
+  p:has(> em:only-child) { text-align: center; font-size: 10pt; font-style: italic; color: #555; margin: 1.4em 0 -0.6em; }
   hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
   .diagram-note { background: #fff8e6; border: 1px solid #e8d38a; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 10.5pt; }
   ul, ol { margin: 0.5em 0; padding-left: 1.6em; }
   li { margin: 0.25em 0; }
   a { color: #1B5E20; }
+  
 </style>
 </head>
 <body>
@@ -43,13 +53,13 @@
 <hr/>
 <h2 id="table-of-contents">Table of Contents</h2>
 <ol>
-<li>From Proposal to Delivered System</li>
-<li>Development Timeline (Changelog, expanded)</li>
-<li>Architecture Decisions — Index</li>
-<li>Issue Register — Post-Build Hardening Pass</li>
-<li>Testing Record</li>
-<li>Backlog — Outstanding Work</li>
-<li>Appendix — File and Migration Index</li>
+<li><a href="#1-from-proposal-to-delivered-system">From Proposal to Delivered System</a></li>
+<li><a href="#2-development-timeline-changelog-expanded">Development Timeline (Changelog, expanded)</a></li>
+<li><a href="#3-architecture-decisions-index">Architecture Decisions — Index</a></li>
+<li><a href="#4-issue-register-post-build-hardening-pass">Issue Register — Post-Build Hardening Pass</a></li>
+<li><a href="#5-testing-record">Testing Record</a></li>
+<li><a href="#6-backlog-outstanding-work">Backlog — Outstanding Work</a></li>
+<li><a href="#7-appendix-file-and-migration-index">Appendix — File and Migration Index</a></li>
 </ol>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
@@ -347,6 +357,88 @@
 <p>crop`: all ten crops now return four or more rows; zero for the same</p>
 <p>query before this migration on nine of them.</p>
 <hr/>
+<h3 id="issue-18-edit-season-modal-was-unreadable-under-dark-mode">Issue #18 — Edit Season modal was unreadable under dark mode</h3>
+<p><strong>Severity:</strong> High (functionally blocking, not cosmetic). <code>useTheme.tsx</code></p>
+<p>falls back to <code>prefers-color-scheme: dark</code> for any visitor who has never</p>
+<p>explicitly picked a theme — meaning a browser or OS set to dark mode gets</p>
+<p>FarmPilot's dark theme with no action on the farmer's part. The Edit</p>
+<p>Season modal in <code>SeasonDetail.tsx</code> was written with no <code>dark:</code> variants</p>
+<p>at all on its three form fields (area, season window, year): each</p>
+<p>inherited the page's dark-mode text colour (<code>#f3f4f6</code>, near white)</p>
+<p>directly onto an unswitched light background (<code>bg-gray-50</code>), rendering</p>
+<p>every field's text — and the season-window <code><select></code>'s options —</p>
+<p>effectively invisible. Reported as "a dark overlay blocks the dialogue"</p>
+<p>and "the dropdown has no options," which was this exact bug: the fields</p>
+<p>were present and functional, just unreadable.</p>
+<p><strong>Fix.</strong> Added the same <code>dark:</code> pattern already used correctly elsewhere</p>
+<p>in the same file (<code>dark:bg-[#121212]</code>, <code>dark:text-gray-100</code>,</p>
+<p><code>dark:border-white/10</code>) to the modal's container, backdrop, labels, and</p>
+<p>all three fields.</p>
+<p><strong>Evidence.</strong> Live Puppeteer walkthrough: signed into the demo account,</p>
+<p>forced <code>localStorage.farmpilot-theme = 'dark'</code>, opened Edit Season —</p>
+<p>screenshot confirms "1", "Minor Season", and "2026" all render in white</p>
+<p>text against the dark card, previously indistinguishable from the</p>
+<p>background.</p>
+<hr/>
+<h3 id="issue-19-costs-and-seasons-pages-had-no-visual-breakdown-or-search">Issue #19 — Costs and Seasons pages had no visual breakdown or search</h3>
+<p><strong>Severity:</strong> Low (usability gap, not a defect). The season-level page</p>
+<p>already had a bar-chart cost breakdown; the farm-wide Costs page and the</p>
+<p>Seasons list did not — every other list-heavy screen in the app had</p>
+<p>grown a search/filter bar over the course of this project except Costs,</p>
+<p>and Costs had no chart at all despite aggregating every cost on the farm.</p>
+<p><strong>Fix.</strong> <code>CostsOverview.tsx</code> gained a Recharts pie/donut chart of</p>
+<p>category spend plus a search box that filters by category, crop, or cost</p>
+<p>description across both the "By Category" and "By Season" views.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live screenshot against the</p>
+<p>demo account's 12 recorded costs shows a 6-slice donut (Fertiliser 47%,</p>
+<p>Labour 30%, ...) and the search box correctly narrowing the list.</p>
+<hr/>
+<h3 id="issue-20-no-way-to-backfill-a-crop-s-cost-history-at-season-creation">Issue #20 — No way to backfill a crop's cost history at season creation</h3>
+<p><strong>Severity:</strong> Medium (a real capability gap, not a bug). A farmer who</p>
+<p>already had exact records for previous years of a crop had no way to</p>
+<p>enter them — the only path into <code>season_costs</code> was the live,</p>
+<p>week-by-week recording flow on an <em>active</em> season, so the estimate engine</p>
+<p>could never use "your own historical average" (§4.2.4 of the main</p>
+<p>report) for a crop the farmer had already grown, only the benchmark.</p>
+<p><strong>Fix.</strong> <code>SeasonNew.tsx</code> now asks, after a crop is chosen, "Have you</p>
+<p>grown \[crop\] before?" — if yes, the farmer can add up to three previous</p>
+<p>years (year, area planted, and a total for each essential category) which</p>
+<p>are saved as already-<code>is_complete</code> seasons via a new</p>
+<p><code>createHistoricalSeason()</code> (<code>src/api/seasons.ts</code>), with their costs</p>
+<p>inserted through the existing <code>addCost()</code>. No new schema — these are</p>
+<p>ordinary completed seasons, so <code>generate_estimate()</code> picks them up as</p>
+<p>history immediately, and they appear in the Seasons list under the</p>
+<p>existing "Complete" status filter alongside any other closed season.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live Puppeteer walkthrough</p>
+<p>selecting Cassava, toggling history on, and confirming the per-category</p>
+<p>GH₵ inputs render and validate correctly.</p>
+<hr/>
+<h3 id="issue-21-landing-page-described-hypothetical-features-not-shipped-ones">Issue #21 — Landing page described hypothetical features, not shipped ones</h3>
+<p><strong>Severity:</strong> Low (marketing accuracy, not a defect). The public landing</p>
+<p>page's interactive feature grid (Season Tracking, Financials Simulator,</p>
+<p>Offline-First, Precision Control) was built early in the project and</p>
+<p>never updated — none of the four correspond to a real, shipped screen,</p>
+<p>while several genuinely shipped features (overspend flagging, the</p>
+<p>benchmark quick-fill, the Weekly Check-in, the AI assistant reading real</p>
+<p>flagged data, the per-page dashboards, the cold-start benchmark-to-history</p>
+<p>handoff) had no presence on the page at all.</p>
+<p><strong>Fix.</strong> Added a second interactive section, "Built for the real</p>
+<p>season," with six cards — each opens a live, working mini-demo of the</p>
+<p>actual feature (not a mockup): a benchmark-vs-spend slider that flags</p>
+<p>past 30% exactly like the real engine, a one-tap benchmark-fill demo, a</p>
+<p>step-by-step Weekly Check-in question flow matching the real component's</p>
+<p>one-category-at-a-time UX, a scripted AI-assistant exchange referencing</p>
+<p>real flagged-category language, a pie/bar dashboard toggle, and a</p>
+<p>cold-start-vs-history toggle. The README's setup instructions were also</p>
+<p>rewritten for a from-scratch clone (prerequisites, <code>.env</code> copy step,</p>
+<p>build/preview scripts, fresh-Supabase-project migration order), and the</p>
+<p>GitHub repository link was added to the landing footer, the README, and</p>
+<p>the report's title page and Appendix A (previously just the bare</p>
+<p><code>farmpilot</code> folder name).</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean; live screenshots of the new</p>
+<p>section and of the Weekly Check-in demo's question flow against the</p>
+<p>running dev server.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table. Full evidence for</p>
 <p>each row:</p>
@@ -361,6 +453,10 @@
 <tr><td>— / Issue #14</td><td>Report layout at 1440px</td><td>Overlapping columns</td><td>Clean two-column grid</td><td>Before/after screenshot</td></tr>
 <tr><td>— / Issue #16</td><td><code>tsc -b --noEmit</code> after split logic change</td><td>—</td><td>0 new errors</td><td>Full project build</td></tr>
 <tr><td>— / Issue #17</td><td>Crops with ≥1 seeded norm row</td><td>1 of 10</td><td>10 of 10</td><td><code>SELECT</code> grouped by crop</td></tr>
+<tr><td>— / Issue #18</td><td>Edit Season field text visible in dark mode</td><td>Invisible (near-white on light bg)</td><td>Fully readable</td><td>Puppeteer, forced <code>dark</code> theme</td></tr>
+<tr><td>— / Issue #19</td><td>Costs page has a chart / search</td><td>Neither</td><td>Donut chart + search across both views</td><td>Live screenshot + <code>tsc</code></td></tr>
+<tr><td>— / Issue #20</td><td>Historical seasons enter <code>generate_estimate()</code>'s history path</td><td>Only via full live recording flow</td><td>Backfillable at season creation, up to 3 years</td><td>Live walkthrough + <code>tsc</code></td></tr>
+<tr><td>— / Issue #21</td><td>Landing page features match shipped functionality</td><td>4 of 4 cards hypothetical</td><td>6 new cards, each a live demo of a real feature</td><td>Live screenshots</td></tr>
 </tbody></table>
 <p>Every fix in §4 was verified against the live, linked Supabase project —</p>
 <p>not a local mock or an assumed-correct code review — using either a</p>

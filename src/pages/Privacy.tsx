@@ -13,11 +13,15 @@ export function Privacy() {
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-8">Privacy Policy</h1>
           
           <div className="space-y-6 text-gray-600 leading-relaxed">
-            <p><strong>Last Updated:</strong> August 2026</p>
-            
+            <p><strong>Last Updated:</strong> September 2026</p>
+
+            <section>
+              <p>FarmPilot is a mini project built for the Department of Computer Science, Kwame Nkrumah University of Science and Technology, and operated as a demonstration application rather than a commercial service. This policy describes what the running application actually does with your data, not a generic template.</p>
+            </section>
+
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">1. Information We Collect</h2>
-              <p>When you use FarmPilot, we collect information that you provide to us directly, such as your phone number, name, and farm details. We also collect data related to your crops, seasons, and recorded expenses to provide accurate cost estimations and analytics.</p>
+              <p>When you use FarmPilot, we collect information that you provide to us directly, such as your phone number or email, name, and farm details (region, district, total acreage). We also collect the crop seasons, per-category cost entries, and any figures you back-fill for previous years that you choose to record, so the app can generate estimates and detect overspending against the benchmark.</p>
             </section>
 
             <section>
@@ -25,7 +29,8 @@ export function Privacy() {
               <p>We use the information we collect to:</p>
               <ul className="list-disc pl-5 mt-2 space-y-2">
                 <li>Provide, maintain, and improve our services.</li>
-                <li>Calculate crop estimates and benchmark your spending against agricultural standards.</li>
+                <li>Calculate crop estimates and benchmark your spending against agricultural standards, including flagging categories that exceed the benchmark and suggesting a specific fix.</li>
+                <li>Power the in-app Weekly Check-in prompt and the AI farm assistant, both of which read your own recorded and flagged data to answer your questions — this happens within the app itself and is not shared with any other user.</li>
                 <li>Communicate with you regarding your account and platform updates.</li>
                 <li>Protect against fraud and unauthorized access.</li>
               </ul>
@@ -33,12 +38,12 @@ export function Privacy() {
 
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">3. Data Security and Offline Storage</h2>
-              <p>FarmPilot is built to work offline. Your farm data is stored locally on your device using IndexedDB and is synchronized securely with our servers when an internet connection is available. We implement industry-standard encryption protocols to protect your data during transit and at rest.</p>
+              <p>FarmPilot is built to work offline. Your farm data is cached locally on your device and is synchronized with our servers (hosted on Supabase, a PostgreSQL-based backend) when an internet connection is available. Access to your data is enforced by row-level security policies on the server, so only your own account can read or write your farm's records — this is a database-level guarantee, not just a check in the app.</p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">4. Sharing of Information</h2>
-              <p>We do not sell your personal data to third parties. We may share aggregated, non-personally identifiable data with agricultural research partners to improve farming benchmarks and policy recommendations for smallholder farmers in Ghana.</p>
+              <p>We do not sell your personal data to third parties. As a mini project, FarmPilot does not currently share aggregated data with any external research partner — the benchmark figures the app compares you against come from published Ministry of Food and Agriculture (MoFA) statistics, not from other farmers' recorded data.</p>
             </section>
 
             <section>

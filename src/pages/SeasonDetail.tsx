@@ -515,11 +515,11 @@ export function SeasonDetail() {
     {/* Edit Season Modal */}
     {isEditModalOpen && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !editSeasonMutation.isPending && setIsEditModalOpen(false)}></div>
-        
-        <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-full">
+        <div className="absolute inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => !editSeasonMutation.isPending && setIsEditModalOpen(false)}></div>
+
+        <div className="relative w-full max-w-md bg-white dark:bg-[#121212] rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-full border border-transparent dark:border-white/5">
           <div className="p-8 overflow-y-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Season</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Edit Season</h2>
             <form onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
@@ -530,24 +530,24 @@ export function SeasonDetail() {
               });
             }} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Area Planted (acres)</label>
-                <input type="number" step="0.01" name="area" defaultValue={season.area_planted_acres} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Area Planted (acres)</label>
+                <input type="number" step="0.01" name="area" defaultValue={season.area_planted_acres} required className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Season Window</label>
-                <select name="window" defaultValue={season.season_window} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Season Window</label>
+                <select name="window" defaultValue={season.season_window} required className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                   <option value="major">Major Season</option>
                   <option value="minor">Minor Season</option>
                   <option value="dry">Dry Season</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Year</label>
-                <input type="number" name="year" defaultValue={season.year} required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Year</label>
+                <input type="number" name="year" defaultValue={season.year} required className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
               </div>
-              
+
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 px-4 font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 px-4 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-colors">
                   Cancel
                 </button>
                 <button type="submit" disabled={editSeasonMutation.isPending} className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">

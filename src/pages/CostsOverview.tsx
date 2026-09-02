@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useFarm } from '../hooks/useFarm';
 import { listSeasons } from '../api/seasons';
 import { listCosts } from '../api/costs';
@@ -13,9 +14,12 @@ interface CostWithSeason extends CostItem {
   season?: SeasonSummary;
 }
 
+const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+
 export function CostsOverview() {
   const { farm, isLoading: isLoadingFarm } = useFarm();
   const [groupBy, setGroupBy] = useState<'category' | 'season'>('category');
+  const [search, setSearch] = useState('');
 
   // Load all seasons
   const { data: seasons, isLoading: isLoadingSeasons } = useQuery({
@@ -42,8 +46,26 @@ export function CostsOverview() {
 
   const isLoading = isLoadingFarm || isLoadingSeasons || isLoadingCosts;
 
+  // Filter by search term — matches category label, description, or the
+  // owning season's crop/window/year, so a farmer can find e.g. "fertiliser"
+  // or "maize" without switching the By Category / By Season toggle.
+  const searchedCosts = useMemo(() => {
+    if (!allCosts) return allCosts;
+    const q = search.trim().toLowerCase();
+    if (!q) return allCosts;
+    return allCosts.filter((c) => {
+      const categoryLabel = CATEGORIES[c.category]?.label?.toLowerCase() || c.category;
+      const seasonLabel = `${c.season?.crop_name || ''} ${c.season?.season_window || ''} ${c.season?.year || ''}`.toLowerCase();
+      return (
+        categoryLabel.includes(q) ||
+        seasonLabel.includes(q) ||
+        (c.description || '').toLowerCase().includes(q)
+      );
+    });
+  }, [allCosts, search]);
+
   // Group costs by category
-  const costsByCategory = allCosts?.reduce((acc, cost) => {
+  const costsByCategory = searchedCosts?.reduce((acc, cost) => {
     const cat = cost.category;
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(cost);
@@ -51,7 +73,7 @@ export function CostsOverview() {
   }, {} as Record<string, CostWithSeason[]>) || {};
 
   // Group costs by season
-  const costsBySeason = allCosts?.reduce((acc, cost) => {
+  const costsBySeason = searchedCosts?.reduce((acc, cost) => {
     const key = cost.season_id;
     if (!acc[key]) acc[key] = [];
     acc[key].push(cost);
@@ -65,7 +87,12 @@ export function CostsOverview() {
     count: costs.length,
   })).sort((a, b) => b.total - a.total);
 
-  const grandTotal = allCosts?.reduce((sum, c) => sum + c.amount_pesewas, 0) || 0;
+  const grandTotal = searchedCosts?.reduce((sum, c) => sum + c.amount_pesewas, 0) || 0;
+
+  const pieData = categoryTotals.map(({ category, total }) => ({
+    name: CATEGORIES[category]?.label || category,
+    value: total / 100,
+  }));
 
   if (isLoading) {
     return (
@@ -139,7 +166,7 @@ export function CostsOverview() {
             </div>
             <div className="bg-white dark:bg-white/5 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Entries</p>
-              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{allCosts.length}</p>
+              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{searchedCosts?.length ?? 0}</p>
             </div>
             <div className="bg-white dark:bg-white/5 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Categories Used</p>
@@ -151,24 +178,77 @@ export function CostsOverview() {
             </div>
           </div>
 
-          {/* Toggle View */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Cost Breakdown</h2>
-            <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl">
-              <button
-                onClick={() => setGroupBy('category')}
-                className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${groupBy === 'category' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
-              >
-                By Category
-              </button>
-              <button
-                onClick={() => setGroupBy('season')}
-                className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${groupBy === 'season' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
-              >
-                By Season
-              </button>
+          {/* Mini-dashboard: pie chart breakdown of where money is going */}
+          {pieData.length > 0 && (
+            <div className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-[0_8px_40px_rgb(0,0,0,0.03)] mb-8">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Where your money is going</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" paddingAngle={2}>
+                        {pieData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v) => `₵${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-2">
+                  {pieData.map((d, i) => {
+                    const pct = grandTotal > 0 ? Math.round((d.value * 100) / (grandTotal / 100)) : 0;
+                    return (
+                      <div key={d.name} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          {d.name}
+                        </span>
+                        <span className="font-bold text-gray-900 dark:text-gray-100">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search + Toggle View */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 shrink-0">Cost Breakdown</h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input
+                  type="text"
+                  placeholder="Search category, crop, or note..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl text-sm w-full focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl shrink-0">
+                <button
+                  onClick={() => setGroupBy('category')}
+                  className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${groupBy === 'category' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                  By Category
+                </button>
+                <button
+                  onClick={() => setGroupBy('season')}
+                  className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${groupBy === 'season' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                  By Season
+                </button>
+              </div>
             </div>
           </div>
+
+          {search && categoryTotals.length === 0 && (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400 font-medium">
+              No costs match "{search}".
+            </div>
+          )}
 
           {groupBy === 'category' ? (
             /* Category View */

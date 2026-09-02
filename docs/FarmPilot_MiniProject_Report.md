@@ -10,7 +10,7 @@
 | **Academic Year** | 2025/2026 |
 | **Supervisor** | *[Insert supervisor's name]* |
 | **Date of Submission** | 3 September 2026 |
-| **Repository** | `farmpilot` (see Appendix A) |
+| **Repository** | https://github.com/itzSAD999/farmpilot (see Appendix A) |
 
 **Team**
 
@@ -249,6 +249,8 @@ A season is created against a crop, year, and growing window; costs are then rec
 
 Where a farmer does not know a category's cost, the add-cost form can fill it with the standard benchmark rate, scaled to the season's planted acreage, rather than leaving them to guess or leave it blank.
 
+A farmer who already has exact figures for a crop from previous years is not limited to the live, week-by-week recording flow to get them into the system: at season creation, after picking a crop, they can optionally back-fill up to three previous years — year, area planted, and a per-category total each — which are saved directly as already-closed seasons. This has no separate code path in the estimation engine: a back-filled season is an ordinary completed season, so `generate_estimate()` (§4.2.3) picks it up as history exactly as if it had been recorded live, letting a returning farmer skip the benchmark entirely from their very first season in the app.
+
 #### 4.2.3 The estimation engine
 
 Clicking *Generate Estimate* calls the `generate_estimate(season_id)` PL/pgSQL function. For each cost category, the function:
@@ -273,7 +275,7 @@ The dashboard (Figure 4.5) rolls estimates and recorded totals up to farm and cr
 *Figure 4.5 — Dashboard, farm-level rollup across two crops and three seasons.*
 ![Dashboard](screenshots/05_dashboard_populated.png)
 
-A separate comparison screen lets a farmer compare their own recorded per-acre spend against the benchmark directly (Figure 4.6), independent of whether they have generated a formal estimate, or compare crops against each other where more than one is being grown (Figure 4.7) — Cassava has no seeded benchmark norms yet, so it is excluded from the benchmark tab but still fully usable in the crop-vs-crop and season-vs-season comparisons, since those are driven entirely by recorded costs.
+A separate comparison screen lets a farmer compare their own recorded per-acre spend against the benchmark directly (Figure 4.6), independent of whether they have generated a formal estimate, or compare crops against each other where more than one is being grown (Figure 4.7). All ten seeded crops, Cassava included, now carry indicative per-acre norms (§3.3.2), so every crop is usable in the benchmark tab as well as the crop-vs-crop and season-vs-season comparisons, which are driven entirely by recorded costs regardless of benchmark coverage.
 
 *Figure 4.6 — "Me vs Standard" comparison, corroborating the same fertiliser overspend shown in Figure 4.4.*
 ![Compare](screenshots/08_compare_benchmark.png)
@@ -353,7 +355,10 @@ Two limitations identified during an earlier review of this report — benchmark
 
 ### Appendix A — Source Code
 
-Full source code is maintained in the project's Git repository (`farmpilot/`), structured as described in `FarmPilot_SDD.md` §5.1 and §16.3. Key implementation artefacts referenced in this report:
+Full source code is maintained in the project's Git repository at
+**https://github.com/itzSAD999/farmpilot**, structured as described in
+`FarmPilot_SDD.md` §5.1 and §16.3. Key implementation artefacts referenced
+in this report:
 
 - `supabase/migrations/001_schema.sql` — base schema, RLS policies, and the original estimation engine.
 - `supabase/migrations/010_estimate_actual_vs_benchmark.sql` — the actual-vs-benchmark correction described in §4.2.4.
@@ -417,7 +422,7 @@ npx supabase db query --linked -f supabase/demo_seed.sql
 A full account of the project treated as a real, shipped system rather
 than only a final snapshot: the six-week Python-based proposal versus
 what was actually built and why, a stage-by-stage development timeline,
-an index into all twelve architecture decisions, a seventeen-item issue
+an index into all twelve architecture decisions, a twenty-one-item issue
 register from a full post-build hardening pass (each with root cause, fix,
 and live verification evidence), the complete testing record behind
 Chapter Four's summary table, and the outstanding backlog. Kept as a

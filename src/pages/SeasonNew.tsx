@@ -4,9 +4,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createSeason } from '../api/seasons';
+import { createSeason, createHistoricalSeason } from '../api/seasons';
 import { getCrops } from '../api/crops';
+import { addCost } from '../api/costs';
+import type { CostCategory } from '../api/costs';
 import { useFarm } from '../hooks/useFarm';
+import { CATEGORIES, ESSENTIAL_CATEGORIES } from '../lib/categories';
+
+const MAX_HISTORICAL_YEARS = 3;
+
+interface HistoricalYearEntry {
+  year: number;
+  area_planted_acres: number;
+  costs: Partial<Record<CostCategory, number>>;
+}
+
+function emptyHistoricalYear(year: number): HistoricalYearEntry {
+  return { year, area_planted_acres: 0, costs: {} };
+}
 
 const seasonWindows = [
   { value: 'major', label: 'Major season', desc: 'around March to July' },
@@ -21,6 +36,12 @@ export function SeasonNew() {
   
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [hasHistory, setHasHistory] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [historicalYears, setHistoricalYears] = useState<HistoricalYearEntry[]>([
+    emptyHistoricalYear(currentYear - 1),
+  ]);
 
   const { data: crops, isLoading: isCropsLoading, isError: isCropsError } = useQuery({
     queryKey: ['crops'],
@@ -63,6 +84,35 @@ export function SeasonNew() {
         season_window: data.season_window as any,
         area_planted_acres: data.area_planted_acres,
       });
+
+      // Backfill any previous years the farmer entered, so the estimate
+      // engine has this crop's own historical average to draw on instead
+      // of just the benchmark. Skip years with no area or no costs entered.
+      if (hasHistory) {
+        const usableYears = historicalYears.filter(
+          (y) => y.area_planted_acres > 0 && Object.values(y.costs).some((v) => (v || 0) > 0)
+        );
+        for (const y of usableYears) {
+          const histSeason = await createHistoricalSeason({
+            farm_id: farm.id as number,
+            crop_id: data.crop_id,
+            year: y.year,
+            season_window: data.season_window as any,
+            area_planted_acres: y.area_planted_acres,
+          });
+          const categoryEntries = Object.entries(y.costs) as [CostCategory, number | undefined][];
+          for (const [category, cedis] of categoryEntries) {
+            if (!cedis || cedis <= 0) continue;
+            await addCost({
+              season_id: histSeason.id,
+              category,
+              amount_pesewas: Math.round(cedis * 100),
+              description: `Historical total (${y.year})`,
+            });
+          }
+        }
+      }
+
       // Invalidate both farm_summary and seasons so the dashboard updates instantly
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['seasons'] }),
@@ -243,6 +293,105 @@ export function SeasonNew() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Cost History — optional backfill so the estimate uses this farmer's
+            own average for this crop instead of just the benchmark. */}
+        <div className="pt-8 border-t border-gray-100 dark:border-white/10">
+          <button
+            type="button"
+            onClick={() => setHasHistory((v) => !v)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                Have you grown {crops?.find((c: any) => c.id === watch('crop_id'))?.name || 'this crop'} before?
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
+                Add up to {MAX_HISTORICAL_YEARS} previous years and we'll use your own figures instead of the standard benchmark for this crop going forward.
+              </p>
+            </div>
+            <span className={`shrink-0 ml-4 w-12 h-7 rounded-full transition-colors relative ${hasHistory ? 'bg-emerald-600' : 'bg-gray-200 dark:bg-white/10'}`}>
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${hasHistory ? 'translate-x-6' : 'translate-x-1'}`} />
+            </span>
+          </button>
+
+          {hasHistory && (
+            <div className="mt-6 space-y-6 animate-fade-in-up">
+              {historicalYears.map((entry, idx) => (
+                <div key={idx} className="bg-gray-50 dark:bg-white/5 rounded-2xl p-5 border border-gray-100 dark:border-white/10">
+                  <div className="flex items-center justify-between mb-4 gap-4">
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">Year</label>
+                      <input
+                        type="number"
+                        value={entry.year}
+                        onChange={(e) => {
+                          const year = Number(e.target.value);
+                          setHistoricalYears((prev) => prev.map((y, i) => i === idx ? { ...y, year } : y));
+                        }}
+                        className="w-24 text-lg font-bold text-gray-900 dark:text-gray-100 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <label className="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold ml-2">Area</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="acres"
+                        value={entry.area_planted_acres || ''}
+                        onChange={(e) => {
+                          const area = parseFloat(e.target.value) || 0;
+                          setHistoricalYears((prev) => prev.map((y, i) => i === idx ? { ...y, area_planted_acres: area } : y));
+                        }}
+                        className="w-24 text-lg font-bold text-gray-900 dark:text-gray-100 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    {historicalYears.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setHistoricalYears((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {ESSENTIAL_CATEGORIES.map((cat) => (
+                      <div key={cat}>
+                        <label className="block text-[11px] uppercase tracking-widest text-gray-400 font-bold mb-1">{CATEGORIES[cat].label}</label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₵</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={entry.costs[cat] || ''}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || undefined;
+                              setHistoricalYears((prev) => prev.map((y, i) => i === idx ? { ...y, costs: { ...y.costs, [cat]: val } } : y));
+                            }}
+                            className="w-full text-sm font-bold text-gray-900 dark:text-gray-100 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg pl-6 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {historicalYears.length < MAX_HISTORICAL_YEARS && (
+                <button
+                  type="button"
+                  onClick={() => setHistoricalYears((prev) => [...prev, emptyHistoricalYear(currentYear - prev.length - 1)])}
+                  className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                  Add another year
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action */}

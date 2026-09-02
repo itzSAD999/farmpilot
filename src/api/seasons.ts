@@ -299,6 +299,26 @@ export async function createSeason(input: CreateSeasonInput): Promise<Season> {
   return data;
 }
 
+/**
+ * Records a past season directly as complete, with no recording phase —
+ * for a farmer backfilling cost history so the estimate engine has their
+ * own historical average to draw on, not just the benchmark. Costs are
+ * added separately via addCost() against the returned season's id.
+ */
+export async function createHistoricalSeason(input: CreateSeasonInput): Promise<Season> {
+  const { data, error } = await supabase
+    .from('seasons')
+    .insert({ ...input, is_complete: true })
+    .select()
+    .single();
+
+  if (error) {
+    throw handleSeasonError(error);
+  }
+
+  return data;
+}
+
 export async function updateSeason(id: number, updates: Partial<CreateSeasonInput>): Promise<void> {
   const { error } = await supabase
     .from('seasons')

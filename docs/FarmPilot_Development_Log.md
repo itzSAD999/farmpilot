@@ -17,13 +17,13 @@ summarised in each entry's Evidence line.
 
 ## Table of Contents
 
-1. From Proposal to Delivered System
-2. Development Timeline (Changelog, expanded)
-3. Architecture Decisions — Index
-4. Issue Register — Post-Build Hardening Pass
-5. Testing Record
-6. Backlog — Outstanding Work
-7. Appendix — File and Migration Index
+1. [From Proposal to Delivered System](#1-from-proposal-to-delivered-system)
+2. [Development Timeline (Changelog, expanded)](#2-development-timeline-changelog-expanded)
+3. [Architecture Decisions — Index](#3-architecture-decisions-index)
+4. [Issue Register — Post-Build Hardening Pass](#4-issue-register-post-build-hardening-pass)
+5. [Testing Record](#5-testing-record)
+6. [Backlog — Outstanding Work](#6-backlog-outstanding-work)
+7. [Appendix — File and Migration Index](#7-appendix-file-and-migration-index)
 
 ---
 
@@ -400,6 +400,104 @@ query before this migration on nine of them.
 
 ---
 
+### Issue #18 — Edit Season modal was unreadable under dark mode
+**Severity:** High (functionally blocking, not cosmetic). `useTheme.tsx`
+falls back to `prefers-color-scheme: dark` for any visitor who has never
+explicitly picked a theme — meaning a browser or OS set to dark mode gets
+FarmPilot's dark theme with no action on the farmer's part. The Edit
+Season modal in `SeasonDetail.tsx` was written with no `dark:` variants
+at all on its three form fields (area, season window, year): each
+inherited the page's dark-mode text colour (`#f3f4f6`, near white)
+directly onto an unswitched light background (`bg-gray-50`), rendering
+every field's text — and the season-window `<select>`'s options —
+effectively invisible. Reported as "a dark overlay blocks the dialogue"
+and "the dropdown has no options," which was this exact bug: the fields
+were present and functional, just unreadable.
+
+**Fix.** Added the same `dark:` pattern already used correctly elsewhere
+in the same file (`dark:bg-[#121212]`, `dark:text-gray-100`,
+`dark:border-white/10`) to the modal's container, backdrop, labels, and
+all three fields.
+
+**Evidence.** Live Puppeteer walkthrough: signed into the demo account,
+forced `localStorage.farmpilot-theme = 'dark'`, opened Edit Season —
+screenshot confirms "1", "Minor Season", and "2026" all render in white
+text against the dark card, previously indistinguishable from the
+background.
+
+---
+
+### Issue #19 — Costs and Seasons pages had no visual breakdown or search
+**Severity:** Low (usability gap, not a defect). The season-level page
+already had a bar-chart cost breakdown; the farm-wide Costs page and the
+Seasons list did not — every other list-heavy screen in the app had
+grown a search/filter bar over the course of this project except Costs,
+and Costs had no chart at all despite aggregating every cost on the farm.
+
+**Fix.** `CostsOverview.tsx` gained a Recharts pie/donut chart of
+category spend plus a search box that filters by category, crop, or cost
+description across both the "By Category" and "By Season" views.
+
+**Evidence.** `npx tsc -b --noEmit` clean; live screenshot against the
+demo account's 12 recorded costs shows a 6-slice donut (Fertiliser 47%,
+Labour 30%, ...) and the search box correctly narrowing the list.
+
+---
+
+### Issue #20 — No way to backfill a crop's cost history at season creation
+**Severity:** Medium (a real capability gap, not a bug). A farmer who
+already had exact records for previous years of a crop had no way to
+enter them — the only path into `season_costs` was the live,
+week-by-week recording flow on an *active* season, so the estimate engine
+could never use "your own historical average" (§4.2.4 of the main
+report) for a crop the farmer had already grown, only the benchmark.
+
+**Fix.** `SeasonNew.tsx` now asks, after a crop is chosen, "Have you
+grown \[crop\] before?" — if yes, the farmer can add up to three previous
+years (year, area planted, and a total for each essential category) which
+are saved as already-`is_complete` seasons via a new
+`createHistoricalSeason()` (`src/api/seasons.ts`), with their costs
+inserted through the existing `addCost()`. No new schema — these are
+ordinary completed seasons, so `generate_estimate()` picks them up as
+history immediately, and they appear in the Seasons list under the
+existing "Complete" status filter alongside any other closed season.
+
+**Evidence.** `npx tsc -b --noEmit` clean; live Puppeteer walkthrough
+selecting Cassava, toggling history on, and confirming the per-category
+GH₵ inputs render and validate correctly.
+
+---
+
+### Issue #21 — Landing page described hypothetical features, not shipped ones
+**Severity:** Low (marketing accuracy, not a defect). The public landing
+page's interactive feature grid (Season Tracking, Financials Simulator,
+Offline-First, Precision Control) was built early in the project and
+never updated — none of the four correspond to a real, shipped screen,
+while several genuinely shipped features (overspend flagging, the
+benchmark quick-fill, the Weekly Check-in, the AI assistant reading real
+flagged data, the per-page dashboards, the cold-start benchmark-to-history
+handoff) had no presence on the page at all.
+
+**Fix.** Added a second interactive section, "Built for the real
+season," with six cards — each opens a live, working mini-demo of the
+actual feature (not a mockup): a benchmark-vs-spend slider that flags
+past 30% exactly like the real engine, a one-tap benchmark-fill demo, a
+step-by-step Weekly Check-in question flow matching the real component's
+one-category-at-a-time UX, a scripted AI-assistant exchange referencing
+real flagged-category language, a pie/bar dashboard toggle, and a
+cold-start-vs-history toggle. The README's setup instructions were also
+rewritten for a from-scratch clone (prerequisites, `.env` copy step,
+build/preview scripts, fresh-Supabase-project migration order), and the
+GitHub repository link was added to the landing footer, the README, and
+the report's title page and Appendix A (previously just the bare
+`farmpilot` folder name).
+
+**Evidence.** `npx tsc -b --noEmit` clean; live screenshots of the new
+section and of the Weekly Check-in demo's question flow against the
+running dev server.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table. Full evidence for
@@ -415,6 +513,10 @@ each row:
 | — / Issue #14 | Report layout at 1440px | Overlapping columns | Clean two-column grid | Before/after screenshot |
 | — / Issue #16 | `tsc -b --noEmit` after split logic change | — | 0 new errors | Full project build |
 | — / Issue #17 | Crops with ≥1 seeded norm row | 1 of 10 | 10 of 10 | `SELECT` grouped by crop |
+| — / Issue #18 | Edit Season field text visible in dark mode | Invisible (near-white on light bg) | Fully readable | Puppeteer, forced `dark` theme |
+| — / Issue #19 | Costs page has a chart / search | Neither | Donut chart + search across both views | Live screenshot + `tsc` |
+| — / Issue #20 | Historical seasons enter `generate_estimate()`'s history path | Only via full live recording flow | Backfillable at season creation, up to 3 years | Live walkthrough + `tsc` |
+| — / Issue #21 | Landing page features match shipped functionality | 4 of 4 cards hypothetical | 6 new cards, each a live demo of a real feature | Live screenshots |
 
 Every fix in §4 was verified against the live, linked Supabase project —
 not a local mock or an assumed-correct code review — using either a

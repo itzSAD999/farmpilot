@@ -13,8 +13,12 @@ export function Terms() {
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-8">Terms of Service</h1>
           
           <div className="space-y-6 text-gray-600 leading-relaxed">
-            <p><strong>Last Updated:</strong> August 2026</p>
-            
+            <p><strong>Last Updated:</strong> September 2026</p>
+
+            <section>
+              <p>FarmPilot is a mini project built for the Department of Computer Science, Kwame Nkrumah University of Science and Technology, and is operated as a working demonstration rather than a commercial product. A permanent demo account is available on the live deployment for evaluation without registering.</p>
+            </section>
+
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">1. Acceptance of Terms</h2>
               <p>By accessing or using FarmPilot (the "Service"), you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you do not have permission to access the Service.</p>
@@ -22,7 +26,7 @@ export function Terms() {
 
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">2. Description of Service</h2>
-              <p>FarmPilot provides agricultural cost tracking and estimation tools specifically designed for smallholder farmers in Ghana. The platform allows users to log expenses, manage crop seasons, and receive benchmark-based estimations.</p>
+              <p>FarmPilot provides agricultural cost tracking and estimation tools specifically designed for smallholder farmers in Ghana. The platform lets users log expenses (live or back-filled from previous years), manage crop seasons, receive benchmark- and history-based cost estimations, and get flagged, specific advice where recorded spending exceeds the expected rate for a category.</p>
             </section>
 
             <section>

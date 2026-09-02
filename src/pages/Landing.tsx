@@ -91,6 +91,18 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
     }
   }, [feature, syncStatus]);
 
+  // "What's actually in the app" section state
+  const [overspendPct, setOverspendPct] = useState(18);
+  const [benchmarkFilled, setBenchmarkFilled] = useState(false);
+  const [maizeAcres, setMaizeAcres] = useState(3);
+  const [cassavaAcres, setCassavaAcres] = useState(2);
+  const [wcQuestionIdx, setWcQuestionIdx] = useState(0);
+  const [wcAmount, setWcAmount] = useState('');
+  const [wcAnswers, setWcAnswers] = useState<Record<string, number>>({});
+  const [chatQuestion, setChatQuestion] = useState<'overspend' | 'total' | null>(null);
+  const [dashboardView, setDashboardView] = useState<'pie' | 'bar'>('pie');
+  const [coldStartMode, setColdStartMode] = useState<'new' | 'returning'>('new');
+
   let content = null;
   
   if (feature === 'season') {
@@ -286,6 +298,302 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
               <span className="text-xs text-white/50 mb-1">Fertilizer (NPK)</span>
               <span className="text-xl font-bold text-white">{(acres * 2.5).toFixed(1)} Bags</span>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (feature === 'overspend') {
+    const benchmark = 3800;
+    const spent = benchmark * (1 + overspendPct / 100);
+    const isFlagged = overspendPct > 30;
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">Overspend Detection</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          Drag your fertiliser spend and watch it get checked against the real benchmark — cross 30% over, and it flags with a reason, just like it does in the app.
+        </p>
+
+        <div className={`bg-white/5 rounded-3xl p-8 border transition-colors duration-300 ${isFlagged ? 'border-amber-500/50' : 'border-white/10'}`}>
+          <div className="flex justify-between text-xs mb-2">
+            <span className="text-white/50 uppercase tracking-widest font-bold">Your Fertiliser Spend</span>
+            <span className={`font-bold ${isFlagged ? 'text-amber-400' : 'text-white'}`}>GH₵ {spent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          </div>
+          <input
+            type="range" min="-20" max="80" step="1"
+            value={overspendPct}
+            onChange={(e) => setOverspendPct(parseFloat(e.target.value))}
+            className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-white/10 ${isFlagged ? 'accent-amber-500' : 'accent-emerald-500'}`}
+          />
+          <div className="flex justify-between text-[10px] text-white/30 uppercase tracking-widest font-bold mt-1 mb-6">
+            <span>Under</span>
+            <span>Benchmark: GH₵ {benchmark.toLocaleString()}</span>
+            <span>Over</span>
+          </div>
+
+          {isFlagged ? (
+            <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 animate-fade-in">
+              <svg className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              <div>
+                <p className="text-amber-300 font-bold text-sm">Fertiliser is {overspendPct}% over benchmark</p>
+                <p className="text-white/50 text-xs mt-1">That's GH₵ {(spent - benchmark).toLocaleString(undefined, { maximumFractionDigits: 0 })} more than the expected per-acre NPK rate. Check for bulk-buy discounts or a smaller application.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4">
+              <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <p className="text-emerald-300 font-bold text-sm">Within the expected range — no flag.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  } else if (feature === 'benchmarkfill') {
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">"Don't know this cost?"</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          Recording labour costs but never wrote down the number? Tap once and the standard rate for your acreage fills in for you.
+        </p>
+
+        <div className="bg-white/5 rounded-3xl p-8 border border-white/10 space-y-4">
+          <div className="flex items-center justify-between bg-black/40 rounded-2xl p-4 border border-white/5">
+            <span className="text-white/60 text-sm font-bold">Category</span>
+            <span className="text-white font-bold px-3 py-1 bg-white/10 rounded-lg text-sm">Labour</span>
+          </div>
+
+          {!benchmarkFilled ? (
+            <button
+              onClick={() => setBenchmarkFilled(true)}
+              className="w-full flex items-center justify-between gap-3 p-4 rounded-xl border border-dashed border-emerald-400/50 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors text-left"
+            >
+              <span className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full bg-emerald-500 text-black flex items-center justify-center shrink-0 font-bold">?</span>
+                <span>
+                  <span className="block text-sm font-bold text-emerald-300">Don't know this cost?</span>
+                  <span className="block text-xs text-emerald-400/80">Tap to use the estimated average</span>
+                </span>
+              </span>
+            </button>
+          ) : (
+            <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 animate-fade-in flex items-center justify-between">
+              <span className="text-sm font-bold text-emerald-300">Total Amount</span>
+              <span className="text-2xl font-extrabold text-white">GH₵ 1,840.00</span>
+            </div>
+          )}
+
+          <button onClick={() => setBenchmarkFilled(false)} className="text-xs text-white/30 hover:text-white/60 transition-colors underline">Reset</button>
+        </div>
+      </div>
+    );
+  } else if (feature === 'weeklycheckin') {
+    const WC_CATEGORIES = [
+      { key: 'fertiliser', label: 'Fertiliser' },
+      { key: 'land_prep', label: 'Land Preparation' },
+    ];
+    const totalAcres = maizeAcres + cassavaAcres;
+    const maizeShare = totalAcres > 0 ? maizeAcres / totalAcres : 0.5;
+    const isDone = wcQuestionIdx >= WC_CATEGORIES.length;
+    const currentCat = !isDone ? WC_CATEGORIES[wcQuestionIdx] : null;
+    const liveAmount = parseFloat(wcAmount) || 0;
+
+    const answerAndAdvance = () => {
+      if (!currentCat) return;
+      setWcAnswers((prev) => ({ ...prev, [currentCat.key]: liveAmount }));
+      setWcAmount('');
+      setWcQuestionIdx((i) => i + 1);
+    };
+
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">Weekly Check-in</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          The same short prompt FarmPilot asks once a week — one question per shared category, split automatically by acreage.
+        </p>
+
+        <div className="bg-white/5 rounded-3xl p-8 border border-white/10 space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-white/50 uppercase tracking-widest font-bold">Maize</span>
+                <span className="text-white font-bold">{maizeAcres.toFixed(1)} ac</span>
+              </div>
+              <input type="range" min="0" max="10" step="0.5" value={maizeAcres} onChange={(e) => setMaizeAcres(parseFloat(e.target.value))} className="w-full accent-emerald-500 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-white/50 uppercase tracking-widest font-bold">Cassava</span>
+                <span className="text-white font-bold">{cassavaAcres.toFixed(1)} ac</span>
+              </div>
+              <input type="range" min="0" max="10" step="0.5" value={cassavaAcres} onChange={(e) => setCassavaAcres(parseFloat(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer" />
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 pt-6">
+            {!isDone && currentCat ? (
+              <div key={currentCat.key} className="animate-fade-in-up space-y-4">
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Question {wcQuestionIdx + 1} of {WC_CATEGORIES.length}</p>
+                <p className="text-white text-xl font-medium">
+                  How much did you spend on <span className="text-emerald-400 font-bold">{currentCat.label}</span> this week?
+                </p>
+                <p className="text-white/40 text-xs">Shared across your active seasons — Maize ({maizeAcres.toFixed(1)} ac) and Cassava ({cassavaAcres.toFixed(1)} ac).</p>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 font-bold">GH₵</span>
+                  <input
+                    type="number" min="0" step="0.01" placeholder="0.00" autoFocus
+                    value={wcAmount}
+                    onChange={(e) => setWcAmount(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && liveAmount > 0 && answerAndAdvance()}
+                    className="w-full text-2xl font-bold text-white bg-black/40 border border-white/10 rounded-xl pl-14 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                  />
+                </div>
+                {liveAmount > 0 && (
+                  <div className="flex items-center gap-3 text-sm animate-fade-in">
+                    <span className="text-white/50">Splits as</span>
+                    <span className="font-bold text-emerald-400">Maize GH₵{(liveAmount * maizeShare).toFixed(0)}</span>
+                    <span className="text-white/30">+</span>
+                    <span className="font-bold text-blue-400">Cassava GH₵{(liveAmount * (1 - maizeShare)).toFixed(0)}</span>
+                  </div>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => { setWcAmount(''); setWcQuestionIdx((i) => i + 1); }} className="text-sm font-bold text-white/40 hover:text-white transition-colors px-4 py-3">Skip</button>
+                  <button onClick={answerAndAdvance} disabled={liveAmount <= 0} className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3 transition-colors">
+                    Log it →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="animate-fade-in text-center py-4 space-y-4">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto">
+                  <svg className="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <p className="text-white text-lg font-bold">All caught up for this week.</p>
+                <div className="space-y-1 text-sm text-white/60">
+                  {WC_CATEGORIES.filter(c => wcAnswers[c.key] > 0).map(c => (
+                    <p key={c.key}>{c.label}: <span className="text-white font-bold">GH₵{wcAnswers[c.key].toFixed(0)}</span> logged, split by acreage</p>
+                  ))}
+                  {WC_CATEGORIES.every(c => !wcAnswers[c.key]) && <p>Nothing logged this round — try again with a real amount.</p>}
+                </div>
+                <button onClick={() => { setWcQuestionIdx(0); setWcAnswers({}); setWcAmount(''); }} className="text-xs font-bold text-white/40 hover:text-white underline transition-colors">Try again</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  } else if (feature === 'aiassistant') {
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">Ask FarmPilot</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          The assistant answers from your real, recorded data — not a script. Try a question.
+        </p>
+
+        <div className="bg-white/5 rounded-3xl border border-white/10 flex flex-col h-[340px] overflow-hidden">
+          <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+            {!chatQuestion && (
+              <div className="text-white/30 text-sm text-center pt-16">Pick a question below to see a real-shaped answer.</div>
+            )}
+            {chatQuestion === 'overspend' && (
+              <>
+                <div className="self-end ml-auto max-w-[80%] bg-emerald-600 text-white text-sm font-medium rounded-2xl rounded-br-sm px-4 py-2.5">Am I overspending anywhere this season?</div>
+                <div className="max-w-[85%] bg-black/50 border border-white/10 text-white/80 text-sm rounded-2xl rounded-bl-sm px-4 py-3 leading-relaxed">
+                  Yes — your <span className="text-amber-400 font-bold">fertiliser</span> spend is 42% above the benchmark for maize this season (GH₵4,800 vs an expected GH₵3,376). Labour is 15% under, so it's mostly the fertiliser line worth a second look.
+                </div>
+              </>
+            )}
+            {chatQuestion === 'total' && (
+              <>
+                <div className="self-end ml-auto max-w-[80%] bg-emerald-600 text-white text-sm font-medium rounded-2xl rounded-br-sm px-4 py-2.5">What's my total cost per acre so far?</div>
+                <div className="max-w-[85%] bg-black/50 border border-white/10 text-white/80 text-sm rounded-2xl rounded-bl-sm px-4 py-3 leading-relaxed">
+                  GH₵2,145 per acre across your 2.5-acre maize plot, based on what you've recorded plus the benchmark for categories you haven't logged yet.
+                </div>
+              </>
+            )}
+          </div>
+          <div className="p-4 border-t border-white/10 flex flex-wrap gap-2 shrink-0">
+            <button onClick={() => setChatQuestion('overspend')} className="text-xs font-bold px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 transition-colors">Am I overspending?</button>
+            <button onClick={() => setChatQuestion('total')} className="text-xs font-bold px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 transition-colors">Cost per acre so far?</button>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (feature === 'dashboards') {
+    const slices = [
+      { label: 'Fertiliser', pct: 38, color: '#10b981' },
+      { label: 'Labour', pct: 26, color: '#3b82f6' },
+      { label: 'Seeds', pct: 18, color: '#f59e0b' },
+      { label: 'Land Prep', pct: 12, color: '#8b5cf6' },
+      { label: 'Other', pct: 6, color: '#ec4899' },
+    ];
+    let acc = 0;
+    const gradientStops = slices.map(s => {
+      const start = acc; acc += s.pct;
+      return `${s.color} ${start}% ${acc}%`;
+    }).join(', ');
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">A Dashboard on Every Page</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          Costs, Seasons, and each season's own page all carry a real visual breakdown — not just the top-level dashboard.
+        </p>
+
+        <div className="bg-white/5 rounded-3xl p-8 border border-white/10">
+          <div className="flex rounded-full bg-black/50 p-1 mb-8 w-fit border border-white/10">
+            <button onClick={() => setDashboardView('pie')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${dashboardView === 'pie' ? 'bg-emerald-500 text-black' : 'text-white/50 hover:text-white'}`}>Pie</button>
+            <button onClick={() => setDashboardView('bar')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${dashboardView === 'bar' ? 'bg-emerald-500 text-black' : 'text-white/50 hover:text-white'}`}>Bar</button>
+          </div>
+
+          {dashboardView === 'pie' ? (
+            <div className="flex items-center gap-8 flex-wrap justify-center">
+              <div className="w-40 h-40 rounded-full shrink-0" style={{ background: `conic-gradient(${gradientStops})` }} />
+              <div className="space-y-2">
+                {slices.map(s => (
+                  <div key={s.label} className="flex items-center gap-2 text-sm">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                    <span className="text-white/70 font-medium">{s.label}</span>
+                    <span className="text-white font-bold ml-auto">{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-end space-x-4 h-40">
+              {slices.map(s => (
+                <div key={s.label} className="flex-1 flex flex-col items-center justify-end h-full">
+                  <div className="w-full rounded-t-lg transition-all duration-500" style={{ height: `${(s.pct / 38) * 100}%`, backgroundColor: s.color }} />
+                  <span className="text-[10px] text-white/40 font-bold mt-2 text-center">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  } else if (feature === 'coldstart') {
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">First Season, or Tenth</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          Same screen, two data sources — toggle to see where your estimate comes from.
+        </p>
+
+        <div className="bg-white/5 rounded-3xl p-8 border border-white/10">
+          <div className="flex rounded-full bg-black/50 p-1 mb-8 w-fit border border-white/10">
+            <button onClick={() => setColdStartMode('new')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${coldStartMode === 'new' ? 'bg-emerald-500 text-black' : 'text-white/50 hover:text-white'}`}>New Crop</button>
+            <button onClick={() => setColdStartMode('returning')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${coldStartMode === 'returning' ? 'bg-emerald-500 text-black' : 'text-white/50 hover:text-white'}`}>Closed a Season Already</button>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
+            <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-2">Estimate source</p>
+            {coldStartMode === 'new' ? (
+              <p className="text-white text-lg leading-relaxed animate-fade-in">
+                <span className="text-emerald-400 font-bold">MoFA benchmark rates</span> — no history yet, so every category starts from the standard per-acre norm for this crop.
+              </p>
+            ) : (
+              <p className="text-white text-lg leading-relaxed animate-fade-in">
+                <span className="text-blue-400 font-bold">Your own recorded figures</span> from the closed season — the estimate now reflects what you actually spent, not just the generic rate.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -554,16 +862,101 @@ export function Landing() {
         </div>
       </section>
 
+      {/* What's Actually In The App — real, shipped features */}
+      <section className="relative w-full bg-black px-6 py-24 md:px-12 lg:py-32 border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 lg:mb-20 reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tighter mb-6 md:mb-0 text-white">
+              Built for the <br/> <span className="text-emerald-400">real season.</span>
+            </h2>
+            <p className="max-w-sm text-white/60 font-light leading-relaxed">
+              Not a mockup — every card below is a feature you can open and use right now, including with the live demo account.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                key: 'overspend',
+                title: 'Overspend detection, not just tracking',
+                body: "Every recorded cost is compared category-by-category against an independent benchmark built from MoFA input prices and per-acre norms. Anything more than 30% over gets flagged with a specific, sourced reason — across all 10 seeded crops.",
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />,
+                accent: 'text-amber-400',
+              },
+              {
+                key: 'benchmarkfill',
+                title: "“Don't know this cost?”",
+                body: 'Recording an expense you can’t put a number on? One tap fills in the standard benchmark rate for that category, scaled to your farm’s acreage — no guessing, no blank fields.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+                accent: 'text-emerald-400',
+              },
+              {
+                key: 'weeklycheckin',
+                title: 'Weekly Check-in',
+                body: 'A short weekly prompt to log shared costs across every active season — split proportionally to how many acres you actually planted of each crop, not divided evenly.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
+                accent: 'text-blue-400',
+              },
+              {
+                key: 'aiassistant',
+                title: 'AI farm assistant that sees your real numbers',
+                body: 'Ask FarmPilot’s built-in assistant about your spending and it answers using your actual flagged categories and variance — not a generic chatbot bolted on the side.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-6l-4 4v-4z" />,
+                accent: 'text-purple-400',
+              },
+              {
+                key: 'dashboards',
+                title: 'A dashboard on every page',
+                body: 'Costs, Seasons, and each season’s own page carry their own visual breakdown — pie charts, bar charts, and search/filter — not just one dashboard at the top level.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
+                accent: 'text-orange-400',
+              },
+              {
+                key: 'coldstart',
+                title: 'Works from day one, with or without history',
+                body: 'New to a crop? Your first estimate comes straight from the benchmark. Closed a season already? Next time, your own recorded figures take over — same screen, no setup required.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />,
+                accent: 'text-yellow-400',
+              },
+            ].map((f, i) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setSelectedFeature(f.key)}
+                className="reveal-on-scroll text-left cursor-pointer bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[32px] p-8 border border-white/5 hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] hover:scale-[1.02] active:scale-[0.99]"
+                style={{ transitionDelay: `${100 + i * 100}ms` }}
+              >
+                <div className={`w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-6 bg-black/50 backdrop-blur-sm ${f.accent}`}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{f.icon}</svg>
+                </div>
+                <h3 className="text-xl font-medium tracking-wide mb-3 text-white">{f.title}</h3>
+                <p className="text-sm text-white/50 font-light leading-relaxed mb-4">{f.body}</p>
+                <span className="inline-flex items-center text-xs font-bold uppercase tracking-widest text-white/40">
+                  Try it
+                  <svg className="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="relative w-full bg-[#111] px-6 py-24 md:px-12 md:py-32 flex flex-col items-center text-center reveal-on-scroll" style={{ transitionDelay: '200ms' }}>
         <h2 className="text-3xl md:text-5xl font-light tracking-tighter mb-8 text-white">
           Ready to optimize your harvest?
         </h2>
-        <Link 
-          to="/signup" 
+        <Link
+          to="/signup"
           className="px-10 py-5 text-center uppercase tracking-widest text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors shadow-xl shadow-emerald-900/20"
         >
           Start using FarmPilot
+        </Link>
+        <Link
+          to="/signin"
+          className="mt-6 text-xs uppercase tracking-widest font-bold text-white/50 hover:text-white transition-colors underline underline-offset-4 decoration-white/20"
+        >
+          Just want to look around? Sign in with the demo account
         </Link>
       </section>
 
@@ -571,6 +964,7 @@ export function Landing() {
       <footer className="w-full px-6 py-8 md:px-12 flex flex-col md:flex-row justify-between items-center border-t border-white/10 text-xs text-white/40 uppercase tracking-wider bg-black gap-4 md:gap-0">
         <p>© {new Date().getFullYear()} FarmPilot</p>
         <div className="flex space-x-6">
+          <a href="https://github.com/itzSAD999/farmpilot" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
           <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
         </div>

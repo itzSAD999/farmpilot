@@ -6,6 +6,7 @@ Built as a Year 3 mini project for the Department of Computer Science,
 Kwame Nkrumah University of Science and Technology (2025/2026).
 
 **Live app:** https://farmpilot-chi.vercel.app
+**Repository:** https://github.com/itzSAD999/farmpilot
 
 **Try it now** with the seeded demonstration account (see
 `docs/FarmPilot_MiniProject_Report.md`, Appendix D, for what it contains):
@@ -35,7 +36,7 @@ Everything about the project — not just the code — lives in `docs/`:
 | [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules |
 | [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model |
 | [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
-| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 17-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 21-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
 | [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |
 | `docs/adr/` | Additional standalone ADRs |
@@ -65,21 +66,50 @@ farmpilot/
 └── README.md                 This file
 ```
 
-## Environment Variables
+## Setup (from a fresh clone)
 
-Create a `.env` file in the project root:
+**Prerequisites:** Node.js 20+ and npm. A Supabase project — either the
+shared one this app already runs against (ask a team member for the URL
+and anon key) or your own (free tier is enough; see **Database
+Migrations** below for how to load the schema into a fresh project).
+
+```bash
+# 1. Clone and install
+git clone https://github.com/itzSAD999/farmpilot.git
+cd farmpilot
+npm install
+
+# 2. Configure environment variables
+cp .env.example .env
+# then open .env and fill in VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+# (Project Settings → API in the Supabase dashboard)
+
+# 3. Run the dev server
+npm run dev
+# opens at http://localhost:5173
+```
+
+To sign in immediately without creating an account, use the seeded demo
+account from the top of this README. To type-check and build for
+production: `npm run build` (runs `tsc -b` then `vite build`); to preview
+that production build locally: `npm run preview`.
+
+If `npm run dev` starts but the app errors on load, it's almost always
+the `.env` file — confirm both variables are set and that there's no
+stray quote or trailing space around the values.
+
+## Environment Variables
 
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## Setup
-
-```bash
-npm install
-npm run dev
-```
+Both are public, client-safe values (the anon key is meant to be exposed
+in a browser bundle — access is enforced server-side by Row Level
+Security, see `FarmPilot_SDD.md` §5). `.env.example` in the project root
+has the same two keys with placeholder values, which is what `cp
+.env.example .env` above copies.
 
 ## Database Migrations
 
@@ -90,6 +120,14 @@ applied directly against the shared Supabase project (via the SQL editor,
 or `npx supabase db query --linked -f <file>`) rather than
 `supabase db push`, since the CLI's own migration-history table doesn't
 reflect them — see `FarmPilot_SDD.md` §16.3.
+
+**Setting up a brand-new Supabase project from scratch:** run every file
+in `supabase/migrations/` in numeric order (001 → 013) — either paste
+each into the Supabase Dashboard's SQL Editor one at a time, or, once
+`npx supabase login` and `npx supabase link --project-ref <your-ref>`
+are done, run each with `npx supabase db query --linked -f <file>`. They
+are not idempotent as a whole (some later files alter earlier tables),
+so order matters.
 
 To seed the demonstration account (safe to re-run — it resets the account
 to a known clean state):

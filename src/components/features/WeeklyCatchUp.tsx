@@ -16,6 +16,23 @@ interface CatchupStep {
   seasonAreas: number[];
 }
 
+// Fixed (not random-per-render) burst offsets for the completion celebration —
+// deterministic so the animation doesn't reshuffle on an unrelated re-render.
+const CONFETTI_PIECES = [
+  { dx: -60, dy: -55, rot: 40, color: '#10b981', delay: 0 },
+  { dx: 55, dy: -60, rot: -35, color: '#34d399', delay: 40 },
+  { dx: -75, dy: -10, rot: 120, color: '#f59e0b', delay: 80 },
+  { dx: 70, dy: -15, rot: -110, color: '#3b82f6', delay: 60 },
+  { dx: -35, dy: -75, rot: 200, color: '#a78bfa', delay: 120 },
+  { dx: 35, dy: -78, rot: -190, color: '#10b981', delay: 20 },
+  { dx: -20, dy: 60, rot: 80, color: '#f59e0b', delay: 100 },
+  { dx: 20, dy: 62, rot: -80, color: '#34d399', delay: 140 },
+  { dx: -80, dy: 25, rot: 150, color: '#3b82f6', delay: 160 },
+  { dx: 80, dy: 20, rot: -150, color: '#a78bfa', delay: 60 },
+  { dx: 0, dy: -85, rot: 300, color: '#10b981', delay: 90 },
+  { dx: 0, dy: 80, rot: -300, color: '#f59e0b', delay: 40 },
+] as const;
+
 export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
   const { farm } = useFarm();
   const queryClient = useQueryClient();
@@ -146,9 +163,25 @@ export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
 
   if (isDone) {
     return (
-      <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-[32px] p-8 shadow-sm border border-emerald-100 dark:border-emerald-800/30 mb-8 animate-fade-in-up flex flex-col items-center text-center">
-        <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-800/50 rounded-full flex items-center justify-center mb-4">
-          <svg className="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+      <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-[32px] p-8 shadow-sm border border-emerald-100 dark:border-emerald-800/30 mb-8 animate-fade-in-up flex flex-col items-center text-center relative overflow-hidden">
+        <div className="relative w-16 h-16 mb-4">
+          {CONFETTI_PIECES.map((c, idx) => (
+            <span
+              key={idx}
+              className="absolute top-1/2 left-1/2 w-2 h-2 rounded-sm animate-confetti"
+              style={{
+                backgroundColor: c.color,
+                // @ts-expect-error custom properties read by the keyframe animation
+                '--dx': `${c.dx}px`,
+                '--dy': `${c.dy}px`,
+                '--rot': `${c.rot}deg`,
+                animationDelay: `${c.delay}ms`,
+              }}
+            />
+          ))}
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-800/50 rounded-full flex items-center justify-center animate-check-pop relative">
+            <svg className="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+          </div>
         </div>
         <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">You're all caught up!</h3>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Your records are up to date. This keeps your estimates accurate.</p>
@@ -176,7 +209,7 @@ export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
             Did you spend anything on <span className="text-emerald-600 dark:text-emerald-400">{categoryLabel}</span> for <span className="text-emerald-600 dark:text-emerald-400">{formattedCrops}</span> this week?
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            {currentStep.seasonIds.length > 1 ? 'Enter the total amount. We will split it evenly across these crops.' : 'Enter the total for this specific crop.'}
+            {currentStep.seasonIds.length > 1 ? 'Enter the total amount. We will split it by how many acres you planted of each.' : 'Enter the total for this specific crop.'}
           </p>
         </div>
         <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-4 shrink-0">

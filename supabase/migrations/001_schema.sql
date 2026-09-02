@@ -15,23 +15,31 @@
 
 -- Fixed cost categories. Hardcoded on purpose: every category must
 -- have a benchmark, otherwise the engine cannot flag it as overspend.
-create type cost_category as enum (
-  'seeds',
-  'fertiliser',
-  'agrochem',
-  'land_prep',
-  'labour',
-  'transport',
-  'storage',
-  'other'
-);
+DO $$ BEGIN
+  create type cost_category as enum (
+    'seeds',
+    'fertiliser',
+    'agrochem',
+    'land_prep',
+    'labour',
+    'transport',
+    'storage',
+    'other'
+  );
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- Ghana's middle belt is bimodal. 'dry' covers irrigated off-season.
-create type season_window as enum ('major', 'minor', 'dry');
+DO $$ BEGIN
+  create type season_window as enum ('major', 'minor', 'dry');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-create type price_basis as enum ('subsidised', 'open_market');
+DO $$ BEGIN
+  create type price_basis as enum ('subsidised', 'open_market');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-create type estimate_method as enum ('benchmark', 'blended', 'history');
+DO $$ BEGIN
+  create type estimate_method as enum ('benchmark', 'blended', 'history');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 
 -- ============================================================

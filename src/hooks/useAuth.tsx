@@ -83,17 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data;
   }, [applySessionUser]);
 
-  const intentionalSignOut = useRef(false);
+
 
   const signOut = useCallback(async () => {
-    intentionalSignOut.current = true;
     try {
       await authApi.signOut();
     } catch (e) {
       console.warn('Sign out API error (user may already be deleted):', e);
     }
-    setUser(null);
-    setProfile(null);
+    // We don't manually clear user state here anymore.
+    // The SIGNED_OUT event listener below will handle it cleanly!
   }, []);
 
   useEffect(() => {
@@ -119,16 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
 
       if (event === 'SIGNED_OUT') {
-        // Only wipe state if the user explicitly clicked "Sign Out".
-        // A failed background token refresh also fires SIGNED_OUT —
-        // we must NOT kick the user off the dashboard for that.
-        if (intentionalSignOut.current) {
-          setUser(null);
-          setProfile(null);
-          intentionalSignOut.current = false;
-        } else {
-          console.warn('Supabase fired SIGNED_OUT (likely a token refresh failure). Keeping user state intact.');
-        }
+        // If Supabase fires SIGNED_OUT (whether from explicit sign out or
+        // a background token refresh failure), we MUST clear the user state.
+        // Otherwise, the UI gets trapped in a zombie state where it thinks 
+        // the user is logged in, but all database requests fail with 401s.
+        setUser(null);
+        setProfile(null);
         setIsLoading(false);
         return;
       }

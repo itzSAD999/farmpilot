@@ -32,6 +32,7 @@ type CostFormData = z.infer<typeof costSchema>;
 interface AddCostFormProps {
   seasonId: number;
   initialData?: CostItem;
+  initialCategory?: CostCategory;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -47,9 +48,9 @@ const CategoryIcons: Record<string, React.ReactNode> = {
   other: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>,
 };
 
-export function AddCostForm({ seasonId, initialData, onSuccess, onCancel }: AddCostFormProps) {
+export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess, onCancel }: AddCostFormProps) {
   const isEditing = !!initialData;
-  const [step, setStep] = useState<1 | 2>(isEditing ? 2 : 1);
+  const [step, setStep] = useState<1 | 2>(isEditing || initialCategory ? 2 : 1);
   const [entryMode, setEntryMode] = useState<'total' | 'rate'>(
     initialData ? (initialData.quantity ? 'rate' : 'total') : 'total'
   );
@@ -67,6 +68,7 @@ export function AddCostForm({ seasonId, initialData, onSuccess, onCancel }: AddC
       unit_cost: initialData.unit_cost_pesewas ? pesewasToCedis(initialData.unit_cost_pesewas) : undefined,
       total_amount: pesewasToCedis(initialData.amount_pesewas),
     } : {
+      category: initialCategory,
       entry_mode: 'total',
       date_incurred: new Date().toISOString().split('T')[0],
     }

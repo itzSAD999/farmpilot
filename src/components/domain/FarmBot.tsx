@@ -92,6 +92,13 @@ export function FarmBot() {
     scrollToBottom();
   }, [messages, isOpen]);
 
+  // Listen for external open events (e.g. from Dashboard)
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open-farmbot', handleOpen);
+    return () => window.removeEventListener('open-farmbot', handleOpen);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;

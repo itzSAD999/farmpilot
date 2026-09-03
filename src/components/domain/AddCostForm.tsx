@@ -8,6 +8,8 @@ import { listBudgetsForSeason } from '../../api/budgets';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
 import { cedisToPesewas, pesewasToCedis } from '../../lib/money';
+import { enqueue } from '../../lib/offline/queue';
+import { useOnline } from '../../hooks/useOnline';
 
 const baseSchema = z.object({
   category: z.enum(['seeds', 'fertiliser', 'agrochem', 'land_prep', 'labour', 'transport', 'storage', 'other']),
@@ -56,6 +58,8 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
     initialData ? (initialData.quantity ? 'rate' : 'total') : 'total'
   );
   const queryClient = useQueryClient();
+  const isOnline = useOnline();
+  const [queuedNotice, setQueuedNotice] = useState(false);
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting }, getValues } = useForm<CostFormData>({
     resolver: zodResolver(costSchema),
@@ -150,10 +154,42 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
         amount_pesewas: amountPesewas,
       };
 
+      // Offline: don't even attempt the network call — queue it straight
+      // away so it flushes automatically once useOnline() detects
+      // reconnection. If we're online but the request itself fails for a
+      // connectivity reason (the signal drops mid-submit), fall back to
+      // the same queue rather than losing what the farmer just entered —
+      // this is the queue this project's own offline infrastructure
+      // (src/lib/offline/queue.ts) was built for, but nothing was
+      // actually calling enqueue() from the recording form before now.
       if (isEditing && initialData) {
-        return updateCost(initialData.id, payload);
+        if (!isOnline) {
+          await enqueue({ table: 'season_costs', op: 'update', payload: { ...payload, id: initialData.id } });
+          return { ...initialData, ...payload, queued: true } as CostItem & { queued: true };
+        }
+        try {
+          return await updateCost(initialData.id, payload);
+        } catch (err) {
+          if (err instanceof Error && err.message.toLowerCase().includes('internet connection')) {
+            await enqueue({ table: 'season_costs', op: 'update', payload: { ...payload, id: initialData.id } });
+            return { ...initialData, ...payload, queued: true } as CostItem & { queued: true };
+          }
+          throw err;
+        }
       } else {
-        return addCost(payload);
+        if (!isOnline) {
+          const queuedId = await enqueue({ table: 'season_costs', op: 'insert', payload });
+          return { id: queuedId, ...payload, queued: true } as unknown as CostItem & { queued: true };
+        }
+        try {
+          return await addCost(payload);
+        } catch (err) {
+          if (err instanceof Error && err.message.toLowerCase().includes('internet connection')) {
+            const queuedId = await enqueue({ table: 'season_costs', op: 'insert', payload });
+            return { id: queuedId, ...payload, queued: true } as unknown as CostItem & { queued: true };
+          }
+          throw err;
+        }
       }
     },
     onMutate: async (newCost) => {
@@ -214,11 +250,18 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
         // Just show the error message in the UI so the user can retry when online or let Supabase automatically refresh the session
       }
     },
-    onSettled: () => {
+    onSettled: (result: any) => {
+      // A queued (offline) write isn't in the database yet, so refetching
+      // now would just erase the optimistic entry onMutate already added —
+      // it stays as-is until the queue actually flushes on reconnect.
+      if (result?.queued) return;
       queryClient.invalidateQueries({ queryKey: ['seasonCosts', seasonId] });
       queryClient.invalidateQueries({ queryKey: ['season', seasonId] });
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      if (result?.queued) {
+        setQueuedNotice(true);
+      }
       // Preserve category after save
       const currentCategory = getValues('category');
       setValue('category', currentCategory);
@@ -276,6 +319,15 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
         <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-sm font-medium border border-red-100 animate-fade-in flex items-center justify-between">
           <span>{addMutation.error.message}</span>
           <button onClick={() => addMutation.reset()} className="text-red-700 hover:text-red-900">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
+      {queuedNotice && (
+        <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 text-sm font-medium border border-amber-100 dark:border-amber-500/20 animate-fade-in flex items-center justify-between">
+          <span>Saved offline — no signal right now, so this will sync automatically once you're back online.</span>
+          <button onClick={() => setQueuedNotice(false)} className="text-amber-700 dark:text-amber-300 hover:text-amber-900">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>

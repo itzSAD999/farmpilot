@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 39 issues in full technical detail, for a
-technical reader. This section describes the same 39 issues in plain
+Section 4 below describes all 40 issues in full technical detail, for a
+technical reader. This section describes the same 40 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -82,6 +82,7 @@ to define each one.
 | 37 | Six more parts of the app had never been automatically checked at all — signing in, personal spending caps, the crop/season comparison screens, the dashboard summary numbers, the advice-guide library, and notifications. One of those, a behind-the-scenes rule that automatically alerts a farmer the moment overspending is detected, had literally never been tested by anyone or anything since it was built. | Added checks for all six, including one that deliberately triggers an overspend and confirms the automatic alert really appears — and confirms a normal, under-budget cost correctly creates no alert at all. |
 | 38 | While running the new automated checks repeatedly back-to-back, sign-ups started failing — not because of anything wrong in the app, but because the login service itself (a service the app relies on, run by Supabase) has its own built-in limit on how many new accounts can be created in a short window, as a security measure, and running the checks over and over in quick succession tripped it. | Confirmed with a standalone test that the app's own code wasn't at fault — the login service's own safety limit was. Changed how the automated checks run (one at a time instead of all at once, and reusing one test account instead of creating a new one for almost every check) so the checks ask for far fewer new accounts overall. |
 | 39 | A whole file of code, sitting quietly in the project, turned out to be completely unused by the actual running app — and it contained its own, separate copy of the list of cost categories that had quietly gone out of date compared to the real one actually used everywhere else (calling the same category two different names in two different places). | Confirmed nothing in the app used the file at all, then deleted it, rather than fix or keep testing something nobody ever calls. |
+| 40 | The single biggest finding of this whole testing effort: the app was supposed to let a farmer record a cost even with no phone signal, and save it for later automatically — all the actual machinery for that existed and was well-built — but nothing in the real "record a cost" screen was ever connected to it. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not have it saved for later like the report and README both said it would. | Connected the recording form to the offline-saving system that already existed, so a cost recorded with no signal is now genuinely saved and automatically sent once signal returns — and proved it really works by checking it against the real database, including the specific case of the same saved item accidentally being sent twice (it correctly does not create a duplicate). |
 
 ---
 
@@ -1167,7 +1168,54 @@ after deletion — nothing referenced the removed exports. `npm test`:
 
 ---
 
-## 5. Testing Record
+### Issue #40 — Offline cost recording was never actually wired up, despite being documented and reported as tested
+**Severity:** Critical (a documented, reportedly-tested feature did not
+function at all for its one real use case) — and the most important
+finding in this entire hardening pass, because it was not caught by
+manual testing (T11 in the main report's testing table) before now.
+While looking for what to test next in `src/lib/offline/` (the only
+part of the app left completely uncovered — see Issue #37), the offline
+write-queue turned out to be fully built — `enqueue()`, `flush()` with
+exponential backoff and a permanent-failure list, and even a dedicated
+`client_id` column with a unique index (migration 003) specifically so
+a retried flush can never create a duplicate row — but a full-codebase
+search showed `enqueue()`, the one function that actually puts a write
+into that queue, had **zero callers anywhere in the application**.
+`AddCostForm.tsx`, the only place a farmer records a cost, called
+`addCost()`/`updateCost()` directly with no offline handling at all: its
+`onError` handler only reverted the optimistic UI update and displayed
+an error message. `OfflineBanner.tsx` and `useOfflineStatus.ts` were
+correctly built to *display* a pending/failed queue — but nothing ever
+filled it, so a farmer who lost signal mid-submission today would simply
+see an error and lose what they typed, not get the "queues locally,
+flushes automatically on reconnect" behaviour the report and README both
+describe. T11's "Pass" verdict could not have been produced by actually
+testing this path as built; it is left in this log's record rather than
+rewritten, as an honest account of what testing missed the first time.
+
+**Fix.** `AddCostForm.tsx` now calls `enqueue()` in two places: proactively,
+the moment `useOnline()` reports the browser is offline (skipping the
+network attempt entirely rather than waiting for it to time out), and as
+a fallback if an online submission still fails for a connectivity reason
+(the signal drops mid-request). Both paths reuse the exact `season_costs`
+table and payload shape `addCost()`/`updateCost()` already use, so a
+queued write is byte-for-byte the same row the normal path would have
+produced. `onSettled` now skips its query-cache invalidation for a queued
+result specifically, so the optimistic entry `onMutate` already added
+stays visible instead of being erased by a refetch that (correctly) can't
+see a row that hasn't synced yet; `onSuccess` surfaces a distinct amber
+"Saved offline — will sync automatically" notice so this state is never
+silently indistinguishable from a normal save.
+
+**Evidence.** `npx tsc -b --noEmit` clean. A new
+`src/lib/offline/queue.integration.test.ts` (using `fake-indexeddb` to
+run a real IndexedDB against Vitest's Node environment) proves the fix
+at the level that actually matters — not that `enqueue()`/`flush()` call
+the right functions, but that a queued insert is genuinely accepted by
+the live `season_costs` table under real RLS, and that re-flushing the
+same `client_id` — the exact scenario a retried sync after a dropped
+connection produces — does not create a duplicate row, confirming the
+migration-003 unique index does what it was built for four ADRs ago.
 
 The main report (§4.3) carries the primary test table — a summary of what
 was checked and whether it passed. This section gives the full, detailed
@@ -1244,6 +1292,7 @@ that are lower priority than what shipped in this pass:
 | `src/api/farms.integration.test.ts`, `seasons.integration.test.ts`, `costs.integration.test.ts` | Issue #36 (CRUD, cascade deletion, cross-user RLS security) |
 | `src/api/auth.integration.test.ts`, `budgets.integration.test.ts`, `compare.integration.test.ts`, `dashboard.integration.test.ts`, `guides.integration.test.ts`, `notifications.integration.test.ts`, the new describe block in `estimates.integration.test.ts`, plus `auth.test.ts`, `budgets.test.ts`, `dashboard.test.ts`, `estimates.test.ts`, `src/lib/districts.test.ts`, `src/components/domain/GhanaMap.test.ts` | Issue #37 (remaining API modules, including the notification trigger) |
 | `vitest.integration.config.ts` (`fileParallelism: false`) | Issue #38 (Supabase Auth sign-up rate limit) |
+| `src/components/domain/AddCostForm.tsx`, `src/lib/offline/queue.integration.test.ts` | Issue #40 (offline cost recording actually wired up) |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |
 | `docs/DECISIONS.md` | Full ADR text |

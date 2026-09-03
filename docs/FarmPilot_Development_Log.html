@@ -64,8 +64,8 @@
 </ol>
 <hr/>
 <h2 id="0-plain-language-summary-no-jargon">0. Plain-Language Summary — No Jargon</h2>
-<p>Section 4 below describes all 39 issues in full technical detail, for a</p>
-<p>technical reader. This section describes the same 39 issues in plain</p>
+<p>Section 4 below describes all 40 issues in full technical detail, for a</p>
+<p>technical reader. This section describes the same 40 issues in plain</p>
 <p>language — what was actually wrong, in everyday terms, and what was done</p>
 <p>about it — for anyone reading this who isn't a programmer. Each row here</p>
 <p>corresponds exactly to the same-numbered entry in §4, so "Issue #12"</p>
@@ -116,6 +116,7 @@
 <tr><td>37</td><td>Six more parts of the app had never been automatically checked at all — signing in, personal spending caps, the crop/season comparison screens, the dashboard summary numbers, the advice-guide library, and notifications. One of those, a behind-the-scenes rule that automatically alerts a farmer the moment overspending is detected, had literally never been tested by anyone or anything since it was built.</td><td>Added checks for all six, including one that deliberately triggers an overspend and confirms the automatic alert really appears — and confirms a normal, under-budget cost correctly creates no alert at all.</td></tr>
 <tr><td>38</td><td>While running the new automated checks repeatedly back-to-back, sign-ups started failing — not because of anything wrong in the app, but because the login service itself (a service the app relies on, run by Supabase) has its own built-in limit on how many new accounts can be created in a short window, as a security measure, and running the checks over and over in quick succession tripped it.</td><td>Confirmed with a standalone test that the app's own code wasn't at fault — the login service's own safety limit was. Changed how the automated checks run (one at a time instead of all at once, and reusing one test account instead of creating a new one for almost every check) so the checks ask for far fewer new accounts overall.</td></tr>
 <tr><td>39</td><td>A whole file of code, sitting quietly in the project, turned out to be completely unused by the actual running app — and it contained its own, separate copy of the list of cost categories that had quietly gone out of date compared to the real one actually used everywhere else (calling the same category two different names in two different places).</td><td>Confirmed nothing in the app used the file at all, then deleted it, rather than fix or keep testing something nobody ever calls.</td></tr>
+<tr><td>40</td><td>The single biggest finding of this whole testing effort: the app was supposed to let a farmer record a cost even with no phone signal, and save it for later automatically — all the actual machinery for that existed and was well-built — but nothing in the real "record a cost" screen was ever connected to it. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not have it saved for later like the report and README both said it would.</td><td>Connected the recording form to the offline-saving system that already existed, so a cost recorded with no signal is now genuinely saved and automatically sent once signal returns — and proved it really works by checking it against the real database, including the specific case of the same saved item accidentally being sent twice (it correctly does not create a duplicate).</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
@@ -1047,7 +1048,52 @@
 <p>after deletion — nothing referenced the removed exports. <code>npm test</code>:</p>
 <p>67/67 still passed (nothing in the suite depended on it either).</p>
 <hr/>
-<h2 id="5-testing-record">5. Testing Record</h2>
+<h3 id="issue-40-offline-cost-recording-was-never-actually-wired-up-despite-being-documented-and-reported-as-tested">Issue #40 — Offline cost recording was never actually wired up, despite being documented and reported as tested</h3>
+<p><strong>Severity:</strong> Critical (a documented, reportedly-tested feature did not</p>
+<p>function at all for its one real use case) — and the most important</p>
+<p>finding in this entire hardening pass, because it was not caught by</p>
+<p>manual testing (T11 in the main report's testing table) before now.</p>
+<p>While looking for what to test next in <code>src/lib/offline/</code> (the only</p>
+<p>part of the app left completely uncovered — see Issue #37), the offline</p>
+<p>write-queue turned out to be fully built — <code>enqueue()</code>, <code>flush()</code> with</p>
+<p>exponential backoff and a permanent-failure list, and even a dedicated</p>
+<p><code>client_id</code> column with a unique index (migration 003) specifically so</p>
+<p>a retried flush can never create a duplicate row — but a full-codebase</p>
+<p>search showed <code>enqueue()</code>, the one function that actually puts a write</p>
+<p>into that queue, had <strong>zero callers anywhere in the application</strong>.</p>
+<p><code>AddCostForm.tsx</code>, the only place a farmer records a cost, called</p>
+<p><code>addCost()</code>/<code>updateCost()</code> directly with no offline handling at all: its</p>
+<p><code>onError</code> handler only reverted the optimistic UI update and displayed</p>
+<p>an error message. <code>OfflineBanner.tsx</code> and <code>useOfflineStatus.ts</code> were</p>
+<p>correctly built to <em>display</em> a pending/failed queue — but nothing ever</p>
+<p>filled it, so a farmer who lost signal mid-submission today would simply</p>
+<p>see an error and lose what they typed, not get the "queues locally,</p>
+<p>flushes automatically on reconnect" behaviour the report and README both</p>
+<p>describe. T11's "Pass" verdict could not have been produced by actually</p>
+<p>testing this path as built; it is left in this log's record rather than</p>
+<p>rewritten, as an honest account of what testing missed the first time.</p>
+<p><strong>Fix.</strong> <code>AddCostForm.tsx</code> now calls <code>enqueue()</code> in two places: proactively,</p>
+<p>the moment <code>useOnline()</code> reports the browser is offline (skipping the</p>
+<p>network attempt entirely rather than waiting for it to time out), and as</p>
+<p>a fallback if an online submission still fails for a connectivity reason</p>
+<p>(the signal drops mid-request). Both paths reuse the exact <code>season_costs</code></p>
+<p>table and payload shape <code>addCost()</code>/<code>updateCost()</code> already use, so a</p>
+<p>queued write is byte-for-byte the same row the normal path would have</p>
+<p>produced. <code>onSettled</code> now skips its query-cache invalidation for a queued</p>
+<p>result specifically, so the optimistic entry <code>onMutate</code> already added</p>
+<p>stays visible instead of being erased by a refetch that (correctly) can't</p>
+<p>see a row that hasn't synced yet; <code>onSuccess</code> surfaces a distinct amber</p>
+<p>"Saved offline — will sync automatically" notice so this state is never</p>
+<p>silently indistinguishable from a normal save.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> clean. A new</p>
+<p><code>src/lib/offline/queue.integration.test.ts</code> (using <code>fake-indexeddb</code> to</p>
+<p>run a real IndexedDB against Vitest's Node environment) proves the fix</p>
+<p>at the level that actually matters — not that <code>enqueue()</code>/<code>flush()</code> call</p>
+<p>the right functions, but that a queued insert is genuinely accepted by</p>
+<p>the live <code>season_costs</code> table under real RLS, and that re-flushing the</p>
+<p>same <code>client_id</code> — the exact scenario a retried sync after a dropped</p>
+<p>connection produces — does not create a duplicate row, confirming the</p>
+<p>migration-003 unique index does what it was built for four ADRs ago.</p>
 <p>The main report (§4.3) carries the primary test table — a summary of what</p>
 <p>was checked and whether it passed. This section gives the full, detailed</p>
 <p>evidence behind each row of that table:</p>
@@ -1119,6 +1165,7 @@
 <tr><td><code>src/api/farms.integration.test.ts</code>, <code>seasons.integration.test.ts</code>, <code>costs.integration.test.ts</code></td><td>Issue #36 (CRUD, cascade deletion, cross-user RLS security)</td></tr>
 <tr><td><code>src/api/auth.integration.test.ts</code>, <code>budgets.integration.test.ts</code>, <code>compare.integration.test.ts</code>, <code>dashboard.integration.test.ts</code>, <code>guides.integration.test.ts</code>, <code>notifications.integration.test.ts</code>, the new describe block in <code>estimates.integration.test.ts</code>, plus <code>auth.test.ts</code>, <code>budgets.test.ts</code>, <code>dashboard.test.ts</code>, <code>estimates.test.ts</code>, <code>src/lib/districts.test.ts</code>, <code>src/components/domain/GhanaMap.test.ts</code></td><td>Issue #37 (remaining API modules, including the notification trigger)</td></tr>
 <tr><td><code>vitest.integration.config.ts</code> (<code>fileParallelism: false</code>)</td><td>Issue #38 (Supabase Auth sign-up rate limit)</td></tr>
+<tr><td><code>src/components/domain/AddCostForm.tsx</code>, <code>src/lib/offline/queue.integration.test.ts</code></td><td>Issue #40 (offline cost recording actually wired up)</td></tr>
 <tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
 <tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>

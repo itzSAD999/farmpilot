@@ -5,7 +5,7 @@ interface GhanaMapProps {
   onSelect: (region: string) => void;
 }
 
-function mapRegionName(raw: string | null | undefined) {
+export function mapRegionName(raw: string | null | undefined) {
   if (!raw) return null;
   if (raw === 'Northern East') return 'North East';
   return raw;

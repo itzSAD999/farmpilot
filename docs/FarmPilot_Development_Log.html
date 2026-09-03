@@ -64,8 +64,8 @@
 </ol>
 <hr/>
 <h2 id="0-plain-language-summary-no-jargon">0. Plain-Language Summary — No Jargon</h2>
-<p>Section 4 below describes all 36 issues in full technical detail, for a</p>
-<p>technical reader. This section describes the same 36 issues in plain</p>
+<p>Section 4 below describes all 38 issues in full technical detail, for a</p>
+<p>technical reader. This section describes the same 38 issues in plain</p>
 <p>language — what was actually wrong, in everyday terms, and what was done</p>
 <p>about it — for anyone reading this who isn't a programmer. Each row here</p>
 <p>corresponds exactly to the same-numbered entry in §4, so "Issue #12"</p>
@@ -113,6 +113,8 @@
 <tr><td>34</td><td>Every single check that the app worked correctly had been done by hand — a person clicking through the app and reading the results themselves. There was no way to automatically re-check things after a future change.</td><td>Built a proper set of automated checks that re-run the app's core money calculations by themselves, on command, without anyone needing to click through anything.</td></tr>
 <tr><td>35</td><td>The very first time the new automated checks ran, they caught a real, previously-unnoticed inconsistency: two pieces of behind-the-scenes logic that were supposed to always agree on a price were actually off by a tiny amount.</td><td>Traced it to one of the two no longer being used anywhere in the app, and removed it rather than patching around the mismatch.</td></tr>
 <tr><td>36</td><td>The first set of automated checks (#34) only covered the money-calculation logic — it didn't check ordinary things like creating/editing/deleting a farm, or the single most important safety rule: that one farmer can never see or change another farmer's data. That safety rule had only ever been checked by a person manually signing in as two different accounts.</td><td>Added many more automated checks covering farms, seasons, and costs being created/edited/deleted correctly, and — most importantly — a check using two genuinely separate accounts confirming one farmer truly cannot read, change, or delete another farmer's farm, no matter how they try.</td></tr>
+<tr><td>37</td><td>Six more parts of the app had never been automatically checked at all — signing in, personal spending caps, the crop/season comparison screens, the dashboard summary numbers, the advice-guide library, and notifications. One of those, a behind-the-scenes rule that automatically alerts a farmer the moment overspending is detected, had literally never been tested by anyone or anything since it was built.</td><td>Added checks for all six, including one that deliberately triggers an overspend and confirms the automatic alert really appears — and confirms a normal, under-budget cost correctly creates no alert at all.</td></tr>
+<tr><td>38</td><td>While running the new automated checks repeatedly back-to-back, sign-ups started failing — not because of anything wrong in the app, but because the login service itself (a service the app relies on, run by Supabase) has its own built-in limit on how many new accounts can be created in a short window, as a security measure, and running the checks over and over in quick succession tripped it.</td><td>Confirmed with a standalone test that the app's own code wasn't at fault — the login service's own safety limit was. Changed how the automated checks run (one at a time instead of all at once, and reusing one test account instead of creating a new one for almost every check) so the checks ask for far fewer new accounts overall.</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
@@ -921,6 +923,93 @@
 <p><strong>Evidence.</strong> <code>npm run test:integration</code>: 28/28 passed (up from 6).</p>
 <p><code>npm test</code>: 39/39 unit tests still passed. <code>npx tsc -b --noEmit</code> clean.</p>
 <hr/>
+<h3 id="issue-37-six-more-api-modules-had-zero-test-coverage-including-a-database-trigger-nothing-had-ever-exercised">Issue #37 — Six more API modules had zero test coverage, including a database trigger nothing had ever exercised</h3>
+<p><strong>Severity:</strong> N/A (coverage expansion, same directive as #36: "continue</p>
+<p>building automated tests for all the features and functionalities...</p>
+<p>all use cases, all functionality and different scenarios"). Issue #36</p>
+<p>covered farms/seasons/costs CRUD and cross-user security. Six other</p>
+<p><code>src/api/*.ts</code> modules still had no dedicated test at all: <code>auth.ts</code>,</p>
+<p><code>budgets.ts</code> (beyond the spent/remaining arithmetic Issue #36 already</p>
+<p>covered), <code>compare.ts</code>, <code>dashboard.ts</code>, <code>guides.ts</code>, and <code>notifications.ts</code></p>
+<p>— including a piece of logic that lives entirely in the database and had</p>
+<p>never been exercised by anything: the <code>on_estimate_flag_trigger</code> (migration</p>
+<p>004) that writes an "Overspend Alert" notification automatically the</p>
+<p>instant an estimate line is flagged, with no application code involved.</p>
+<p>Nothing in the UI would show a missing notification as an error, which is</p>
+<p>exactly the kind of silent failure this hardening pass exists to catch.</p>
+<p><strong>Fix.</strong> Two kinds of gap closed:</p>
+<ul>
+<li><strong>Pure error-mapping functions</strong> (<code>handleAuthError</code>, and — newly</li>
+</ul>
+<p>  exported for this purpose — <code>handleBudgetError</code>, <code>handleDashboardError</code>)</p>
+<p>  now have direct unit tests (<code>auth.test.ts</code>, <code>budgets.test.ts</code>,</p>
+<p>  <code>dashboard.test.ts</code>) covering every branch: network failure, duplicate</p>
+<p>  registration, wrong password, weak password, expired session, and the</p>
+<p>  no-raw-error-leaks fallback case.</p>
+<ul>
+<li><strong>Six new integration files</strong> against the live database:</li>
+</ul>
+<p>  <code>auth.integration.test.ts</code> (sign-up, duplicate-phone rejection, sign-in,</p>
+<p>  wrong-password rejection, <code>linkEmail()</code>, <code>updateLanguage()</code>,</p>
+<p>  <code>updateProfile()</code>, sign-out); <code>budgets.integration.test.ts</code></p>
+<p>  (<code>setCategoryBudget()</code> replaces rather than duplicates a cap;</p>
+<p>  <code>deleteCategoryBudget()</code> removes one); <code>compare.integration.test.ts</code></p>
+<p>  (season-vs-season excludes a zero-cost season and computes correct</p>
+<p>  cost-per-acre; crop-vs-crop's unfiltered view path and year-filtered</p>
+<p>  direct-aggregation path agree; me-vs-benchmark after a real estimate);</p>
+<p>  <code>dashboard.integration.test.ts</code> (farm- and crop-level rollups match</p>
+<p>  what was actually recorded, not just that the query succeeds);</p>
+<p>  <code>guides.integration.test.ts</code> (listing, filtering, and — the more</p>
+<p>  interesting path — a guide is only surfaced once its category is</p>
+<p>  genuinely flagged on a real estimate, not before); and</p>
+<p>  <code>notifications.integration.test.ts</code>, which generates a deliberately</p>
+<p>  flagged estimate and then asserts the database trigger actually wrote</p>
+<p>  the alert row, with no code of this project's own doing the writing.</p>
+<p>Two smaller, related fixes found while writing this batch: <code>GhanaMap.tsx</code>'s</p>
+<p><code>mapRegionName()</code> (reconciling the SVG map's region-name spelling with</p>
+<p><code>GHANA_DISTRICTS</code>, relevant to Issue #28's unreproduced farm-creation</p>
+<p>error) is now exported and unit-tested against every real region name;</p>
+<p>and a new <code>districts.test.ts</code> checks <code>GHANA_DISTRICTS</code> itself — all 16</p>
+<p>regions present, none with zero districts, no duplicate district names.</p>
+<p><strong>Evidence.</strong> <code>npm test</code>: 63/63 passed (up from 39 — 24 new unit tests).</p>
+<p><code>npm run test:integration</code>: 57/57 passed (up from 28 — 29 new integration</p>
+<p>tests), including the trigger-created notification actually appearing</p>
+<p>with <code>type: 'limit_reached'</code> and <code>is_read: false</code> immediately after</p>
+<p><code>generate_estimate()</code> flags a category, and a companion test confirming</p>
+<p>an <em>under</em>-benchmark category creates no notification at all. `npx tsc -b</p>
+<p>--noEmit` clean.</p>
+<hr/>
+<h3 id="issue-38-running-the-integration-suite-repeatedly-in-quick-succession-trips-supabase-s-own-sign-up-rate-limit">Issue #38 — Running the integration suite repeatedly in quick succession trips Supabase's own sign-up rate limit</h3>
+<p><strong>Severity:</strong> Low (a testing-workflow finding, not an application defect</p>
+<p>— documented here because it was found <em>by</em> testing and materially</p>
+<p>affects how the suite should be run, not because anything in the shipped</p>
+<p>app is wrong). While verifying Issue #37's new tests, running</p>
+<p><code>npm run test:integration</code> several times in close succession — on top of</p>
+<p>Vitest's default of running test files in parallel, each creating its own</p>
+<p>throwaway account — started failing with `"Database error saving new</p>
+<p>user"<code> (HTTP 500) and then </code>"Request rate limit reached"`</p>
+<p>(<code>over_request_rate_limit</code>, HTTP 429) directly from Supabase's Auth</p>
+<p>service, not from anything in this project's own code.</p>
+<p><strong>Fix.</strong> Two changes, both defensive rather than papering over the</p>
+<p>limiter: <code>vitest.integration.config.ts</code> now sets <code>fileParallelism: false</code>,</p>
+<p>so test files run one at a time — the total number of sign-ups per full</p>
+<p>run is unchanged, but they no longer all fire in the same instant, which</p>
+<p>is what a burst-style rate limiter actually objects to.</p>
+<p><code>auth.integration.test.ts</code> was restructured (see Issue #37) to share one</p>
+<p>throwaway account across seven of its eight assertions instead of</p>
+<p>creating a fresh one per test, cutting that file's own sign-up count from</p>
+<p>seven to two. Both changes reduce load on the shared Supabase project</p>
+<p>regardless of the rate limiter — there is no reason to spend a shared,</p>
+<p>finite sign-up budget testing things that don't need a fresh account.</p>
+<p>No code change was made to work around or bypass the rate limiter itself;</p>
+<p>it is Supabase's own protection and is left exactly as configured.</p>
+<p><strong>Evidence.</strong> A standalone probe script calling <code>supabase.auth.signUp()</code></p>
+<p>directly (bypassing this project's error-message wrapping) reproduced</p>
+<p>both raw errors verbatim, confirming the cause was the Auth service's own</p>
+<p>limiter and not a bug in <code>handleAuthError()</code>'s mapping. After the fix and</p>
+<p>a short cooldown, a full <code>npm run test:integration</code> run passed clean —</p>
+<p>see Issue #37's evidence line for the final count.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table — a summary of what</p>
 <p>was checked and whether it passed. This section gives the full, detailed</p>
@@ -990,6 +1079,9 @@
 <tr><td><code>supabase/migrations/016_crop_benchmark_lines.sql</code></td><td>Issue #30 (Cost Lab quantity-based redesign)</td></tr>
 <tr><td><code>supabase/migrations/017_drop_unused_benchmark_breakdown.sql</code></td><td>Issue #35</td></tr>
 <tr><td><code>src/api/estimates.integration.test.ts</code>, <code>src/lib/*.test.ts</code></td><td>Issue #34 (automated test suite)</td></tr>
+<tr><td><code>src/api/farms.integration.test.ts</code>, <code>seasons.integration.test.ts</code>, <code>costs.integration.test.ts</code></td><td>Issue #36 (CRUD, cascade deletion, cross-user RLS security)</td></tr>
+<tr><td><code>src/api/auth.integration.test.ts</code>, <code>budgets.integration.test.ts</code>, <code>compare.integration.test.ts</code>, <code>dashboard.integration.test.ts</code>, <code>guides.integration.test.ts</code>, <code>notifications.integration.test.ts</code>, plus <code>auth.test.ts</code>, <code>budgets.test.ts</code>, <code>dashboard.test.ts</code>, <code>src/lib/districts.test.ts</code>, <code>src/components/domain/GhanaMap.test.ts</code></td><td>Issue #37 (remaining API modules, including the notification trigger)</td></tr>
+<tr><td><code>vitest.integration.config.ts</code> (<code>fileParallelism: false</code>)</td><td>Issue #38 (Supabase Auth sign-up rate limit)</td></tr>
 <tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
 <tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>

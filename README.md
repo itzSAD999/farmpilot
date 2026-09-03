@@ -45,7 +45,7 @@ Everything about the project — not just the code — lives in `docs/`:
 | [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules |
 | [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model |
 | [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
-| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 36-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 38-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
 | [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |
 | `docs/adr/` | Additional standalone ADRs |
@@ -115,13 +115,19 @@ npm run test:watch    # same, in watch mode
 npm run test:integration   # hits the real, linked Supabase project — needs .env
 ```
 
-Unit tests (`vitest.config.ts`) cover pesewa/cedi conversion, category-list
-consistency, and the Weekly Check-in's proportional-by-acreage split rule.
-Integration tests (`vitest.integration.config.ts`) exercise
-`generate_estimate()` and the benchmark RPCs directly against the linked
-database, using a throwaway test farm that's created and torn down within
-each run — nothing in the demo account or your own data is touched. See
-`FarmPilot_Development_Log.md`, Issue #34, for what each tier covers and why.
+Unit tests (`vitest.config.ts`, 63 tests) cover pesewa/cedi conversion,
+category-list and Ghana-region/district consistency, every API module's
+error-message mapping, and the Weekly Check-in's proportional-by-acreage
+split rule. Integration tests (`vitest.integration.config.ts`, 57 tests,
+run one file at a time — see Issue #38 on why) exercise every
+`src/api/*.ts` module directly against the linked database — recording,
+`generate_estimate()` and the benchmark RPCs, comparisons, budgets,
+dashboards, guides, auth, and a database trigger that writes overspend
+notifications with no application code involved — using throwaway test
+accounts and farms created and torn down within each run, so nothing in
+the demo account or your own data is touched. See
+`FarmPilot_Development_Log.md`, Issues #34, #36–38, for what each tier
+covers and why.
 
 ## Environment Variables
 

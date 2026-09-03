@@ -12,7 +12,7 @@ export interface CategoryBudgetStatus {
   pct_used: number | null;
 }
 
-function handleBudgetError(error: any): Error {
+export function handleBudgetError(error: any): Error {
   const msg = error.message || String(error);
   if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')) {
     return new Error('Cannot connect to the network. Please check your internet connection and try again.');

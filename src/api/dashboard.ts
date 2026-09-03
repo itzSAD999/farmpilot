@@ -25,7 +25,7 @@ export interface CropSummary {
   cost_per_acre_pesewas: number | null;
 }
 
-function handleDashboardError(error: any): Error {
+export function handleDashboardError(error: any): Error {
   const msg = error.message || String(error);
 
   if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')) {

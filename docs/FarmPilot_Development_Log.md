@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 42 issues in full technical detail, for a
-technical reader. This section describes the same 42 issues in plain
+Section 4 below describes all 45 issues in full technical detail, for a
+technical reader. This section describes the same 45 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -85,6 +85,9 @@ to define each one.
 | 40 | The single biggest finding of this whole testing effort: the app was supposed to let a farmer record a cost even with no phone signal, and save it for later automatically — all the actual machinery for that existed and was well-built — but nothing in the real "record a cost" screen was ever connected to it. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not have it saved for later like the report and README both said it would. | Connected the recording form to the offline-saving system that already existed, so a cost recorded with no signal is now genuinely saved and automatically sent once signal returns — and proved it really works by checking it against the real database, including the specific case of the same saved item accidentally being sent twice (it correctly does not create a duplicate). |
 | 41 | Built the Twi-language feature that had been deliberately postponed until now ("only build this once everything else is done"): a farmer can now hear advice spoken aloud in Twi and read it in Twi instead of English. Before writing any of it, the real outside service was tested directly first — and it's a good thing that happened, because three things about it turned out different from what was assumed (the exact Twi dialect code, the shape of one response, and the audio file format), each of which would have caused a confusing failure if just guessed at instead of checked. | Built it properly: generated real Twi text and real spoken audio for all 8 advice categories, only ever calling the outside service once per category, ever (never while a farmer is actually using the app), with the app quietly falling back to English if anything is ever missing. Every generated translation is clearly marked "not yet checked by a person" in the database, since a machine translation of a farming term can come out wrong, and nothing in this project automatically marks one as trustworthy — only a real Twi speaker listening to it can do that. |
 | 42 | On the farm-wide costs page, tapping a category to see every recorded item opened a long dropdown right there on the page — fine for a few entries, but a farm with fifty entries in one category would have made that dropdown the entire page. Separately, on the estimate report, there was no way to click a category and see the individual items that added up to its number. | Gave the farm-wide category breakdown its own proper page instead of a dropdown, with a search box and a way to filter to just one season. Made the estimate report's categories clickable too, taking you to the same kind of detail page. |
+| 43 | A notification popup was rendering behind a card on the dashboard instead of in front of it — a real display glitch caused by an obscure styling rule, not something wrong with the notification itself. Also, the season page showed every single recorded item stacked up for each category, wasting a lot of space, and a couple of unlabeled tags ("High", "Recorded", "Predicted") on the estimate report had no explanation of what they meant. | Fixed the layering so the notification always shows properly on top. Changed the season page to show just one summary line per category instead of every item (tap it to see them all). Added proper explanations you can tap or hover to see for every unlabeled tag. |
+| 44 | The "Crop vs Crop" comparison couldn't be narrowed to specific crops or a specific season — it always showed everything, and only ever gave one lump number per crop with no way to see where the money within that number actually goes. | Added the ability to choose exactly which crops (up to 4) and which specific seasons to compare — e.g. one crop's minor season last year against another crop's major season this year. Also added a second way to view the comparison: a spider-web-shaped chart with one point per cost category, so you can see the shape of each crop's spending, not just its total. |
+| 45 | A handful of rough edges in the new Twi feature, found only once it was actually being used: the setting was labeled just "Language," which made it sound like the whole app would switch, not just the advice; the AI assistant didn't actually speak Twi even when that language was chosen; and there was still no real way for a person to confirm a translation was accurate — the honest gap flagged in the previous entry. Also found: a technical naming mistake meant the secret key for the translation service was stored in a way that, by convention, signals "safe to expose in the browser," which it is not. | Relabeled the setting "Advice Language" with a clear one-line explanation, and made it a simple two-button choice instead of a dropdown. Made the AI assistant genuinely reply in Twi when that's selected. Built a proper page where a real Twi speaker can listen to each clip and confirm it with one tap — confirmed the tool works correctly, then left every clip exactly as "not yet confirmed," since nobody claimed to actually be that reviewer. Fixed the naming mistake so the secret key can no longer be mistaken for one that's safe to expose. Also added: a full notification history page, and a proper in-app Help page that the AI assistant now also reads from, so it can correctly answer "how does this work" questions instead of guessing. |
 
 ---
 
@@ -1354,6 +1357,147 @@ the real +42% variance.
 
 ---
 
+### Issue #43 — UI clarity pass: a stacking-context bug hid notifications, and several tags/flags had no explanation
+**Severity:** Medium (the notification bug — a real, functional visual
+defect, not cosmetic) / Low (the rest — coverage gaps, requested
+directly on review). Four issues found and fixed together:
+
+1. **The notification panel rendered behind the Dashboard's gradient
+   card**, not in front of it, on desktop. Root cause: that card uses
+   Tailwind's `transform` class (line 295, `Dashboard.tsx`), and *any*
+   non-`none` `transform` value — even the identity transform at rest —
+   creates a new CSS stacking context per spec. Two sibling stacking
+   contexts with no explicit `z-index` (both effectively `auto`/0) paint
+   in DOM order, and the card comes after the notification topbar in the
+   document, so it painted on top regardless of the panel's own `z-50`.
+   Fixed by giving the topbar wrapper (`AppShell.tsx`) an explicit
+   `relative z-40` — comparing two contexts by an explicit z-index value
+   settles the stacking regardless of DOM order.
+2. **The season page's cost list showed every individual entry inline**,
+   duplicating what the category header button already navigated to on
+   click. A farm with fifty entries in one category made that one card
+   the whole page. `CostList.tsx` now shows a one-line summary per
+   category ("2 entries — tap to view or edit") and nothing else;
+   per-item edit/delete now lives exclusively on `CategoryDetail.tsx`
+   (which already had it), removing genuinely dead code (`deleteMutation`,
+   the inline edit modal) rather than leaving it unreachable.
+3. **The "High" flag and the "Recorded"/"Predicted" badges on the
+   Estimate Report had no real explanation** — a native `title` attribute
+   only, which is low-visibility (delayed, unstyled, easy to miss)
+   compared to this project's own `InfoTip` component used everywhere
+   else. Converted both to real `InfoTip`s explaining what each actually
+   means and, for "High," what to do about it.
+4. **The season page's "Needs to be setup" flag** had the same native-title
+   problem — but its card is now a `<button>` (from fix #2 above), and
+   nesting an `InfoTip` (itself a button) inside would be invalid,
+   unpredictable HTML. Fixed with always-visible explanatory text instead
+   of a hover tooltip — arguably the better choice anyway for something
+   this important, since hover doesn't really exist on a touchscreen.
+
+**Evidence.** `npx tsc -b --noEmit` and `npm run build` clean. Live
+Puppeteer: notification panel now visibly renders over the Dashboard
+card; the season page's category cards show a one-line summary, not
+every item; hovering the "High" badge on `/report/74` shows a real
+explanation of what it means and what to do next.
+
+---
+
+### Issue #44 — Crop vs Crop couldn't select specific crops or seasons, and had no way to see the shape of spending, not just the total
+**Severity:** N/A (feature enhancement, requested directly). The
+Compare page's "Crop vs Crop" tab could only filter by plain year (not a
+specific season within a year — "2025's minor season vs. 2026's major
+one" wasn't expressible), always showed every crop grown rather than a
+chosen selection, and only ever showed one number per crop (cost per
+acre) with no way to see *where* that cost actually goes.
+
+**Fix.** `compareCrops()` (`src/api/compare.ts`) was rewritten to always
+aggregate directly from `seasons`/`season_costs` (dropping the
+`v_crop_summary` view read that the unfiltered path used before) — one
+code path instead of two independent ones that were supposed to agree,
+which is exactly the class of bug Issue #35 already found once. It now
+accepts an array of exact `(year, season_window)` pairs rather than bare
+years, and every returned row carries a full per-category breakdown
+(pesewas per acre per category), not just a lump total.
+`getSeasonFilterOptions()` (`seasons.ts`) now also returns every distinct
+season descriptor actually recorded on the farm. The UI
+(`Compare.tsx`) gained: season-pair filter chips ("Major 2026", "Minor
+2025", ...) instead of plain year buttons; crop-selection chips capped
+at 4 (a radar chart with more shapes is unreadable); and a bar-chart /
+"Category shape" toggle — the second option a radar/spider chart
+(Recharts `RadarChart`) with one spoke per cost category, one polygon per
+selected crop, matching the shape the request described directly. Also
+updated `FarmBot.tsx`'s type usage and `compare.integration.test.ts` for
+the new signature, plus one new test confirming a season filter matching
+nothing correctly excludes everything rather than erroring.
+
+**Evidence.** `npm run test:integration` on `compare.integration.test.ts`:
+6/6 passed (5 existing, rewritten for the new signature, plus 1 new).
+Live Puppeteer on the demo account: selecting "Minor 2026" correctly
+narrows the table to only Cassava (its only Minor 2026 season), excluding
+Maize; the radar view renders a real octagon (8 categories) with Maize
+and Cassava's polygons visibly different shapes, matching their actual
+per-category spend.
+
+---
+
+### Issue #45 — Twi feature refinements: scope clarity, FarmBot in Twi, a real review tool, and a security-convention fix
+**Severity:** N/A (refinements to Issue #41, all requested directly
+after using the shipped feature). Several real gaps found once the
+Twi feature was actually being used rather than just built:
+
+- **`VITE_KHAYA_API_KEY` was the wrong convention.** The `VITE_` prefix
+  tells Vite "safe to bundle into the browser" — this key must never be,
+  even though nothing referenced it client-side yet. Renamed to
+  `KHAYA_API_KEY`, matching `OPENROUTER_API_KEY` elsewhere in this
+  project, which is server/script-only for the same reason.
+- **"Language" read as a full app-locale switch** when it only ever
+  affected the Estimate Report's advice. Relabelled "Advice Language"
+  with an explicit one-line scope description, and — since there are
+  only two real options — replaced the dropdown-plus-Edit/Save pattern
+  with a direct two-button toggle that saves immediately.
+- **The scope was then deliberately widened for real**, not just
+  clarified: `FarmBot.tsx` now instructs the underlying AI to respond in
+  Twi when `preferred_language = 'tw'` — a live instruction to a
+  general-purpose AI, not a lookup against the pre-generated cache, so
+  no new Khaya calls are involved. The Profile description and the
+  Landing page's new "Twi" feature card (with its own English/Twi toggle
+  preview, mirroring the Cold Start card's pattern) were written to
+  describe this accurately.
+- **No mechanism existed for the one thing this project's own code
+  cannot honestly do: judge whether a machine translation is actually
+  good Twi.** `reviewed` was `false` on all 8 rows with no way to change
+  that except raw SQL. Built `src/pages/ReviewTranslations.tsx`
+  (`/review-translations`, reachable by URL only — deliberately not
+  linked in navigation, since this is a reviewer's tool, not a
+  farmer-facing feature) and two new `khaya.ts` functions
+  (`listTranslationsForReview`, `setTranslationReviewed`) — the latter is
+  the only place in the codebase that may ever set `reviewed = true`, and
+  it only does so because a human clicked a button, never automatically.
+  Verified the toggle works in both directions, then explicitly reverted
+  it — the database still shows 0 of 8 reviewed, confirmed directly by
+  SQL, not left in a false state by this work.
+- **Two more real gaps, closed while addressing the above:** a full
+  notification history was previously only reachable via the small
+  dropdown (`src/pages/Notifications.tsx`, `/notifications`, linked from
+  both the dropdown and Profile); and there was no in-app help reference
+  at all. Built `src/pages/Help.tsx` (`/help`, linked in the sidebar and
+  from Profile) — an FAQ covering every major feature in plain language —
+  and its content doubles as a new section of `FarmBot`'s system prompt
+  (`getHelpKnowledgeForFarmBot()`) so the assistant can answer "how does
+  X work" questions from the same source instead of guessing.
+
+**Evidence.** `npx tsc -b --noEmit` and `npm run build` clean. Live
+Puppeteer: the Advice Language toggle changes `/report/74`'s text
+immediately on the very next navigation, no reload needed (same React
+Query cache key across pages); the Review Translations page lists all 8
+categories with working audio playback and a review toggle confirmed to
+flip the database in both directions; direct SQL confirms 0 of 8 rows
+reviewed after testing, and the demo account's language preference and
+accumulated test notifications were both cleaned up afterward so its
+documented state (Appendix D) stays accurate.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table — a summary of what
@@ -1434,6 +1578,10 @@ that are lower priority than what shipped in this pass:
 | `src/api/auth.integration.test.ts`, `budgets.integration.test.ts`, `compare.integration.test.ts`, `dashboard.integration.test.ts`, `guides.integration.test.ts`, `notifications.integration.test.ts`, the new describe block in `estimates.integration.test.ts`, plus `auth.test.ts`, `budgets.test.ts`, `dashboard.test.ts`, `estimates.test.ts`, `src/lib/districts.test.ts`, `src/components/domain/GhanaMap.test.ts` | Issue #37 (remaining API modules, including the notification trigger) |
 | `vitest.integration.config.ts` (`fileParallelism: false`) | Issue #38 (Supabase Auth sign-up rate limit) |
 | `src/components/domain/AddCostForm.tsx`, `src/lib/offline/queue.integration.test.ts` | Issue #40 (offline cost recording actually wired up) |
+| `src/pages/FarmCategoryDetail.tsx` | Issue #42 (farm-wide category detail page, replacing a long dropdown) |
+| `src/components/layout/AppShell.tsx` (notification z-index), `src/components/features/CostList.tsx` (condensed to summary) | Issue #43 |
+| `src/api/compare.ts`, `src/api/seasons.ts` (`getSeasonFilterOptions`), `src/pages/Compare.tsx` | Issue #44 (crop/season selection, radar chart) |
+| `src/pages/ReviewTranslations.tsx`, `src/pages/Notifications.tsx`, `src/pages/Help.tsx` | Issue #45 |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |
 | `docs/DECISIONS.md` | Full ADR text |

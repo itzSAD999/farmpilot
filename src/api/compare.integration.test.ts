@@ -98,18 +98,28 @@ describe('Compare — live integration', () => {
     await costsApi.addCost({ season_id: cassavaSeason.id, category: 'fertiliser', amount_pesewas: 40000 });
 
     const result = await compareApi.compareCrops(farmId);
-    const names = result.data.map((r: any) => r.name);
+    const names = result.data.map((r) => r.name);
     expect(names).toContain('Maize');
     expect(names).toContain('Cassava');
-    expect(result.years).toBeUndefined();
+    expect(result.seasonFilters).toBeUndefined();
+
+    // Category breakdown is always present now (radar-view data), not just
+    // a lump total — confirm it's really per-category, not empty.
+    const maizeRow = result.data.find((r) => r.name === 'Maize')!;
+    expect(maizeRow.categoryBreakdown.fertiliser).toBeGreaterThan(0);
   });
 
-  it('compareCrops() with a year filter aggregates directly and matches the manual sum', async () => {
-    const result = await compareApi.compareCrops(farmId, [2052]);
-    const maizeRow = result.data.find((r: any) => r.name === 'Maize');
+  it('compareCrops() with a season filter aggregates directly and matches the manual sum', async () => {
+    const result = await compareApi.compareCrops(farmId, [{ year: 2052, season_window: 'major' }]);
+    const maizeRow = result.data.find((r) => r.name === 'Maize');
     expect(maizeRow).toBeDefined();
-    expect(maizeRow.cost_per_acre).toBe(20000); // 40000 pesewas / 2 acres, from the 2052 season only
-    expect(result.years).toEqual([2052]);
+    expect(maizeRow!.cost_per_acre).toBe(20000); // 40000 pesewas / 2 acres, from the 2052 major season only
+    expect(result.seasonFilters).toEqual([{ year: 2052, season_window: 'major' }]);
+  });
+
+  it('compareCrops() with a season filter that matches nothing excludes crops with zero cost in that window', async () => {
+    const result = await compareApi.compareCrops(farmId, [{ year: 1999, season_window: 'dry' }]);
+    expect(result.data).toEqual([]);
   });
 
   it('compareToBenchmark() reports actual vs. benchmark per acre after an estimate exists', async () => {

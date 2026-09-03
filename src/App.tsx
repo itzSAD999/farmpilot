@@ -20,6 +20,9 @@ import { GuideLibrary } from './pages/GuideLibrary';
 import { GuideDetail } from './pages/GuideDetail';
 import { CostsOverview } from './pages/CostsOverview';
 import { Lab } from './pages/Lab';
+import { ReviewTranslations } from './pages/ReviewTranslations';
+import { Notifications } from './pages/Notifications';
+import { Help } from './pages/Help';
 import { CategoryDetail } from './pages/CategoryDetail';
 import { FarmCategoryDetail } from './pages/FarmCategoryDetail';
 
@@ -93,6 +96,36 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <Lab />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/review-translations"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ReviewTranslations />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Notifications />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Help />
               </AppShell>
             </ProtectedRoute>
           }

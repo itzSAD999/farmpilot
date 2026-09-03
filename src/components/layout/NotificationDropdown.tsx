@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useNotifications } from '../../hooks/useNotifications';
 
 interface NotificationDropdownProps {
@@ -96,6 +97,14 @@ export function NotificationDropdown({ align = 'right' }: NotificationDropdownPr
               </div>
             )}
           </div>
+
+          <Link
+            to="/notifications"
+            onClick={() => setIsOpen(false)}
+            className="block text-center py-3 text-sm font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          >
+            View all notifications
+          </Link>
         </div>
       )}
     </div>

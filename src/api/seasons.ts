@@ -259,6 +259,7 @@ export async function getSeasonFilterOptions(farmId: number) {
     .select(`
       crop_id,
       year,
+      season_window,
       crops ( name )
     `)
     .eq('farm_id', farmId);
@@ -269,6 +270,7 @@ export async function getSeasonFilterOptions(farmId: number) {
 
   const cropsMap = new Map<number, string>();
   const yearsSet = new Set<number>();
+  const seasonDescriptorsMap = new Map<string, { year: number; season_window: 'major' | 'minor' | 'dry' }>();
 
   data.forEach((row: any) => {
     if (row.crop_id && row.crops?.name) {
@@ -277,11 +279,19 @@ export async function getSeasonFilterOptions(farmId: number) {
     if (row.year) {
       yearsSet.add(row.year);
     }
+    if (row.year && row.season_window) {
+      const key = `${row.year}:${row.season_window}`;
+      if (!seasonDescriptorsMap.has(key)) {
+        seasonDescriptorsMap.set(key, { year: row.year, season_window: row.season_window });
+      }
+    }
   });
 
   return {
     crops: Array.from(cropsMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
-    years: Array.from(yearsSet).sort((a, b) => b - a) // Descending
+    years: Array.from(yearsSet).sort((a, b) => b - a), // Descending
+    /** Every distinct (year, season_window) combination actually recorded on this farm — e.g. "Minor 2025" — for the Compare page's season-pair filter. */
+    seasonDescriptors: Array.from(seasonDescriptorsMap.values()).sort((a, b) => b.year - a.year || a.season_window.localeCompare(b.season_window)),
   };
 }
 

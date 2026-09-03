@@ -70,3 +70,57 @@ export async function playAdviceAudio(audioUrl: string): Promise<boolean> {
     return false;
   }
 }
+
+// ── Review support ──────────────────────────────────────────────
+//
+// The generation script (and every function above) can only ever set
+// `reviewed = false` — that's enforced by never writing `true` anywhere
+// in this codebase. Reviewing a translation for actual quality (is this
+// natural, correct Twi a farmer would understand) is not something an AI
+// coding assistant can do honestly; it requires a real Twi speaker to
+// listen and judge. What follows is the tool that makes that a one-tap
+// action once a real reviewer is available, instead of requiring someone
+// to write raw SQL — see src/pages/ReviewTranslations.tsx.
+
+export interface ReviewableTranslation {
+  id: number;
+  category: string;
+  englishText: string;
+  twiText: string;
+  audioUrl: string | null;
+  reviewed: boolean;
+}
+
+/** Every generated Twi translation, English source included, for a human reviewer to work through. */
+export async function listTranslationsForReview(): Promise<ReviewableTranslation[]> {
+  const { data, error } = await supabase
+    .from('advice_translations')
+    .select('id, message, audio_url, reviewed, advice_rules ( category, message )')
+    .eq('language', 'tw')
+    .order('advice_id');
+
+  if (error) throw new Error('Failed to load translations for review: ' + error.message);
+
+  return (data as any[]).map((row) => ({
+    id: row.id,
+    category: row.advice_rules?.category ?? 'unknown',
+    englishText: row.advice_rules?.message ?? '',
+    twiText: row.message,
+    audioUrl: row.audio_url,
+    reviewed: row.reviewed,
+  }));
+}
+
+/**
+ * The ONLY place in this codebase that may set reviewed = true — and it
+ * only ever does so because a human reviewer clicked a button to say so,
+ * never automatically. Also supports un-reviewing (correcting a mistake).
+ */
+export async function setTranslationReviewed(id: number, reviewed: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('advice_translations')
+    .update({ reviewed })
+    .eq('id', id);
+
+  if (error) throw new Error('Failed to update review status: ' + error.message);
+}

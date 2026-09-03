@@ -8,11 +8,26 @@ export interface CompareSeasonsResult {
   seasons: { id: number; name: string }[];
 }
 
+export interface SeasonFilterPair {
+  year: number;
+  season_window: 'major' | 'minor' | 'dry';
+}
+
+export interface CropCompareRow {
+  cropId: number;
+  name: string;
+  /** Weighted total cost per acre, pesewas, across every included season of this crop. */
+  cost_per_acre: number;
+  season_count: number;
+  /** Cost per acre, pesewas, broken down by category — for the radar/spider view. */
+  categoryBreakdown: Partial<Record<CostCategory, number>>;
+}
+
 export interface CompareCropsResult {
-  data: any[]; // { name: string, cost_per_acre: number, season_count: number }
+  data: CropCompareRow[];
   excluded: string[];
-  /** Years actually included in this result — omitted (all years) unless a filter was applied. */
-  years?: number[];
+  /** Specific (year, season_window) pairs actually included — omitted (all seasons) unless a filter was applied. */
+  seasonFilters?: SeasonFilterPair[];
 }
 
 export interface CompareBenchmarkResult {
@@ -72,74 +87,68 @@ export async function compareSeasons(seasonIds: number[]): Promise<CompareSeason
 }
 
 // 2. Crop vs Crop
-// Without a year filter this reads the pre-aggregated v_crop_summary view
-// (all recorded seasons, any year). With one, it aggregates seasons for
-// just those years directly — using the same sum(cost)/sum(area) weighting
-// the view uses, so the two paths agree when the filter covers every year.
-export async function compareCrops(farmId: number, years?: number[]): Promise<CompareCropsResult> {
-  if (!years || years.length === 0) {
-    const { data, error } = await supabase
-      .from('v_crop_summary')
-      .select('*')
-      .eq('farm_id', farmId);
-
-    if (error) throw error;
-
-    const excluded: string[] = [];
-    const chartData: any[] = [];
-
-    for (const crop of data) {
-      if (Number(crop.total_recorded_pesewas) === 0) {
-        excluded.push(crop.crop_name);
-      } else {
-        chartData.push({
-          name: crop.crop_name,
-          cost_per_acre: Number(crop.cost_per_acre_pesewas),
-          season_count: Number(crop.season_count),
-        });
-      }
-    }
-
-    chartData.sort((a, b) => b.cost_per_acre - a.cost_per_acre);
-    return { data: chartData, excluded };
-  }
-
+// Always aggregates directly from seasons + season_costs, rather than
+// reading the pre-aggregated v_crop_summary view — that view has no
+// per-category breakdown (needed for the radar/spider view) and having
+// two independent implementations of "the same" aggregation was exactly
+// the class of bug Issue #35 in the Development Log found (two functions
+// that were both supposed to compute the same figure quietly disagreeing
+// by a few pesewas). One code path, always category-complete.
+export async function compareCrops(farmId: number, seasonFilters?: SeasonFilterPair[]): Promise<CompareCropsResult> {
   const { data, error } = await supabase
     .from('seasons')
-    .select('area_planted_acres, crops (name), season_costs (amount_pesewas)')
-    .eq('farm_id', farmId)
-    .in('year', years);
+    .select('crop_id, area_planted_acres, year, season_window, crops (name), season_costs (category, amount_pesewas)')
+    .eq('farm_id', farmId);
 
   if (error) throw error;
 
-  const byCrop = new Map<string, { totalCost: number; totalArea: number; count: number }>();
-  for (const s of data) {
+  const seasons = seasonFilters && seasonFilters.length > 0
+    ? data.filter((s: any) => seasonFilters.some((f) => f.year === s.year && f.season_window === s.season_window))
+    : data;
+
+  type CropAccumulator = { name: string; totalCost: number; totalArea: number; count: number; categoryTotals: Partial<Record<CostCategory, number>> };
+  const byCrop = new Map<number, CropAccumulator>();
+  for (const s of seasons) {
+    const cropId = s.crop_id as number;
     const name = (s.crops as any)?.name || 'Unknown Crop';
-    const cost = (s.season_costs as any[]).reduce((sum, c) => sum + Number(c.amount_pesewas), 0);
     const area = Number(s.area_planted_acres);
-    const entry = byCrop.get(name) || { totalCost: 0, totalArea: 0, count: 0 };
-    entry.totalCost += cost;
+    const costs = (s.season_costs as any[]) || [];
+    const totalCost = costs.reduce((sum, c) => sum + Number(c.amount_pesewas), 0);
+
+    const entry: CropAccumulator = byCrop.get(cropId) || { name, totalCost: 0, totalArea: 0, count: 0, categoryTotals: {} };
+    entry.totalCost += totalCost;
     entry.totalArea += area;
     entry.count += 1;
-    byCrop.set(name, entry);
+    for (const c of costs) {
+      const cat = c.category as CostCategory;
+      entry.categoryTotals[cat] = (entry.categoryTotals[cat] || 0) + Number(c.amount_pesewas);
+    }
+    byCrop.set(cropId, entry);
   }
 
   const excluded: string[] = [];
-  const chartData: any[] = [];
-  for (const [name, { totalCost, totalArea, count }] of byCrop.entries()) {
-    if (totalCost === 0) {
-      excluded.push(name);
-    } else {
-      chartData.push({
-        name,
-        cost_per_acre: totalArea > 0 ? Math.round(totalCost / totalArea) : 0,
-        season_count: count,
-      });
+  const rows: CropCompareRow[] = [];
+  for (const [cropId, entry] of byCrop.entries()) {
+    if (entry.totalCost === 0) {
+      excluded.push(entry.name);
+      continue;
     }
+    const categoryBreakdown: Partial<Record<CostCategory, number>> = {};
+    for (const cat of CATEGORIES) {
+      const catTotal = entry.categoryTotals[cat] || 0;
+      categoryBreakdown[cat] = entry.totalArea > 0 ? Math.round(catTotal / entry.totalArea) : 0;
+    }
+    rows.push({
+      cropId,
+      name: entry.name,
+      cost_per_acre: entry.totalArea > 0 ? Math.round(entry.totalCost / entry.totalArea) : 0,
+      season_count: entry.count,
+      categoryBreakdown,
+    });
   }
 
-  chartData.sort((a, b) => b.cost_per_acre - a.cost_per_acre);
-  return { data: chartData, excluded, years };
+  rows.sort((a, b) => b.cost_per_acre - a.cost_per_acre);
+  return { data: rows, excluded, seasonFilters: seasonFilters && seasonFilters.length > 0 ? seasonFilters : undefined };
 }
 
 // 3. Me vs Benchmark

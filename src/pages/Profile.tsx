@@ -7,7 +7,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useFarm } from "../hooks/useFarm";
 import type { Profile as ProfileType } from "../api/auth";
 import { useTheme } from "../hooks/useTheme";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { GhanaMap } from "../components/domain/GhanaMap";
 import { GHANA_DISTRICTS } from "../lib/districts";
 
@@ -300,31 +300,31 @@ export function Profile() {
               />
             </SettingRow>
 
-            <SettingRow
-              label="Advice Language"
-              value={getLanguageName(profile?.preferred_language || "en")}
-              description="Only affects the advice text and audio on your Estimate Report — menus, buttons, and the rest of the app stay in English."
-              isEditing={editingField === "language"}
-              onEdit={() => setEditingField("language")}
-              onCancel={() => setEditingField(null)}
-              onSave={() => handleSaveProfile("preferred_language")}
-              isLoading={profileMutation.isPending}
-              isLast
-            >
-              <select
-                value={formData.language}
-                onChange={(e) =>
-                  setFormData({ ...formData, language: e.target.value })
-                }
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors appearance-none"
-              >
-                <option value="en">English</option>
-                <option value="tw">Twi (Akan)</option>
-                <option value="ee">Ewe (coming soon — shows English for now)</option>
-                <option value="gaa">Ga (coming soon — shows English for now)</option>
-                <option value="dag">Dagbani (coming soon — shows English for now)</option>
-              </select>
-            </SettingRow>
+            <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-white/10 transition-colors">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">
+                Advice Language
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-3 leading-relaxed">
+                Your Estimate Report's advice text and audio switch to Twi, and FarmBot (the AI assistant) will chat with you in Twi too. Menus, buttons, and guide articles stay in English for now.
+              </p>
+              <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/5 p-1">
+                {(["en", "tw"] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => profileMutation.mutate({ preferred_language: lang })}
+                    disabled={profileMutation.isPending}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-60 ${
+                      (profile?.preferred_language || "en") === lang
+                        ? "bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-gray-100"
+                        : "text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    {getLanguageName(lang)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-2">More languages coming soon.</p>
+            </div>
 
             <div className="p-5 sm:p-6 transition-colors flex items-center justify-between gap-4">
               <div>
@@ -480,6 +480,34 @@ export function Profile() {
             Account Actions
           </h2>
           <div className="bg-white dark:bg-white/5 rounded-[24px] shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden p-2 space-y-2">
+            <Link
+              to="/notifications"
+              className="w-full py-4 px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-gray-100 rounded-2xl font-bold transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                Notifications
+              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              to="/help"
+              className="w-full py-4 px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-gray-100 rounded-2xl font-bold transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Help
+              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
             <button
               type="button"
               onClick={() => setIsPasswordModalOpen(true)}
@@ -1041,8 +1069,9 @@ function SettingRow({
           </div>
           <button
             onClick={onEdit}
-            className="flex-shrink-0 px-4 py-2 bg-gray-50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-gray-600 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-400 font-bold text-sm rounded-xl transition-colors border border-gray-200 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-500/30"
+            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-gray-50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-gray-600 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-400 font-bold text-sm rounded-xl transition-colors border border-gray-200 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-500/30"
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
             Edit
           </button>
         </div>

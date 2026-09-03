@@ -102,6 +102,7 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
   const [chatQuestion, setChatQuestion] = useState<'overspend' | 'total' | null>(null);
   const [dashboardView, setDashboardView] = useState<'pie' | 'bar'>('pie');
   const [coldStartMode, setColdStartMode] = useState<'new' | 'returning'>('new');
+  const [twiLang, setTwiLang] = useState<'en' | 'tw'>('en');
 
   let content = null;
   
@@ -598,6 +599,41 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
         </div>
       </div>
     );
+  } else if (feature === 'twi') {
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">Read It, or Hear It, in Twi</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          Set your Advice Language once in Profile — every flagged category on your Estimate Report follows.
+        </p>
+
+        <div className="bg-white/5 rounded-3xl p-8 border border-white/10">
+          <div className="flex rounded-full bg-black/50 p-1 mb-8 w-fit border border-white/10">
+            <button onClick={() => setTwiLang('en')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${twiLang === 'en' ? 'bg-emerald-500 text-black' : 'text-white/50 hover:text-white'}`}>English</button>
+            <button onClick={() => setTwiLang('tw')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${twiLang === 'tw' ? 'bg-teal-400 text-black' : 'text-white/50 hover:text-white'}`}>Twi (Akan)</button>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Fertiliser — flagged, 42% above expected</p>
+              <span className="shrink-0 w-9 h-9 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-300">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+              </span>
+            </div>
+            {twiLang === 'en' ? (
+              <p className="text-white text-lg leading-relaxed animate-fade-in">
+                Your fertiliser spend is above the expected level. Government subsidy cuts NPK and Urea by about half — check with your district MoFA office for the subsidy window before you buy at market price.
+              </p>
+            ) : (
+              <p className="text-white text-lg leading-relaxed animate-fade-in">
+                Wo aduannuru a wode di dwuma no boro nea wɔhwɛ kwan no so. Aban mmoa a wɔate NPK ne Urea so bɛyɛ ɔfa — wo ne wo mansini MoFA adwumayɛbea no kɔhwɛ mfensere a wɔde boa ansa na woatɔ dwa so.
+              </p>
+            )}
+          </div>
+          <p className="text-white/40 text-sm mt-4">FarmBot chats in Twi too, the moment you switch — no separate setting.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1025,6 +1061,23 @@ export function Landing() {
                     <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/40">Benchmark</span>
                     <svg className="w-3 h-3 text-white/20 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     <span className="px-2.5 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-300">Your History</span>
+                  </div>
+                ),
+              },
+              {
+                key: 'twi',
+                title: 'Read it — or hear it — in Twi',
+                body: 'Flip your Advice Language to Twi (Akan) and a flagged category’s advice shows in Twi text, with a speaker button to hear it spoken aloud. FarmBot switches to Twi too.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.536 8.464a5 5 0 010 7.072M17.657 5.343a9 9 0 010 12.728M5 8h4l4-4v16l-4-4H5a1 1 0 01-1-1V9a1 1 0 011-1z" />,
+                accent: 'text-teal-400',
+                preview: (
+                  <div className="mt-2 mb-5 flex items-center gap-2 text-[10px] font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/40">English</span>
+                    <svg className="w-3 h-3 text-white/20 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    <span className="px-2.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 inline-flex items-center gap-1">
+                      Twi
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072" /></svg>
+                    </span>
                   </div>
                 ),
               },

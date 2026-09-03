@@ -45,7 +45,7 @@ Everything about the project — not just the code — lives in `docs/`:
 | [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules (also available as a self-contained `.html`) |
 | [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model, and the Twi localisation feature (§19) (also available as a self-contained `.html`) |
 | [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
-| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 42-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 45-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
 | [`FarmPilot_Presentation_Guide.md`](docs/FarmPilot_Presentation_Guide.md) | Not a submitted deliverable — a condensed study aid for presenting the project: the elevator pitch, how it works step by step, every architecture decision explained in plain terms, and what's automated vs. manually tested vs. not tested at all |
 | [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |

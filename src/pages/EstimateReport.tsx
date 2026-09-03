@@ -420,15 +420,26 @@ export function EstimateReport() {
                                 ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
                                 : 'text-gray-500 bg-gray-50 border-gray-200'
                             }`}
-                            title={line.is_actual ? 'From costs you recorded this season' : 'A prediction — record this cost to replace it with your real spend'}
                           >
                             {line.is_actual ? 'Recorded' : 'Predicted'}
                           </span>
+                          <InfoTip
+                            className="ml-1"
+                            text={line.is_actual
+                              ? "This is real money — exactly what you've entered for this category this season, not a prediction."
+                              : "You haven't recorded anything in this category yet, so this figure is a prediction — your own history for this crop if you have it, otherwise the standard benchmark. It's replaced the moment you record something real."}
+                          />
                           {line.is_flagged && (
-                            <span className="ml-2 inline-flex items-center text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 print:border-black print:text-black print:bg-transparent">
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                              High
-                            </span>
+                            <>
+                              <span className="ml-2 inline-flex items-center text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 print:border-black print:text-black print:bg-transparent">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                High
+                              </span>
+                              <InfoTip
+                                className="ml-1 print:hidden"
+                                text={`"High" means what you actually recorded here came in more than 30% above the standard benchmark rate for ${readableCategory.toLowerCase()} — real overspending, not a guess. Check the suggestion below for a specific way to reduce it.`}
+                              />
+                            </>
                           )}
                           {!line.is_actual && (
                             <button

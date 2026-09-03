@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFarm } from '../../hooks/useFarm';
+import { useAuth } from '../../hooks/useAuth';
 import { listSeasons } from '../../api/seasons';
 import { getFarmSummary } from '../../api/dashboard';
 import { chatWithFarmBot, Message } from '../../api/ai';
 import { getDetailedCostsForFarm } from '../../api/costs';
 import { getFlaggedInsightsForFarm } from '../../api/estimates';
 import { compareCrops } from '../../api/compare';
+import { getProfile } from '../../api/auth';
+import { getHelpKnowledgeForFarmBot } from '../../pages/Help';
 
 const SUGGESTED_PROMPTS = [
   'Am I overspending anywhere?',
@@ -23,7 +26,14 @@ export function FarmBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { farm } = useFarm();
-  
+  const { user } = useAuth();
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: getProfile,
+    enabled: !!user?.id,
+  });
+
   // Fetch context data for the bot
   const { data: seasons } = useQuery({
     queryKey: ['seasons', farm?.id],
@@ -64,7 +74,11 @@ export function FarmBot() {
   // Construct system prompt when context loads
   const systemPrompt = React.useMemo(() => {
     let prompt = `You are FarmBot, an expert agronomist AI assistant for FarmPilot. You advise Ghanaian smallholder farmers on how to reduce costs and improve yields.\n\n`;
-    
+
+    if (profile?.preferred_language === 'tw') {
+      prompt += `IMPORTANT: This farmer has set their Advice Language preference to Twi (Akan). Respond in Twi throughout this conversation, not English — this is a live request to a general-purpose AI, not a lookup against FarmPilot's own pre-generated advice cache, so use your own best Twi. If a specific technical term (like "acre" or a category name) doesn't translate cleanly, it's fine to keep it in English inside an otherwise-Twi sentence.\n\n`;
+    }
+
     if (farm && summary) {
       prompt += `Current User Context:\n`;
       prompt += `- Farm Name: ${farm.name} (${farm.district}, ${farm.region})\n`;
@@ -113,6 +127,11 @@ export function FarmBot() {
 - Recording cost history: when starting a new season (Start New Season), after picking a crop there's a "Have you grown this before?" toggle to back-fill up to 3 previous years' costs, so estimates use real history from day one instead of only the benchmark.
 - The Weekly Check-in prompt on the Dashboard for quickly logging shared costs across active seasons, split by planted acreage.
 - The Compare page (season vs season, crop vs crop, me vs standard benchmark) for the underlying numbers behind whatever you tell them.
+- The Help page (/help) has this same reference in one place if they want to browse it themselves.
+
+Reference — how FarmPilot's own features actually work, so you can answer "how does X work" or "what does X mean" questions accurately instead of guessing (this is the same content as the in-app Help page):
+
+${getHelpKnowledgeForFarmBot()}
 
 Guidelines for your responses:
 - Keep answers concise and extremely practical.
@@ -124,7 +143,7 @@ Guidelines for your responses:
 - Format using simple markdown for readability.`;
 
     return prompt;
-  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison]);
+  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison, profile]);
 
   // Initialize with greeting
   useEffect(() => {

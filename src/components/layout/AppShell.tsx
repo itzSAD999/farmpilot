@@ -157,6 +157,13 @@ export function AppShell({ children }: AppShellProps) {
             {!isCollapsed && <span className="ml-auto text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">New</span>}
           </Link>
 
+          <Link to="/help" title={isCollapsed ? "Help" : undefined} className={`flex items-center px-3 py-3 rounded-xl font-bold group transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive('/help') ? 'bg-[#1B5E20]/10 text-[#1B5E20] dark:text-emerald-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+            <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} ${isActive('/help') ? 'text-[#1B5E20] dark:text-emerald-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {!isCollapsed && <span>Help</span>}
+          </Link>
+
         </nav>
 
         <div className="p-4 mt-auto border-t border-gray-100 dark:border-white/5">
@@ -219,7 +226,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 overflow-y-auto mb-16 md:mb-0 relative flex flex-col">
-        <div className="print-hide hidden md:flex justify-end mb-6 w-full shrink-0">
+        <div className="print-hide hidden md:flex justify-end mb-6 w-full shrink-0 relative z-40">
           <div className="flex items-center gap-3 bg-white/80 dark:bg-black/40 backdrop-blur-md p-1.5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm">
             <ThemeToggle />
             <NotificationDropdown align="right" />

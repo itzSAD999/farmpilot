@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { useFarm } from '../hooks/useFarm';
 import { compareSeasons, compareCrops, compareToBenchmark } from '../api/compare';
+import type { SeasonFilterPair } from '../api/compare';
+import { CATEGORIES } from '../lib/categories';
+import { pesewasToCedis } from '../lib/money';
 import { Money } from '../components/ui/Money';
 import { listSeasons, getSeasonFilterOptions } from '../api/seasons';
 import { InfoTip } from '../components/ui/InfoTip';
@@ -253,9 +256,17 @@ function SeasonVsSeasonTab() {
 // ---------------------------------------------------------------------------
 // 2. Crop vs Crop
 // ---------------------------------------------------------------------------
+const RADAR_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+const WINDOW_LABEL: Record<string, string> = { major: 'Major', minor: 'Minor', dry: 'Dry' };
+const MAX_CROPS = 4;
+
+function seasonKey(f: SeasonFilterPair) { return `${f.year}:${f.season_window}`; }
+
 function CropVsCropTab() {
   const { farm } = useFarm();
-  const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [selectedSeasonKeys, setSelectedSeasonKeys] = useState<Set<string>>(new Set());
+  const [selectedCropIds, setSelectedCropIds] = useState<number[]>([]);
+  const [viewMode, setViewMode] = useState<'bar' | 'radar'>('bar');
 
   const { data: filterOptions } = useQuery({
     queryKey: ['seasonOptions', farm?.id],
@@ -263,46 +274,115 @@ function CropVsCropTab() {
     enabled: !!farm?.id,
   });
 
+  const seasonFilters: SeasonFilterPair[] | undefined = selectedSeasonKeys.size > 0
+    ? (filterOptions?.seasonDescriptors || []).filter((d) => selectedSeasonKeys.has(seasonKey(d)))
+    : undefined;
+
   const { data: result, isLoading } = useQuery({
-    queryKey: ['compareCrops', farm?.id, selectedYears],
-    queryFn: () => compareCrops(farm!.id as number, selectedYears),
+    queryKey: ['compareCrops', farm?.id, seasonFilters],
+    queryFn: () => compareCrops(farm!.id as number, seasonFilters),
     enabled: !!farm?.id,
   });
 
-  const toggleYear = (year: number) => {
-    setSelectedYears((prev) => prev.includes(year) ? prev.filter((y) => y !== year) : [...prev, year]);
+  const toggleSeason = (d: SeasonFilterPair) => {
+    setSelectedSeasonKeys((prev) => {
+      const next = new Set(prev);
+      const key = seasonKey(d);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleCrop = (cropId: number) => {
+    setSelectedCropIds((prev) => {
+      if (prev.includes(cropId)) return prev.filter((id) => id !== cropId);
+      if (prev.length >= MAX_CROPS) return prev; // cap at 4 — a radar with more is unreadable
+      return [...prev, cropId];
+    });
   };
 
   if (isLoading) return <LoadingSpinner />;
 
-  const yearsLabel = selectedYears.length > 0
-    ? selectedYears.slice().sort((a, b) => b - a).join(', ')
-    : 'every year recorded';
+  const seasonsLabel = seasonFilters && seasonFilters.length > 0
+    ? seasonFilters.map((f) => `${WINDOW_LABEL[f.season_window]} ${f.year}`).join(', ')
+    : 'every season recorded';
+
+  // Nothing explicitly picked -> show up to MAX_CROPS by cost, so the page
+  // is never an empty "pick something" state on first load.
+  const visibleRows = (result?.data || []).filter((r) =>
+    selectedCropIds.length > 0 ? selectedCropIds.includes(r.cropId) : true
+  ).slice(0, selectedCropIds.length > 0 ? undefined : MAX_CROPS);
+
+  const radarData = Object.values(CATEGORIES).map((cat) => {
+    const row: any = { category: cat.label };
+    for (const crop of visibleRows) {
+      row[crop.name] = pesewasToCedis(crop.categoryBreakdown[cat.id] || 0);
+    }
+    return row;
+  });
 
   return (
     <div>
-      <div className="flex items-start gap-2 mb-6">
-        <div className="flex-1">
+      <div className="grid sm:grid-cols-2 gap-6 mb-6">
+        <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Filter by year</span>
-            <InfoTip text="Each crop's number is the weighted cost per acre across every one of your seasons that matches the year filter below — combining several seasons of the same crop, not just the most recent one. Leave no year selected to include all of them." />
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Filter by season</span>
+            <InfoTip text="Pick specific seasons (e.g. 'Minor 2025') to compare exactly those against each other — say, 2025's minor season vs. 2026's major one. Leave none selected to include every season recorded." />
           </div>
           <div className="flex flex-wrap gap-2">
-            {filterOptions?.years.map((y) => (
-              <button
-                key={y}
-                onClick={() => toggleYear(y)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
-                  selectedYears.includes(y)
-                    ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-white dark:bg-transparent border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {y}
+            {filterOptions?.seasonDescriptors.map((d) => {
+              const key = seasonKey(d);
+              const selected = selectedSeasonKeys.has(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleSeason(d)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
+                    selected
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-white dark:bg-transparent border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {WINDOW_LABEL[d.season_window]} {d.year}
+                </button>
+              );
+            })}
+            {selectedSeasonKeys.size > 0 && (
+              <button onClick={() => setSelectedSeasonKeys(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline decoration-gray-300 underline-offset-4">
+                Clear
               </button>
-            ))}
-            {selectedYears.length > 0 && (
-              <button onClick={() => setSelectedYears([])} className="px-3 py-1.5 rounded-lg text-sm font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline decoration-gray-300 underline-offset-4">
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Crops to compare (up to {MAX_CROPS})</span>
+            <InfoTip text="Choose exactly which crops to put side by side. Leave none selected to see your top crops by cost automatically." />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions?.crops.map((c) => {
+              const selected = selectedCropIds.includes(c.id);
+              const disabled = !selected && selectedCropIds.length >= MAX_CROPS;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => toggleCrop(c.id)}
+                  disabled={disabled}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
+                    selected
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                      : disabled
+                        ? 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                        : 'bg-white dark:bg-transparent border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+            {selectedCropIds.length > 0 && (
+              <button onClick={() => setSelectedCropIds([])} className="px-3 py-1.5 rounded-lg text-sm font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline decoration-gray-300 underline-offset-4">
                 Clear
               </button>
             )}
@@ -310,31 +390,76 @@ function CropVsCropTab() {
         </div>
       </div>
 
-      {!result || result.data.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">No cost data available for crops in {yearsLabel}.</div>
+      {visibleRows.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">No cost data available for crops in {seasonsLabel}.</div>
       ) : (
         <>
-          {result.excluded.length > 0 && (
+          {result && result.excluded.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-6 text-sm">
-              <strong>Note:</strong> The following crops were excluded because they have no recorded costs in {yearsLabel}: {result.excluded.join(', ')}
+              <strong>Note:</strong> The following crops were excluded because they have no recorded costs in {seasonsLabel}: {result.excluded.join(', ')}
             </div>
           )}
 
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl mb-8 border border-emerald-100 dark:border-emerald-800/30 text-emerald-900 dark:text-emerald-300 font-medium text-center text-lg">
-            {result.data[0].name} is your most expensive crop to grow, averaging GHS {(result.data[0].cost_per_acre / 100).toFixed(0)} per acre across {yearsLabel}.
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 rounded-xl border border-emerald-100 dark:border-emerald-800/30 text-emerald-900 dark:text-emerald-300 font-medium text-sm flex-1">
+              {visibleRows[0].name} is your most expensive crop to grow, averaging GHS {(visibleRows[0].cost_per_acre / 100).toFixed(0)} per acre across {seasonsLabel}.
+            </div>
+            <div className="flex rounded-xl bg-gray-100 dark:bg-white/5 p-1 shrink-0">
+              <button
+                onClick={() => setViewMode('bar')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'bar' ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
+              >
+                Bar chart
+              </button>
+              <button
+                onClick={() => setViewMode('radar')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'radar' ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
+              >
+                Category shape
+              </button>
+            </div>
           </div>
 
-          <div className="h-[400px] w-full mb-8">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={result.data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="name" style={{ fontSize: '12px' }} />
-                <YAxis label={{ value: 'Total Cost per Acre (GHS)', angle: -90, position: 'insideLeft' }} />
-                <Tooltip formatter={(value: any, _n: any, item: any) => [`GHS ${(Number(value)/100).toFixed(2)}`, `Cost/Acre (${item?.payload?.season_count ?? '?'} season${item?.payload?.season_count === 1 ? '' : 's'})`]} />
-                <Bar dataKey="cost_per_acre" name="Cost per Acre" fill="#10b981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {viewMode === 'bar' ? (
+            <div className="h-[400px] w-full mb-8">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={visibleRows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" style={{ fontSize: '12px' }} />
+                  <YAxis label={{ value: 'Total Cost per Acre (GHS)', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value: any, _n: any, item: any) => [`GHS ${(Number(value)/100).toFixed(2)}`, `Cost/Acre (${item?.payload?.season_count ?? '?'} season${item?.payload?.season_count === 1 ? '' : 's'})`]} />
+                  <Bar dataKey="cost_per_acre" name="Cost per Acre" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="mb-8">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-3 text-center">
+                Each spoke is a cost category — the bigger the shape stretches toward a spoke, the more that crop spends there, in GHS per acre.
+              </p>
+              <div className="h-[420px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={radarData} margin={{ top: 20, right: 40, left: 40, bottom: 20 }}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="category" style={{ fontSize: '12px' }} />
+                    <PolarRadiusAxis angle={30} style={{ fontSize: '10px' }} />
+                    {visibleRows.map((crop, i) => (
+                      <Radar
+                        key={crop.cropId}
+                        name={crop.name}
+                        dataKey={crop.name}
+                        stroke={RADAR_COLORS[i % RADAR_COLORS.length]}
+                        fill={RADAR_COLORS[i % RADAR_COLORS.length]}
+                        fillOpacity={0.25}
+                      />
+                    ))}
+                    <Legend />
+                    <Tooltip formatter={(value: any) => `GHS ${Number(value).toFixed(2)}/acre`} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -346,8 +471,8 @@ function CropVsCropTab() {
                 </tr>
               </thead>
               <tbody>
-                {result.data.map((row: any) => (
-                  <tr key={row.name} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5">
+                {visibleRows.map((row) => (
+                  <tr key={row.cropId} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5">
                     <td className="py-4 px-4 font-bold">{row.name}</td>
                     <td className="py-4 px-4 text-right font-medium text-gray-500 dark:text-gray-400">{row.season_count}</td>
                     <td className="py-4 px-4 text-right font-medium text-gray-900 dark:text-gray-100">

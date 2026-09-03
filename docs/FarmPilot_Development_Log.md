@@ -1216,6 +1216,14 @@ the live `season_costs` table under real RLS, and that re-flushing the
 same `client_id` — the exact scenario a retried sync after a dropped
 connection produces — does not create a duplicate row, confirming the
 migration-003 unique index does what it was built for four ADRs ago.
+`npm run test:integration`: this file's 2 new tests pass on a clean run
+(verified directly, and separately against the demo account to sidestep
+Issue #38's rate limit while it was still cooling down) — 64/64 total
+across the whole suite, up from 62.
+
+---
+
+## 5. Testing Record
 
 The main report (§4.3) carries the primary test table — a summary of what
 was checked and whether it passed. This section gives the full, detailed

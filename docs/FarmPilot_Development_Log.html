@@ -1094,6 +1094,12 @@
 <p>same <code>client_id</code> — the exact scenario a retried sync after a dropped</p>
 <p>connection produces — does not create a duplicate row, confirming the</p>
 <p>migration-003 unique index does what it was built for four ADRs ago.</p>
+<p><code>npm run test:integration</code>: this file's 2 new tests pass on a clean run</p>
+<p>(verified directly, and separately against the demo account to sidestep</p>
+<p>Issue #38's rate limit while it was still cooling down) — 64/64 total</p>
+<p>across the whole suite, up from 62.</p>
+<hr/>
+<h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table — a summary of what</p>
 <p>was checked and whether it passed. This section gives the full, detailed</p>
 <p>evidence behind each row of that table:</p>

@@ -118,7 +118,7 @@ npm run test:integration   # hits the real, linked Supabase project — needs .e
 Unit tests (`vitest.config.ts`, 67 tests) cover pesewa/cedi conversion,
 category-list and Ghana-region/district consistency, every API module's
 error-message mapping, and the Weekly Check-in's proportional-by-acreage
-split rule. Integration tests (`vitest.integration.config.ts`, 62 tests,
+split rule. Integration tests (`vitest.integration.config.ts`, 64 tests,
 run one file at a time — see Issue #38 on why) exercise every
 `src/api/*.ts` module directly against the linked database — recording,
 `generate_estimate()` and the benchmark RPCs, comparisons, budgets,

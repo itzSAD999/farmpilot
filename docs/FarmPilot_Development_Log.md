@@ -17,6 +17,7 @@ summarised in each entry's Evidence line.
 
 ## Table of Contents
 
+0. [Plain-Language Summary — No Jargon](#0-plain-language-summary-no-jargon)
 1. [From Proposal to Delivered System](#1-from-proposal-to-delivered-system)
 2. [Development Timeline (Changelog, expanded)](#2-development-timeline-changelog-expanded)
 3. [Architecture Decisions — Index](#3-architecture-decisions-index)
@@ -24,6 +25,55 @@ summarised in each entry's Evidence line.
 5. [Testing Record](#5-testing-record)
 6. [Backlog — Outstanding Work](#6-backlog-outstanding-work)
 7. [Appendix — File and Migration Index](#7-appendix-file-and-migration-index)
+
+---
+
+## 0. Plain-Language Summary — No Jargon
+
+Section 4 below describes all 35 issues in full technical detail, for a
+technical reader. This section describes the same 35 issues in plain
+language — what was actually wrong, in everyday terms, and what was done
+about it — for anyone reading this who isn't a programmer. Each row here
+corresponds exactly to the same-numbered entry in §4, so "Issue #12"
+means the same thing in both places.
+
+| # | What was actually wrong | What we did about it |
+|---|---|---|
+| 1 | The app kept the user signed in by silently checking with the server in the background. On this computer, the clock was set a few hours fast, which confused that background check into thinking it needed to run again and again, non-stop. | Told the app to stop double-checking everything every single time that routine background check happened. |
+| 2 | The same clock problem was also the reason farm setup failed with a vague "something went wrong" message and wouldn't let a new farmer finish signing up. | Fixed the same way as #1 — once the background check stopped looping, farm setup started working. |
+| 3 | The app was supposed to warn a farmer when they'd spent too much on something (like fertiliser), but it was secretly comparing their spending only to itself — which is like grading your own homework with your own answer key. It could never actually catch overspending, no matter how much someone overspent. | Changed it to compare what a farmer really spent against an independent, standard price list — so overspending can now actually be detected. |
+| 4 | A data-loading mistake caused some of the standard price figures to get saved five times over by accident. That made every cost estimate come out roughly five times too expensive. | Found the duplicate data, removed it, and fixed the underlying mistake so it can't happen again. |
+| 5 | There was no quick way to add a cost unless a farmer was already inside a specific season's page — no shortcut from the main dashboard. | Added an "Add Cost" button to the main dashboard. |
+| 6 | If a farmer didn't know exactly what they'd spent on something, there was no way to get a suggested typical figure — they had to guess or leave it blank. | Added a "Don't know this cost?" button that fills in a sensible standard amount automatically. |
+| 7 | Before any costs were recorded, the estimate page just showed an empty screen with nothing useful on it — a dead end. | Replaced it with a checklist showing exactly what to record next to get a real estimate. |
+| 8 | The AI assistant (FarmBot) couldn't see which of a farmer's costs were flagged as too high, so when asked "am I overspending," it couldn't give a real answer. | Gave the assistant access to the farmer's real flagged costs so it can answer with actual numbers. |
+| 9 | On phones, several floating buttons (the chat bubble, an "install this app" banner) sat on top of the bottom navigation bar, making things hard to tap. | Moved them so nothing overlaps on a phone screen. |
+| 10 | A reference file that's supposed to describe exactly what's in the database (used to catch mistakes before they happen) had never actually been generated from the real database — it was a rough placeholder. | Generated it properly from the real, live database. |
+| 11 | The "Reset Password" button on the profile page did nothing when clicked. | Built the missing feature behind it. |
+| 12 | A feature to link a real email address to an account already existed in the background code, but there was no button anywhere for a farmer to actually use it. | Added the missing button and screen. |
+| 13 | Money amounts sometimes displayed with the currency symbol twice, like "GHS GHS 1,424.33." | Found and fixed every place this happened. |
+| 14 | The estimate report's two-column layout broke and overlapped text on certain screen sizes, because of a coding mistake in how the width was calculated. | Fixed the calculation so it always renders correctly. |
+| 15 | Four pieces of code sitting in the project were never finished and never actually used anywhere in the running app — pure leftover clutter. | Confirmed nothing depended on them, then deleted them. |
+| 16 | When two crops shared a cost during the weekly check-in (e.g. one land-clearing bill covering two fields), the app split the cost evenly between them no matter how much land each crop actually used. | Changed it to split the cost based on how many acres each crop actually covers — a bigger plot now correctly pays a bigger share. |
+| 17 | Only one crop (Maize) had real starting price data to estimate against — the other nine crops the app supports had none at all. | Added starting price data for all ten crops. |
+| 18 | With the app's dark colour theme turned on, a farmer trying to edit a season's details couldn't actually see what they were typing — the text was the same colour as the background. | Fixed the colours so text stays readable in both light and dark themes. |
+| 19 | The pages listing a farmer's costs and seasons were just plain lists — no chart, no way to search. | Added charts and a search box to both. |
+| 20 | If a farmer already had real cost figures from previous years for a crop, there was no way to enter that history — they could only start completely fresh. | Added a way to enter up to three previous years of real costs when starting a new season. |
+| 21 | The public website's homepage described app features that didn't actually exist yet — more of a sales mockup than a true description. | Rewrote it to describe, and let visitors actually try, the real, working features. |
+| 22 | Once an estimate had been generated for a season, there was no way to add a new cost from that same page — a farmer had to leave and hunt for another page. | Added a "Record a Cost" button right there, and the estimate now updates itself immediately after. |
+| 23 | Comparing which crop costs the most to grow always blended every year together with no way to look at just one year, and nothing on the page explained what the numbers meant. | Added a year filter, and small "i" info buttons that explain each number when tapped. |
+| 24 | There was no way for a farmer to experiment with "what would this cost me" before actually committing to plant anything. | Built a new sandbox page ("Cost Lab") for trying out different costs safely — nothing is saved unless you start a real season. |
+| 25 | The AI assistant gave a new user no example questions to get started with, and it couldn't compare crops against each other by cost. | Added example questions and gave it access to real crop-comparison figures. |
+| 26 | A farmer had no way to set their own personal spending limit for a category (e.g. "don't let me spend more than X on labour"), separate from the standard price guide. | Added the ability to set a personal limit per category, with a warning before saving a cost that would go over it. |
+| 27 | There was no way to download a season's cost report, or the full list of costs, as a PDF to print or hand to someone. | Added a "Download PDF" button to both, and made sure only the actual report appears on the printed page — not the website's menus and buttons. |
+| 28 | A farmer hit an error saving their farm details during setup, but the app only ever showed a vague "something went wrong" with no real reason given. | Could not reproduce the exact cause despite trying many times, but made the error message show the real technical reason if it ever happens again, and added a safety check for the most likely cause. |
+| 29 | Hovering over a region on the interactive map (during farm setup) showed nothing — a farmer had to click just to find out a region's name. | Added a label that shows the region's name the moment you hover over it. |
+| 30 | The new "Cost Lab" sandbox made you drag a slider for a whole category's cost as one lump sum — not how a real farmer thinks about spending. Separately, tapping a cost category anywhere else in the app did nothing. | Rebuilt Cost Lab around real quantities (e.g. "20 worker-days"), and made cost categories clickable so tapping one shows exactly what was recorded and how it added up. |
+| 31 | The same "tapping a category should show its details" fix from #30 was missing on the separate, all-seasons Costs page. | Fixed there too. |
+| 32 | Several pages showed numbers and charts with no explanation of what they actually meant. | Added small "i" info icons throughout that explain each number in plain terms on tap or hover. |
+| 33 | A file containing real GitHub account-recovery codes had accidentally been saved and uploaded to the project's public code repository. | Immediately told the person responsible to regenerate those codes (since anyone who'd seen the file could otherwise use them), removed the file from the project, and — once given the go-ahead — permanently erased every trace of it from the project's entire saved history, not just the current version. |
+| 34 | Every single check that the app worked correctly had been done by hand — a person clicking through the app and reading the results themselves. There was no way to automatically re-check things after a future change. | Built a proper set of automated checks that re-run the app's core money calculations by themselves, on command, without anyone needing to click through anything. |
+| 35 | The very first time the new automated checks ran, they caught a real, previously-unnoticed inconsistency: two pieces of behind-the-scenes logic that were supposed to always agree on a price were actually off by a tiny amount. | Traced it to one of the two no longer being used anywhere in the app, and removed it rather than patching around the mismatch. |
 
 ---
 

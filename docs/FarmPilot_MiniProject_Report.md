@@ -28,6 +28,8 @@ FarmPilot is a web application that helps small-scale Ghanaian farmers answer tw
 
 **Keywords:** farm cost estimation, overspend detection, smallholder agriculture, Supabase, PostgreSQL row-level security, PL/pgSQL, benchmark comparison.
 
+> **In plain terms:** a small-scale farmer usually has no way to know, in advance, what a growing season should cost, or whether they're paying too much for something — because there's nothing to compare their spending against except vague memory. This app lets a farmer log what they spend on things like seeds, fertiliser, and labour, then automatically checks each amount against a realistic standard price for that crop and warns them, with a specific reason, if any one of them looks too high. If they haven't spent anything on a category yet, it still gives them a sensible estimate so they can plan ahead. The rest of this report explains how that was built and tested; §4.2 ("How It Works") and the companion Development Log's plain-language summary (§0) are the sections written to need the least background knowledge to follow.
+
 ---
 
 ## Table of Contents

@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 45 issues in full technical detail, for a
-technical reader. This section describes the same 45 issues in plain
+Section 4 below describes all 46 issues in full technical detail, for a
+technical reader. This section describes the same 46 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -88,6 +88,7 @@ to define each one.
 | 43 | A notification popup was rendering behind a card on the dashboard instead of in front of it — a real display glitch caused by an obscure styling rule, not something wrong with the notification itself. Also, the season page showed every single recorded item stacked up for each category, wasting a lot of space, and a couple of unlabeled tags ("High", "Recorded", "Predicted") on the estimate report had no explanation of what they meant. | Fixed the layering so the notification always shows properly on top. Changed the season page to show just one summary line per category instead of every item (tap it to see them all). Added proper explanations you can tap or hover to see for every unlabeled tag. |
 | 44 | The "Crop vs Crop" comparison couldn't be narrowed to specific crops or a specific season — it always showed everything, and only ever gave one lump number per crop with no way to see where the money within that number actually goes. | Added the ability to choose exactly which crops (up to 4) and which specific seasons to compare — e.g. one crop's minor season last year against another crop's major season this year. Also added a second way to view the comparison: a spider-web-shaped chart with one point per cost category, so you can see the shape of each crop's spending, not just its total. |
 | 45 | A handful of rough edges in the new Twi feature, found only once it was actually being used: the setting was labeled just "Language," which made it sound like the whole app would switch, not just the advice; the AI assistant didn't actually speak Twi even when that language was chosen; and there was still no real way for a person to confirm a translation was accurate — the honest gap flagged in the previous entry. Also found: a technical naming mistake meant the secret key for the translation service was stored in a way that, by convention, signals "safe to expose in the browser," which it is not. | Relabeled the setting "Advice Language" with a clear one-line explanation, and made it a simple two-button choice instead of a dropdown. Made the AI assistant genuinely reply in Twi when that's selected. Built a proper page where a real Twi speaker can listen to each clip and confirm it with one tap — confirmed the tool works correctly, then left every clip exactly as "not yet confirmed," since nobody claimed to actually be that reviewer. Fixed the naming mistake so the secret key can no longer be mistaken for one that's safe to expose. Also added: a full notification history page, and a proper in-app Help page that the AI assistant now also reads from, so it can correctly answer "how does this work" questions instead of guessing. |
+| 46 | On the website's homepage, the demo showing off the Twi feature had a speaker icon that looked exactly like the real one in the app — but it didn't actually play anything when you tapped it, it was just a picture of a speaker. | Made it a real button that plays the actual pre-generated Twi recording, the same one a real farmer would hear, confirmed to work even for a visitor who isn't signed in at all. |
 
 ---
 
@@ -1498,6 +1499,37 @@ documented state (Appendix D) stays accurate.
 
 ---
 
+### Issue #46 — The Landing page's Twi feature card had a decorative speaker icon, not a working one
+**Severity:** Low (the interactive preview undersold the real feature —
+found directly on review, right after Issue #45 shipped it). The
+`<span>` speaker icon in the "Twi" feature card's demo modal
+(`Landing.tsx`) looked identical to the real, working one on the
+Estimate Report but did nothing when clicked — a static decoration, not
+a preview of the actual feature.
+
+**Fix.** Replaced it with a real `<button>` wired to `playAdviceAudio()`
+(`src/lib/khaya.ts`), with the same loading-spinner state used
+everywhere else this pattern appears. It plays the genuine, pre-generated
+fertiliser clip from the live `audio` Storage bucket — not a mockup, the
+same file `getTwiAdvice('fertiliser')` returns inside the app. One real
+constraint made this more than a one-line change: the Landing page is
+public and unauthenticated, but `advice_rules`/`advice_translations` RLS
+requires a signed-in session (§19.4 of the SDD) — so `getTwiAdvice()`
+itself can't be called here. The Storage object is on a public-read
+bucket, though, so the URL is used directly rather than looked up,
+documented inline in the component with why. A caption was added under
+the demo ("that's the real, pre-generated Twi audio clip, not a
+mockup") so a visitor knows to actually tap it.
+
+**Evidence.** `npx tsc -b --noEmit` and `npm run build` clean. Live
+Puppeteer, fully signed out (a fresh, unauthenticated visit to `/welcome`
+— the public landing route, `/` itself redirects to sign-in): clicking
+the Twi card, then the speaker button, triggers a real network request
+for `.../audio/advice/fertiliser/tw.wav`, confirming playback works with
+zero session — exactly the audience this page is for.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table — a summary of what
@@ -1582,6 +1614,7 @@ that are lower priority than what shipped in this pass:
 | `src/components/layout/AppShell.tsx` (notification z-index), `src/components/features/CostList.tsx` (condensed to summary) | Issue #43 |
 | `src/api/compare.ts`, `src/api/seasons.ts` (`getSeasonFilterOptions`), `src/pages/Compare.tsx` | Issue #44 (crop/season selection, radar chart) |
 | `src/pages/ReviewTranslations.tsx`, `src/pages/Notifications.tsx`, `src/pages/Help.tsx` | Issue #45 |
+| `src/pages/Landing.tsx` (working speaker button in the Twi demo) | Issue #46 |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |
 | `docs/DECISIONS.md` | Full ADR text |

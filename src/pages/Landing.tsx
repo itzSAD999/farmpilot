@@ -1,6 +1,7 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { playAdviceAudio } from '../lib/khaya';
 
 function useScrollReveal() {
   useEffect(() => {
@@ -103,6 +104,20 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
   const [dashboardView, setDashboardView] = useState<'pie' | 'bar'>('pie');
   const [coldStartMode, setColdStartMode] = useState<'new' | 'returning'>('new');
   const [twiLang, setTwiLang] = useState<'en' | 'tw'>('en');
+  const [twiAudioPlaying, setTwiAudioPlaying] = useState(false);
+
+  // The real, pre-generated fertiliser clip from the live "audio" Storage
+  // bucket (public read — this page is unauthenticated, so the same
+  // getTwiAdvice() the app itself uses can't be called here; RLS on
+  // advice_rules/advice_translations requires a signed-in session, but
+  // the Storage object itself is public, so playing it directly is fine).
+  const TWI_DEMO_AUDIO_URL = 'https://ifbtitocbwmlqvpowmuu.supabase.co/storage/v1/object/public/audio/advice/fertiliser/tw.wav';
+
+  const handlePlayTwiDemo = async () => {
+    setTwiAudioPlaying(true);
+    await playAdviceAudio(TWI_DEMO_AUDIO_URL);
+    setTwiAudioPlaying(false);
+  };
 
   let content = null;
   
@@ -616,9 +631,22 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
           <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
             <div className="flex items-start justify-between gap-3 mb-3">
               <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Fertiliser — flagged, 42% above expected</p>
-              <span className="shrink-0 w-9 h-9 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-300">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-              </span>
+              <button
+                type="button"
+                onClick={handlePlayTwiDemo}
+                disabled={twiAudioPlaying}
+                title="Hear this advice spoken in Twi"
+                className="shrink-0 w-9 h-9 rounded-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300 transition-colors disabled:opacity-60"
+              >
+                {twiAudioPlaying ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                )}
+              </button>
             </div>
             {twiLang === 'en' ? (
               <p className="text-white text-lg leading-relaxed animate-fade-in">
@@ -630,7 +658,7 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
               </p>
             )}
           </div>
-          <p className="text-white/40 text-sm mt-4">FarmBot chats in Twi too, the moment you switch — no separate setting.</p>
+          <p className="text-white/40 text-sm mt-4">Tap the speaker icon above — that's the real, pre-generated Twi audio clip, not a mockup. FarmBot chats in Twi too, the moment you switch — no separate setting.</p>
         </div>
       </div>
     );

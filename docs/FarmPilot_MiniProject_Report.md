@@ -452,7 +452,7 @@ npx supabase db query --linked -f supabase/demo_seed.sql
 A full account of the project treated as a real, shipped system rather
 than only a final snapshot: the six-week Python-based proposal versus
 what was actually built and why, a stage-by-stage development timeline,
-an index into all twelve architecture decisions, a thirty-eight-item issue
+an index into all twelve architecture decisions, a thirty-nine-item issue
 register from a full post-build hardening pass (each with root cause, fix,
 and live verification evidence), the complete testing record behind
 Chapter Four's summary table, and the outstanding backlog. Kept as a

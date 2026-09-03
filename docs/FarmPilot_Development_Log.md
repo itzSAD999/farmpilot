@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 38 issues in full technical detail, for a
-technical reader. This section describes the same 38 issues in plain
+Section 4 below describes all 39 issues in full technical detail, for a
+technical reader. This section describes the same 39 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -81,6 +81,7 @@ to define each one.
 | 36 | The first set of automated checks (#34) only covered the money-calculation logic — it didn't check ordinary things like creating/editing/deleting a farm, or the single most important safety rule: that one farmer can never see or change another farmer's data. That safety rule had only ever been checked by a person manually signing in as two different accounts. | Added many more automated checks covering farms, seasons, and costs being created/edited/deleted correctly, and — most importantly — a check using two genuinely separate accounts confirming one farmer truly cannot read, change, or delete another farmer's farm, no matter how they try. |
 | 37 | Six more parts of the app had never been automatically checked at all — signing in, personal spending caps, the crop/season comparison screens, the dashboard summary numbers, the advice-guide library, and notifications. One of those, a behind-the-scenes rule that automatically alerts a farmer the moment overspending is detected, had literally never been tested by anyone or anything since it was built. | Added checks for all six, including one that deliberately triggers an overspend and confirms the automatic alert really appears — and confirms a normal, under-budget cost correctly creates no alert at all. |
 | 38 | While running the new automated checks repeatedly back-to-back, sign-ups started failing — not because of anything wrong in the app, but because the login service itself (a service the app relies on, run by Supabase) has its own built-in limit on how many new accounts can be created in a short window, as a security measure, and running the checks over and over in quick succession tripped it. | Confirmed with a standalone test that the app's own code wasn't at fault — the login service's own safety limit was. Changed how the automated checks run (one at a time instead of all at once, and reusing one test account instead of creating a new one for almost every check) so the checks ask for far fewer new accounts overall. |
+| 39 | A whole file of code, sitting quietly in the project, turned out to be completely unused by the actual running app — and it contained its own, separate copy of the list of cost categories that had quietly gone out of date compared to the real one actually used everywhere else (calling the same category two different names in two different places). | Confirmed nothing in the app used the file at all, then deleted it, rather than fix or keep testing something nobody ever calls. |
 
 ---
 
@@ -1136,6 +1137,33 @@ both raw errors verbatim, confirming the cause was the Auth service's own
 limiter and not a bug in `handleAuthError()`'s mapping. After the fix and
 a short cooldown, a full `npm run test:integration` run passed clean —
 see Issue #37's evidence line for the final count.
+
+---
+
+### Issue #39 — A whole API module, `src/api/reference.ts`, was dead code with a silently wrong category list inside it
+**Severity:** Low (unused code, not a live defect — but a real one, and
+found directly by the process of writing tests for §4's Issue #37: while
+looking for what to test in every `src/api/*.ts` file, `reference.ts`
+turned out to have no importer anywhere in the application at all).
+`reference.ts` exported `listCrops()` (a duplicate of `crops.ts`'s
+`getCrops()`) and `listCategories()` — a second, hand-written copy of the
+category list already defined properly in `src/lib/categories.ts`. The
+two had quietly drifted apart: `reference.ts` labelled `land_prep` as
+"Land Preparation" and `agrochem` as "Agrochemicals," while the real,
+actually-used list in `categories.ts` calls them "Land work" and
+"Chemicals" — the exact kind of two-sources-of-truth trap that produces
+a confusing bug the moment someone imports the wrong one by habit.
+
+**Fix.** A full-codebase, case-insensitive search confirmed zero imports
+of `src/api/reference.ts` from anywhere in `src/`. Consistent with this
+project's standing practice of deleting confirmed-dead code outright
+rather than fixing or testing it (Issue #15's four stub components,
+Issue #35's unused benchmark RPC), the file was removed entirely instead
+of reconciled with `categories.ts` or given a test of its own.
+
+**Evidence.** `npx tsc -b --noEmit` and `npm run build` both stayed clean
+after deletion — nothing referenced the removed exports. `npm test`:
+67/67 still passed (nothing in the suite depended on it either).
 
 ---
 

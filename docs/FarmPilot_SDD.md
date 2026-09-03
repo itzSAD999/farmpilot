@@ -252,7 +252,7 @@ src/
 │   ├── farms.ts                getFarm, createFarm
 │   ├── seasons.ts              listSeasons, createSeason, completeSeason
 │   ├── costs.ts                listCosts, addCost, deleteCost
-│   ├── reference.ts            listCrops, listCategories
+│   ├── crops.ts                 getCrops
 │   ├── estimates.ts            generateEstimate, getReport
 │   └── ai.ts                   askFarmBot
 ├── components/

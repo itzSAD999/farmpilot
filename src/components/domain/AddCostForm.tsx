@@ -5,6 +5,10 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addCost, updateCost, getCategoryBenchmarkPesewas } from '../../api/costs';
 import { listBudgetsForSeason } from '../../api/budgets';
+import { getSeason } from '../../api/seasons';
+import { getFarmBudget, listFarmCategoryBudgets } from '../../api/farmBudgets';
+import { listCropBudgets } from '../../api/cropBudgets';
+import { listCropCategoryBudgets } from '../../api/cropCategoryBudgets';
 import { CATEGORIES, OTHER_CATEGORY_EXPLANATION } from '../../lib/categories';
 import type { CostCategory, CostItem } from '../../api/costs';
 import { cedisToPesewas, pesewasToCedis } from '../../lib/money';
@@ -121,6 +125,93 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
     : cedisToPesewas(watchTotalAmount || 0);
   const wouldBeSpentPesewas = (activeBudget?.spent_pesewas || 0) + pendingAmountPesewas;
   const wouldExceedBudget = !!activeBudget && pendingAmountPesewas > 0 && wouldBeSpentPesewas > activeBudget.limit_pesewas;
+
+  // Farm-wide budgets (migrations 022, 023) — Farm Budget, Budget by
+  // Category, and Crop Budgets all live above a single season, so this
+  // form needs the season's farm_id/crop_id to check them. Reuses the
+  // same ['season', seasonId] cache key SeasonDetail.tsx already
+  // populates, so opening this form there costs no extra request.
+  const { data: season } = useQuery({
+    queryKey: ['season', seasonId],
+    queryFn: () => getSeason(seasonId),
+    enabled: step === 2 && !isEditing,
+  });
+  const farmId = season?.farm_id;
+  const cropId = season?.crop_id;
+
+  const { data: farmBudget } = useQuery({
+    queryKey: ['farmBudget', farmId],
+    queryFn: () => getFarmBudget(farmId!),
+    enabled: step === 2 && !isEditing && !!farmId,
+  });
+  const { data: farmCategoryBudgets } = useQuery({
+    queryKey: ['farmCategoryBudgets', farmId],
+    queryFn: () => listFarmCategoryBudgets(farmId!),
+    enabled: step === 2 && !isEditing && !!farmId,
+  });
+  const { data: cropBudgets } = useQuery({
+    queryKey: ['cropBudgets', farmId],
+    queryFn: () => listCropBudgets(farmId!),
+    enabled: step === 2 && !isEditing && !!farmId,
+  });
+  const { data: cropCategoryBudgets } = useQuery({
+    queryKey: ['cropCategoryBudgets', farmId],
+    queryFn: () => listCropCategoryBudgets(farmId!),
+    enabled: step === 2 && !isEditing && !!farmId,
+  });
+
+  const activeFarmCategoryBudget = farmCategoryBudgets?.find((b) => b.category === watchCategory);
+  const activeCropBudget = cropBudgets?.find((b) => b.crop_id === cropId);
+  const activeCropCategoryBudget = cropCategoryBudgets?.find((b) => b.crop_id === cropId && b.category === watchCategory);
+
+  interface BudgetWarning { key: string; label: string; wouldBeSpentPesewas: number; limitPesewas: number }
+  const budgetWarnings: BudgetWarning[] = [];
+  if (pendingAmountPesewas > 0) {
+    if (activeCropCategoryBudget) {
+      const wouldBeSpent = activeCropCategoryBudget.spent_pesewas + pendingAmountPesewas;
+      if (wouldBeSpent > activeCropCategoryBudget.limit_pesewas) {
+        budgetWarnings.push({
+          key: 'crop-category',
+          label: `your GHS ${(activeCropCategoryBudget.limit_pesewas / 100).toFixed(2)} ${activeCropCategoryBudget.crop_name} ${CATEGORIES[watchCategory as CostCategory]?.label.toLowerCase()} budget`,
+          wouldBeSpentPesewas: wouldBeSpent,
+          limitPesewas: activeCropCategoryBudget.limit_pesewas,
+        });
+      }
+    }
+    if (activeFarmCategoryBudget) {
+      const wouldBeSpent = activeFarmCategoryBudget.spent_pesewas + pendingAmountPesewas;
+      if (wouldBeSpent > activeFarmCategoryBudget.limit_pesewas) {
+        budgetWarnings.push({
+          key: 'farm-category',
+          label: `your GHS ${(activeFarmCategoryBudget.limit_pesewas / 100).toFixed(2)} farm-wide ${CATEGORIES[watchCategory as CostCategory]?.label.toLowerCase()} budget`,
+          wouldBeSpentPesewas: wouldBeSpent,
+          limitPesewas: activeFarmCategoryBudget.limit_pesewas,
+        });
+      }
+    }
+    if (activeCropBudget) {
+      const wouldBeSpent = activeCropBudget.spent_pesewas + pendingAmountPesewas;
+      if (wouldBeSpent > activeCropBudget.limit_pesewas) {
+        budgetWarnings.push({
+          key: 'crop',
+          label: `your GHS ${(activeCropBudget.limit_pesewas / 100).toFixed(2)} ${activeCropBudget.crop_name} crop budget`,
+          wouldBeSpentPesewas: wouldBeSpent,
+          limitPesewas: activeCropBudget.limit_pesewas,
+        });
+      }
+    }
+    if (farmBudget) {
+      const wouldBeSpent = farmBudget.spent_pesewas + pendingAmountPesewas;
+      if (wouldBeSpent > farmBudget.limit_pesewas) {
+        budgetWarnings.push({
+          key: 'farm',
+          label: `your GHS ${(farmBudget.limit_pesewas / 100).toFixed(2)} overall Farm Budget`,
+          wouldBeSpentPesewas: wouldBeSpent,
+          limitPesewas: farmBudget.limit_pesewas,
+        });
+      }
+    }
+  }
 
   const handleModeSwitch = (mode: 'total' | 'rate') => {
     setEntryMode(mode);
@@ -548,6 +639,15 @@ export function AddCostForm({ seasonId, initialData, initialCategory, onSuccess,
             </p>
           </div>
         )}
+
+        {budgetWarnings.map((w) => (
+          <div key={w.key} className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 animate-fade-in-up">
+            <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+              This would put you <span className="text-amber-900 dark:text-amber-200">GHS {((w.wouldBeSpentPesewas - w.limitPesewas) / 100).toFixed(2)} over</span> {w.label}.
+            </p>
+          </div>
+        ))}
 
         {addMutation.isError && (
           <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm font-bold border border-red-200">

@@ -11,6 +11,10 @@ import {
   listFarmCategoryBudgets, setFarmCategoryBudget, deleteFarmCategoryBudget,
   type FarmCategoryBudgetStatus,
 } from '../api/farmBudgets';
+import {
+  listCropCategoryBudgets, setCropCategoryBudget, deleteCropCategoryBudget,
+  type CropCategoryBudgetStatus,
+} from '../api/cropCategoryBudgets';
 import { CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
 import { Money } from '../components/ui/Money';
@@ -24,19 +28,30 @@ const CATEGORY_EMOJI: Record<string, string> = {
   labour: '👷', transport: '🚛', storage: '📦', other: '📋',
 };
 
+type BudgetFilter = 'all' | 'over' | 'unset';
+
 /**
- * Budgets — a dashboard, not just a settings form. Three tiers a farmer
+ * Budgets — a dashboard, not just a settings form. Four tiers a farmer
  * can set spending caps at, reachable from one page (Settings → Account
  * Actions → "Budgets"), styled to match the Costs page's own dashboard
  * (stat cards, a donut breakdown, clickable cards with a progress bar):
  *
- *  1. Farm Budget — one overall ceiling for the whole farm (migration 023).
+ *  1. Farm Budget — one overall ceiling for the whole farm (023).
  *  2. Budget by Category — that ceiling assigned across the 8 cost
  *     categories, farm-wide rather than tied to one season (023) —
  *     distinct from the per-season Category Budgets on SeasonDetail.tsx
  *     (015).
  *  3. Crop Budgets — one total cap per crop, across every season of it
  *     (022) — also editable in context from SeasonDetail.tsx.
+ *  4. Crop x Category — the granular one a farmer actually plans in:
+ *     "for Maize, Labour GHS 300, Seeds GHS 400" (024). Set by
+ *     expanding a crop card in the By Crop view.
+ *
+ * Search narrows the visible cards by crop or category name; the All /
+ * Over Budget / Not Set chips group them the way a farmer would
+ * actually triage — "what's already blown" first, "what haven't I set
+ * yet" second — rather than always scrolling a flat list of eight or
+ * more cards.
  *
  * "Split by Season & Crop" is a read-only breakdown, not an editable
  * tier: how the farm's actual recorded spend already divides, using
@@ -47,6 +62,8 @@ export function CropBudgets() {
   const farmId = farm?.id as number | undefined;
   const queryClient = useQueryClient();
   const [view, setView] = useState<'category' | 'crop'>('category');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<BudgetFilter>('all');
 
   const { data: farmBudget, isLoading: isLoadingFarmBudget } = useQuery({
     queryKey: ['farmBudget', farmId],
@@ -63,13 +80,20 @@ export function CropBudgets() {
     queryFn: () => listCropBudgets(farmId!),
     enabled: !!farmId,
   });
+  const { data: cropCategoryBudgetsList, isLoading: isLoadingCropCategoryBudgets } = useQuery({
+    queryKey: ['cropCategoryBudgets', farmId],
+    queryFn: () => listCropCategoryBudgets(farmId!),
+    enabled: !!farmId,
+  });
 
-  const isLoading = isLoadingFarmBudget || isLoadingCategoryBudgets || isLoadingCropBudgets;
+  const isLoading = isLoadingFarmBudget || isLoadingCategoryBudgets || isLoadingCropBudgets || isLoadingCropCategoryBudgets;
   const overBudgetCount =
     (categoryBudgets || []).filter((b) => b.is_over_budget).length +
     (cropBudgetsList || []).filter((b) => b.is_over_budget).length +
+    (cropCategoryBudgetsList || []).filter((b) => b.is_over_budget).length +
     (farmBudget?.is_over_budget ? 1 : 0);
-  const budgetsSetCount = (categoryBudgets?.length || 0) + (cropBudgetsList?.length || 0) + (farmBudget ? 1 : 0);
+  const budgetsSetCount =
+    (categoryBudgets?.length || 0) + (cropBudgetsList?.length || 0) + (cropCategoryBudgetsList?.length || 0) + (farmBudget ? 1 : 0);
 
   return (
     <div className="animate-fade-in-up pb-24 max-w-6xl mx-auto px-4 sm:px-0">
@@ -82,7 +106,7 @@ export function CropBudgets() {
 
       <div className="flex items-center gap-2 mb-1">
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Budgets</h1>
-        <InfoTip text="Your own spending caps — separate from the standard benchmark. Set one overall ceiling for the farm, assign it across categories, or cap a specific crop, all independent of each other." />
+        <InfoTip text="Your own spending caps — separate from the standard benchmark. Set one overall ceiling for the farm, assign it across categories, cap a specific crop, or go granular with a category inside one crop, all independent of each other." />
       </div>
       <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-8">Spending caps for the whole farm, by category, or by crop.</p>
 
@@ -158,29 +182,54 @@ export function CropBudgets() {
             </div>
           )}
 
-          {/* Toggle: By Category / By Crop */}
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Set a Budget</h2>
-            <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl shrink-0">
-              <button
-                onClick={() => setView('category')}
-                className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${view === 'category' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
-              >
-                By Category
-              </button>
-              <button
-                onClick={() => setView('crop')}
-                className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${view === 'crop' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
-              >
-                By Crop
-              </button>
+          {/* Toggle + Search + Filter */}
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Set a Budget</h2>
+              <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl shrink-0">
+                <button
+                  onClick={() => setView('category')}
+                  className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${view === 'category' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                  By Category
+                </button>
+                <button
+                  onClick={() => setView('crop')}
+                  className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${view === 'crop' ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                  By Crop
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="relative flex-1 sm:max-w-xs">
+                <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input
+                  type="text"
+                  placeholder={view === 'category' ? 'Search category...' : 'Search crop...'}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-xl text-sm w-full focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl shrink-0">
+                {([['all', 'All'], ['over', 'Over Budget'], ['unset', 'Not Set']] as [BudgetFilter, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className={`px-3 py-2 text-xs font-bold rounded-lg transition-colors ${filter === key ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {view === 'category' ? (
-            <CategoryBudgetGrid farmId={farmId} budgets={categoryBudgets || []} queryClient={queryClient} />
+            <CategoryBudgetGrid farmId={farmId} budgets={categoryBudgets || []} queryClient={queryClient} search={search} filter={filter} />
           ) : (
-            <CropBudgetGrid farmId={farmId} budgets={cropBudgetsList || []} queryClient={queryClient} />
+            <CropBudgetGrid farmId={farmId} budgets={cropBudgetsList || []} categoryBudgets={cropCategoryBudgetsList || []} queryClient={queryClient} search={search} filter={filter} />
           )}
 
           {/* Read-only breakdown of actual spend */}
@@ -201,6 +250,12 @@ function ProgressBar({ pct, isOver }: { pct: number; isOver: boolean }) {
       />
     </div>
   );
+}
+
+function matchesFilter(status: { is_over_budget: boolean } | undefined, filter: BudgetFilter): boolean {
+  if (filter === 'over') return !!status?.is_over_budget;
+  if (filter === 'unset') return !status;
+  return true;
 }
 
 // ── Farm Budget — hero card, matching the Costs page's card language ─
@@ -279,11 +334,12 @@ function FarmBudgetHero({ farmId, status, queryClient }: { farmId: number; statu
 }
 
 // ── Budget by Category — card grid, matching the Costs page's cards ──
-function CategoryBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budgets: FarmCategoryBudgetStatus[]; queryClient: ReturnType<typeof useQueryClient> }) {
+function CategoryBudgetGrid({ farmId, budgets, queryClient, search, filter }: { farmId: number; budgets: FarmCategoryBudgetStatus[]; queryClient: ReturnType<typeof useQueryClient>; search: string; filter: BudgetFilter }) {
   const [editingCategory, setEditingCategory] = useState<CostCategory | null>(null);
   const [amount, setAmount] = useState('');
 
   const budgetByCategory = new Map(budgets.map((b) => [b.category, b]));
+  const q = search.trim().toLowerCase();
 
   const saveMutation = useMutation({
     mutationFn: ({ category, limitPesewas }: { category: CostCategory; limitPesewas: number }) => setFarmCategoryBudget(farmId, category, limitPesewas),
@@ -299,9 +355,19 @@ function CategoryBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; 
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['farmCategoryBudgets', farmId] }),
   });
 
+  const visibleCategories = (Object.keys(CATEGORIES) as CostCategory[]).filter((cat) => {
+    const status = budgetByCategory.get(cat);
+    if (q && !CATEGORIES[cat].label.toLowerCase().includes(q)) return false;
+    return matchesFilter(status, filter);
+  });
+
+  if (visibleCategories.length === 0) {
+    return <div className="text-center py-12 text-gray-500 dark:text-gray-400 font-medium mb-8">No categories match.</div>;
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-      {(Object.keys(CATEGORIES) as CostCategory[]).map((cat) => {
+      {visibleCategories.map((cat) => {
         const status = budgetByCategory.get(cat);
         const isEditing = editingCategory === cat;
         const pct = status ? Math.min(100, status.pct_used ?? 0) : 0;
@@ -383,10 +449,14 @@ function CategoryBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; 
   );
 }
 
-// ── Crop Budgets — card grid ──────────────────────────────────────────
-function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budgets: CropBudgetStatus[]; queryClient: ReturnType<typeof useQueryClient> }) {
+// ── Crop Budgets — card grid, each expandable into per-category caps ─
+function CropBudgetGrid({ farmId, budgets, categoryBudgets, queryClient, search, filter }: {
+  farmId: number; budgets: CropBudgetStatus[]; categoryBudgets: CropCategoryBudgetStatus[];
+  queryClient: ReturnType<typeof useQueryClient>; search: string; filter: BudgetFilter;
+}) {
   const [editingCropId, setEditingCropId] = useState<number | null>(null);
   const [amount, setAmount] = useState('');
+  const [expandedCropId, setExpandedCropId] = useState<number | null>(null);
 
   const { data: filterOptions, isLoading } = useQuery({
     queryKey: ['seasonFilterOptions', farmId],
@@ -394,6 +464,7 @@ function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budg
   });
 
   const budgetByCropId = new Map(budgets.map((b) => [b.crop_id, b]));
+  const q = search.trim().toLowerCase();
 
   const saveMutation = useMutation({
     mutationFn: ({ cropId, limitPesewas }: { cropId: number; limitPesewas: number }) => setCropBudget(farmId, cropId, limitPesewas),
@@ -411,6 +482,19 @@ function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budg
 
   const crops = filterOptions?.crops || [];
 
+  const visibleCrops = crops.filter((crop) => {
+    const status = budgetByCropId.get(crop.id);
+    const cropCats = categoryBudgets.filter((b) => b.crop_id === crop.id);
+    if (q && !crop.name.toLowerCase().includes(q)) return false;
+    // A crop stays visible under Over/Not Set if EITHER its own total
+    // budget or any of its per-category budgets matches — a farmer
+    // filtering "Over Budget" wants to see Maize even if only its
+    // Fertiliser line is over, not just when the crop total itself is.
+    if (filter === 'all') return true;
+    if (filter === 'over') return !!status?.is_over_budget || cropCats.some((c) => c.is_over_budget);
+    return !status; // 'unset' — crop has no total budget yet
+  });
+
   if (isLoading) return <div className="p-12 text-center text-gray-500 dark:text-gray-400 text-sm mb-8">Loading...</div>;
 
   if (crops.length === 0) {
@@ -422,12 +506,18 @@ function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budg
     );
   }
 
+  if (visibleCrops.length === 0) {
+    return <div className="text-center py-12 text-gray-500 dark:text-gray-400 font-medium mb-8">No crops match.</div>;
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-      {crops.map((crop, i) => {
+    <div className="space-y-4 mb-8">
+      {visibleCrops.map((crop, i) => {
         const status = budgetByCropId.get(crop.id);
         const isEditing = editingCropId === crop.id;
         const pct = status ? Math.min(100, status.pct_used ?? 0) : 0;
+        const isExpanded = expandedCropId === crop.id;
+        const cropCategoryCount = categoryBudgets.filter((b) => b.crop_id === crop.id).length;
 
         return (
           <div
@@ -435,17 +525,24 @@ function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budg
             className={`bg-white dark:bg-white/5 rounded-2xl border shadow-sm transition-all p-5 ${status?.is_over_budget ? 'border-red-200 dark:border-red-500/30' : 'border-gray-100 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-800'}`}
           >
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${CROP_COLORS[i % CROP_COLORS.length]}20` }}>
+              <button
+                onClick={() => setExpandedCropId(isExpanded ? null : crop.id)}
+                className="flex items-center gap-3 text-left flex-1 min-w-0"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${CROP_COLORS[i % CROP_COLORS.length]}20` }}>
                   <span className="text-lg">🌾</span>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100">{crop.name}</h3>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5 truncate">
+                    {crop.name}
+                    <svg className={`w-4 h-4 text-gray-300 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                  </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                     {status ? <><Money pesewas={status.spent_pesewas} /> spent</> : 'No budget set'}
+                    {cropCategoryCount > 0 && ` · ${cropCategoryCount} categor${cropCategoryCount === 1 ? 'y' : 'ies'} assigned`}
                   </p>
                 </div>
-              </div>
+              </button>
               {!isEditing && (
                 <div className="flex items-center gap-1 shrink-0">
                   {status && (
@@ -456,7 +553,7 @@ function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budg
                   <button
                     onClick={() => { setEditingCropId(crop.id); setAmount(status ? String(status.limit_pesewas / 100) : ''); }}
                     className="p-2 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                    title={status ? 'Edit' : 'Set a budget'}
+                    title={status ? 'Edit total' : 'Set a total budget'}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
@@ -496,6 +593,110 @@ function CropBudgetGrid({ farmId, budgets, queryClient }: { farmId: number; budg
               </>
             ) : (
               <div className="h-2" />
+            )}
+
+            {isExpanded && (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Budget by category, for {crop.name} only</p>
+                <CropCategoryRows
+                  farmId={farmId}
+                  cropId={crop.id}
+                  cropName={crop.name}
+                  budgets={categoryBudgets.filter((b) => b.crop_id === crop.id)}
+                  queryClient={queryClient}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Per-crop category rows — "for Maize: Labour 300, Seeds 400" ──────
+function CropCategoryRows({ farmId, cropId, cropName, budgets, queryClient }: {
+  farmId: number; cropId: number; cropName: string; budgets: CropCategoryBudgetStatus[];
+  queryClient: ReturnType<typeof useQueryClient>;
+}) {
+  const [editingCategory, setEditingCategory] = useState<CostCategory | null>(null);
+  const [amount, setAmount] = useState('');
+
+  const budgetByCategory = new Map(budgets.map((b) => [b.category, b]));
+
+  const saveMutation = useMutation({
+    mutationFn: ({ category, limitPesewas }: { category: CostCategory; limitPesewas: number }) => setCropCategoryBudget(farmId, cropId, category, limitPesewas),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cropCategoryBudgets', farmId] });
+      setEditingCategory(null);
+      setAmount('');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (budgetId: number) => deleteCropCategoryBudget(budgetId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cropCategoryBudgets', farmId] }),
+  });
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {(Object.keys(CATEGORIES) as CostCategory[]).map((cat) => {
+        const status = budgetByCategory.get(cat);
+        const isEditing = editingCategory === cat;
+        const pct = status ? Math.min(100, status.pct_used ?? 0) : 0;
+
+        return (
+          <div key={cat} className="bg-gray-50 dark:bg-white/[0.03] rounded-xl p-3">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <span>{CATEGORY_EMOJI[cat]}</span> {CATEGORIES[cat].label}
+              </span>
+              {!isEditing && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {status && (
+                    <button onClick={() => deleteMutation.mutate(status.id)} className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 transition-colors" title="Remove">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setEditingCategory(cat); setAmount(status ? String(status.limit_pesewas / 100) : ''); }}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
+                  >
+                    {status ? 'Edit' : 'Set'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isEditing ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!amount || Number(amount) <= 0) return;
+                  saveMutation.mutate({ category: cat, limitPesewas: Math.round(Number(amount) * 100) });
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <input
+                  type="number" min="0.01" step="0.01" required autoFocus
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="GHS"
+                  className="flex-1 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none min-w-0"
+                />
+                <button type="submit" disabled={saveMutation.isPending} className="py-1.5 px-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 shrink-0">Save</button>
+                <button type="button" onClick={() => setEditingCategory(null)} className="py-1.5 px-2 text-xs font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors shrink-0">✕</button>
+              </form>
+            ) : status ? (
+              <>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400"><Money pesewas={status.spent_pesewas} /> / <Money pesewas={status.limit_pesewas} /></span>
+                  <span className={`text-[11px] font-bold ${status.is_over_budget ? 'text-red-500' : 'text-gray-400'}`}>{Math.round(pct)}%</span>
+                </div>
+                <ProgressBar pct={pct} isOver={status.is_over_budget} />
+              </>
+            ) : (
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">Not set for {cropName} yet.</p>
             )}
           </div>
         );

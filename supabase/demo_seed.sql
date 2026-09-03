@@ -42,14 +42,16 @@
 --   • Generated estimates for both active seasons, so the dashboard,
 --     report, and every Compare tab have real data the moment you
 --     log in — nothing needs to be clicked through first.
---   • All four budgeting tiers populated with real, meaningfully mixed
---     numbers against the spend above (migrations 015, 022, 023) — a
---     Farm Budget sitting at 84% used, a farm-wide Fertiliser category
+--   • All five budgeting tiers populated with real, meaningfully mixed
+--     numbers against the spend above (migrations 015, 022, 023, 024) —
+--     a Farm Budget sitting at 84% used, a farm-wide Fertiliser category
 --     budget already OVER (echoing the same fertiliser-overspend story
 --     told throughout the rest of the demo), a Maize crop budget
---     cutting it close at 99%, and a Cassava crop budget already OVER
---     — so the /budgets page shows every visual state (fine, close,
---     over, and "not set yet") on first login, not just empty forms.
+--     cutting it close at 99%, a Cassava crop budget already OVER, and
+--     granular crop x category budgets ("Maize Labour", "Maize Seeds",
+--     ...) mixing fine/close/over states of their own — so the /budgets
+--     page shows every visual state (fine, close, over, and "not set
+--     yet") on first login, not just empty forms.
 --
 -- Run with:
 --   npx supabase db query --linked -f supabase/demo_seed.sql
@@ -188,6 +190,19 @@ begin
   insert into crop_budgets (farm_id, crop_id, limit_pesewas) values
     (v_farm_id, v_maize_id,   1600000),
     (v_farm_id, v_cassava_id, 80000);
+
+  -- Crop Category Budgets (024) — the most granular tier, e.g. "for
+  -- Maize: Labour GHS 4,000, Seeds GHS 1,500" — how a farmer actually
+  -- plans a crop. Maize fertiliser and labour are deliberately OVER
+  -- (the same open-market/no-subsidy story as everywhere else in this
+  -- demo); Maize seeds and both Cassava lines show the fine/over mix
+  -- too, so this tier's UI isn't only ever demoed empty.
+  insert into crop_category_budgets (farm_id, crop_id, category, limit_pesewas) values
+    (v_farm_id, v_maize_id,   'labour',     400000),
+    (v_farm_id, v_maize_id,   'seeds',      150000),
+    (v_farm_id, v_maize_id,   'fertiliser', 700000),
+    (v_farm_id, v_cassava_id, 'labour',     50000),
+    (v_farm_id, v_cassava_id, 'land_prep',  50000);
 
   -- Category Budgets (015) — per season+category, on the active 2026
   -- Maize season specifically. Fertiliser is already OVER (matches the

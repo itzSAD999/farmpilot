@@ -11,6 +11,9 @@ import { Money } from '../components/ui/Money';
 import { WeeklyCatchUp } from '../components/features/WeeklyCatchUp';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { InfoTip } from '../components/ui/InfoTip';
+import { getFarmBudget, listFarmCategoryBudgets } from '../api/farmBudgets';
+import { listCropBudgets } from '../api/cropBudgets';
+import { listCropCategoryBudgets } from '../api/cropCategoryBudgets';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -81,6 +84,30 @@ export function Dashboard() {
     enabled: !!farm?.id,
   });
 
+  // Budgets — the farmer's own spending caps (migrations 015, 022, 023,
+  // 024), surfaced here as a quick-glance widget rather than requiring a
+  // visit to /budgets just to know whether anything's over.
+  const { data: farmBudget } = useQuery({
+    queryKey: ['farmBudget', farm?.id],
+    queryFn: () => getFarmBudget(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+  const { data: farmCategoryBudgets } = useQuery({
+    queryKey: ['farmCategoryBudgets', farm?.id],
+    queryFn: () => listFarmCategoryBudgets(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+  const { data: cropBudgets } = useQuery({
+    queryKey: ['cropBudgets', farm?.id],
+    queryFn: () => listCropBudgets(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+  const { data: cropCategoryBudgets } = useQuery({
+    queryKey: ['cropCategoryBudgets', farm?.id],
+    queryFn: () => listCropCategoryBudgets(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+
   const { data: weeklyTip, isLoading: isLoadingTip } = useQuery({
     queryKey: ['weekly_tip', farm?.id],
     queryFn: () => generateWeeklyTip([], farmSummary),
@@ -107,6 +134,14 @@ export function Dashboard() {
     
     return true;
   });
+
+  const budgetsSetCount =
+    (farmBudget ? 1 : 0) + (farmCategoryBudgets?.length || 0) + (cropBudgets?.length || 0) + (cropCategoryBudgets?.length || 0);
+  const overBudgetCount =
+    (farmBudget?.is_over_budget ? 1 : 0) +
+    (farmCategoryBudgets || []).filter((b) => b.is_over_budget).length +
+    (cropBudgets || []).filter((b) => b.is_over_budget).length +
+    (cropCategoryBudgets || []).filter((b) => b.is_over_budget).length;
 
   if (isLoading) {
     return (
@@ -313,6 +348,34 @@ export function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* Budgets — quick glance at the farmer's own spending caps */}
+          <Link
+            to="/budgets"
+            className={`block rounded-[24px] p-6 mb-10 border shadow-sm hover:shadow-md transition-all ${overBudgetCount > 0 ? 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20' : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/10'}`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${overBudgetCount > 0 ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'}`}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-6 4h6m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100">Budgets</h3>
+                  {budgetsSetCount === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No spending caps set yet — tap to set one.</p>
+                  ) : overBudgetCount > 0 ? (
+                    <p className="text-sm font-bold text-red-600 dark:text-red-400">{overBudgetCount} {overBudgetCount === 1 ? 'budget is' : 'budgets are'} over — {farmBudget ? <>Farm Budget <Money pesewas={farmBudget.spent_pesewas} /> / <Money pesewas={farmBudget.limit_pesewas} /></> : `${budgetsSetCount} set`}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{budgetsSetCount} budget{budgetsSetCount === 1 ? '' : 's'} set, all on track{farmBudget ? <> — Farm Budget <Money pesewas={farmBudget.spent_pesewas} /> / <Money pesewas={farmBudget.limit_pesewas} /></> : ''}</p>
+                  )}
+                </div>
+              </div>
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+                Manage
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+              </span>
+            </div>
+          </Link>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
               {/* Spend by Crop Pie Wheel */}

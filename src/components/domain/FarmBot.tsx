@@ -12,6 +12,7 @@ import { getProfile } from '../../api/auth';
 import { getHelpKnowledgeForFarmBot } from '../../pages/Help';
 import { getFarmBudget, listFarmCategoryBudgets } from '../../api/farmBudgets';
 import { listCropBudgets } from '../../api/cropBudgets';
+import { listCropCategoryBudgets } from '../../api/cropCategoryBudgets';
 
 const SUGGESTED_PROMPTS = [
   'Am I overspending anywhere?',
@@ -91,6 +92,11 @@ export function FarmBot() {
     queryFn: () => listCropBudgets(farm!.id as number),
     enabled: !!farm?.id,
   });
+  const { data: cropCategoryBudgets } = useQuery({
+    queryKey: ['cropCategoryBudgets', farm?.id],
+    queryFn: () => listCropCategoryBudgets(farm!.id as number),
+    enabled: !!farm?.id,
+  });
 
   // Construct system prompt when context loads
   const systemPrompt = React.useMemo(() => {
@@ -143,22 +149,28 @@ export function FarmBot() {
       });
     }
 
-    const hasBudgets = !!farmBudget || (farmCategoryBudgets && farmCategoryBudgets.length > 0) || (cropBudgets && cropBudgets.length > 0);
+    const hasBudgets = !!farmBudget || (farmCategoryBudgets && farmCategoryBudgets.length > 0) || (cropBudgets && cropBudgets.length > 0) || (cropCategoryBudgets && cropCategoryBudgets.length > 0);
     if (hasBudgets) {
       prompt += `\nBudgets (the farmer's own spending caps, set at /budgets — separate from the benchmark comparisons above; a category or crop can be within benchmark and still over the farmer's own budget, or vice versa):\n`;
       if (farmBudget) {
         prompt += `- Farm Budget (whole farm, every season/crop/category combined): GHS ${(farmBudget.spent_pesewas / 100).toFixed(2)} spent of GHS ${(farmBudget.limit_pesewas / 100).toFixed(2)}${farmBudget.is_over_budget ? ' — OVER BUDGET' : ` (${farmBudget.pct_used ?? 0}% used)`}\n`;
       }
       if (farmCategoryBudgets && farmCategoryBudgets.length > 0) {
-        prompt += `- By category (farm-wide, across every season):\n`;
+        prompt += `- By category (farm-wide, across every crop and season):\n`;
         farmCategoryBudgets.forEach((b) => {
           prompt += `  - ${b.category}: GHS ${(b.spent_pesewas / 100).toFixed(2)} spent of GHS ${(b.limit_pesewas / 100).toFixed(2)}${b.is_over_budget ? ' — OVER BUDGET' : ` (${b.pct_used ?? 0}% used)`}\n`;
         });
       }
       if (cropBudgets && cropBudgets.length > 0) {
-        prompt += `- By crop (across every season of that crop):\n`;
+        prompt += `- By crop (total, across every season of that crop):\n`;
         cropBudgets.forEach((b) => {
           prompt += `  - ${b.crop_name}: GHS ${(b.spent_pesewas / 100).toFixed(2)} spent of GHS ${(b.limit_pesewas / 100).toFixed(2)}${b.is_over_budget ? ' — OVER BUDGET' : ` (${b.pct_used ?? 0}% used)`}\n`;
+        });
+      }
+      if (cropCategoryBudgets && cropCategoryBudgets.length > 0) {
+        prompt += `- By crop AND category together (the most specific tier — e.g. "Maize Labour"), across every season of that crop:\n`;
+        cropCategoryBudgets.forEach((b) => {
+          prompt += `  - ${b.crop_name} ${b.category}: GHS ${(b.spent_pesewas / 100).toFixed(2)} spent of GHS ${(b.limit_pesewas / 100).toFixed(2)}${b.is_over_budget ? ' — OVER BUDGET' : ` (${b.pct_used ?? 0}% used)`}\n`;
         });
       }
     }
@@ -186,7 +198,7 @@ Guidelines for your responses:
 - Format using simple markdown for readability.`;
 
     return prompt;
-  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison, profile, farmBudget, farmCategoryBudgets, cropBudgets]);
+  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison, profile, farmBudget, farmCategoryBudgets, cropBudgets, cropCategoryBudgets]);
 
   // Initialize with greeting
   useEffect(() => {

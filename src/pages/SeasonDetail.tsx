@@ -9,6 +9,7 @@ import { getSeason, completeSeason, updateSeason, deleteSeason } from '../api/se
 import { listCosts, getExpectedCategoriesForCrop, CostCategory } from '../api/costs';
 import { generateEstimate } from '../api/estimates';
 import { listBudgetsForSeason, setCategoryBudget, deleteCategoryBudget } from '../api/budgets';
+import { listCropBudgets, setCropBudget } from '../api/cropBudgets';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { CATEGORIES } from '../lib/categories';
 import { CostList } from '../components/features/CostList';
@@ -94,6 +95,29 @@ export function SeasonDetail() {
   const deleteBudgetMutation = useMutation({
     mutationFn: (budgetId: number) => deleteCategoryBudget(budgetId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categoryBudgets', seasonId] }),
+  });
+
+  // Crop Budget — a single total spending cap for this season's crop,
+  // across every season of it on the farm (migration 022), separate from
+  // the per-category caps above. Editable right here so a farmer doesn't
+  // have to leave the page they generate estimates and record costs from.
+  const { data: cropBudgets } = useQuery({
+    queryKey: ['cropBudgets', season?.farm_id],
+    queryFn: () => listCropBudgets(season!.farm_id),
+    enabled: !!season?.farm_id,
+  });
+  const cropBudgetStatus = cropBudgets?.find((b) => b.crop_id === season?.crop_id);
+
+  const [isCropBudgetModalOpen, setIsCropBudgetModalOpen] = useState(false);
+  const [cropBudgetAmount, setCropBudgetAmount] = useState('');
+
+  const saveCropBudgetMutation = useMutation({
+    mutationFn: () => setCropBudget(season!.farm_id, season!.crop_id, Math.round(Number(cropBudgetAmount) * 100)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cropBudgets', season?.farm_id] });
+      setIsCropBudgetModalOpen(false);
+      setCropBudgetAmount('');
+    },
   });
 
   const deleteSeasonMutation = useMutation({
@@ -374,6 +398,49 @@ export function SeasonDetail() {
                     </div>
                   </div>
                 )}
+
+                {/* Crop Budget — one total spending cap for this crop, across every season */}
+                <div className="bg-white dark:bg-[#121212] rounded-[32px] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-[0_8px_40px_rgb(0,0,0,0.03)] mb-8 animate-fade-in-up">
+                  <div className="flex items-center justify-between mb-4 gap-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Crop Budget</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Your total cap for {season.crop_name} across every season — <Link to="/budgets" className="underline hover:text-emerald-600 dark:hover:text-emerald-400">manage all crop budgets</Link>.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setCropBudgetAmount(cropBudgetStatus ? String(cropBudgetStatus.limit_pesewas / 100) : '');
+                        setIsCropBudgetModalOpen(true);
+                      }}
+                      className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-3 py-2 rounded-xl transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      {cropBudgetStatus ? 'Edit Budget' : 'Set Budget'}
+                    </button>
+                  </div>
+
+                  {cropBudgetStatus ? (
+                    <div>
+                      <div className="flex justify-between items-end mb-1.5">
+                        <span className={`text-xs font-bold ${cropBudgetStatus.is_over_budget ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                          <Money pesewas={cropBudgetStatus.spent_pesewas} /> / <Money pesewas={cropBudgetStatus.limit_pesewas} /> spent
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${cropBudgetStatus.is_over_budget ? 'bg-red-500' : Math.min(100, cropBudgetStatus.pct_used ?? 0) > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${Math.min(100, cropBudgetStatus.pct_used ?? 0)}%` }}
+                        />
+                      </div>
+                      {cropBudgetStatus.is_over_budget && (
+                        <p className="text-xs font-bold text-red-500 mt-1">
+                          <Money pesewas={cropBudgetStatus.spent_pesewas - cropBudgetStatus.limit_pesewas} /> over budget
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">No budget set yet — tap "Set Budget" to cap your total spend on {season.crop_name}.</p>
+                  )}
+                </div>
 
                 {/* Category Budgets — a farmer's own spending caps, separate from the benchmark */}
                 {!season.is_complete && (
@@ -696,6 +763,45 @@ export function SeasonDetail() {
                 </button>
                 <button type="submit" disabled={saveBudgetMutation.isPending} className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">
                   {saveBudgetMutation.isPending ? 'Saving...' : 'Set Budget'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Set/Edit Crop Budget Modal */}
+    {isCropBudgetModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+        <div className="absolute inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => !saveCropBudgetMutation.isPending && setIsCropBudgetModalOpen(false)}></div>
+
+        <div className="relative w-full max-w-md bg-white dark:bg-[#121212] rounded-[32px] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-full border border-transparent dark:border-white/5">
+          <div className="p-8 overflow-y-auto">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{cropBudgetStatus ? 'Edit' : 'Set'} Crop Budget</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Cap your total spend on {season.crop_name} across every season — you'll see a warning if you go over.</p>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!cropBudgetAmount || Number(cropBudgetAmount) <= 0) return;
+              saveCropBudgetMutation.mutate();
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Total limit (GHS)</label>
+                <input
+                  type="number" min="0.01" step="0.01" required autoFocus
+                  value={cropBudgetAmount}
+                  onChange={(e) => setCropBudgetAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setIsCropBudgetModalOpen(false)} className="flex-1 py-3 px-4 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saveCropBudgetMutation.isPending} className="flex-1 py-3 px-4 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">
+                  {saveCropBudgetMutation.isPending ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </form>

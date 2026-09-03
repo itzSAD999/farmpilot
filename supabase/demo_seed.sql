@@ -42,6 +42,14 @@
 --   • Generated estimates for both active seasons, so the dashboard,
 --     report, and every Compare tab have real data the moment you
 --     log in — nothing needs to be clicked through first.
+--   • All four budgeting tiers populated with real, meaningfully mixed
+--     numbers against the spend above (migrations 015, 022, 023) — a
+--     Farm Budget sitting at 84% used, a farm-wide Fertiliser category
+--     budget already OVER (echoing the same fertiliser-overspend story
+--     told throughout the rest of the demo), a Maize crop budget
+--     cutting it close at 99%, and a Cassava crop budget already OVER
+--     — so the /budgets page shows every visual state (fine, close,
+--     over, and "not set yet") on first login, not just empty forms.
 --
 -- Run with:
 --   npx supabase db query --linked -f supabase/demo_seed.sql
@@ -151,6 +159,44 @@ begin
     (v_season_cassava_id, 'labour',    'Planting labour',              45000, '2026-09-12');
 
   select generate_estimate(v_season_cassava_id) into v_estimate_cassava_id;
+
+  -- ============================================================
+  -- 7. Budgeting — all four tiers, deliberately mixed states.
+  -- Farm-wide recorded spend across every season above is GHS 16,855.00
+  -- (seeds 1,325 + fertiliser 8,000 + agrochem 360 + land_prep 1,700 +
+  -- labour 5,050 + storage 420); Maize alone is GHS 15,805.00; Cassava
+  -- alone is GHS 1,050.00 — the limits below are chosen against those
+  -- real totals, not round numbers picked in isolation.
+  -- ============================================================
+
+  -- Farm Budget (023) — one overall ceiling, sitting at 84% used.
+  insert into farm_budgets (farm_id, limit_pesewas) values (v_farm_id, 2000000);
+
+  -- Budget by Category (023) — farm-wide, not tied to one season.
+  -- Fertiliser is deliberately already OVER, echoing the same
+  -- open-market-vs-subsidy overspend story the estimate report itself
+  -- tells for this account. Agrochem, storage, transport and other are
+  -- left unassigned on purpose, to show that state too.
+  insert into farm_category_budgets (farm_id, category, limit_pesewas) values
+    (v_farm_id, 'fertiliser', 600000),
+    (v_farm_id, 'labour',     600000),
+    (v_farm_id, 'seeds',      150000),
+    (v_farm_id, 'land_prep',  200000);
+
+  -- Crop Budgets (022) — one total cap per crop, across every season.
+  -- Maize is cutting it close (99%); Cassava is already OVER.
+  insert into crop_budgets (farm_id, crop_id, limit_pesewas) values
+    (v_farm_id, v_maize_id,   1600000),
+    (v_farm_id, v_cassava_id, 80000);
+
+  -- Category Budgets (015) — per season+category, on the active 2026
+  -- Maize season specifically. Fertiliser is already OVER (matches the
+  -- flagged benchmark overspend on this exact season); labour is
+  -- comfortably under, since it was recorded via nnoboa exchange below
+  -- benchmark.
+  insert into category_budgets (season_id, category, limit_pesewas) values
+    (v_season_2026_id, 'fertiliser', 400000),
+    (v_season_2026_id, 'labour',     250000);
 
   raise notice 'Demo account ready — email: %, password: %, farm_id: %, active maize season: %, cassava season: %',
     v_demo_email, v_demo_password, v_farm_id, v_season_2026_id, v_season_cassava_id;

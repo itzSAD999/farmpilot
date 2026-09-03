@@ -25,6 +25,7 @@ import { Notifications } from './pages/Notifications';
 import { Help } from './pages/Help';
 import { CategoryDetail } from './pages/CategoryDetail';
 import { FarmCategoryDetail } from './pages/FarmCategoryDetail';
+import { CropBudgets } from './pages/CropBudgets';
 
 export function App() {
   return (
@@ -126,6 +127,16 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <Help />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budgets"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <CropBudgets />
               </AppShell>
             </ProtectedRoute>
           }

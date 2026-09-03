@@ -251,6 +251,11 @@ Where a farmer does not know a category's cost, the add-cost form can fill it wi
 
 A farmer who already has exact figures for a crop from previous years is not limited to the live, week-by-week recording flow to get them into the system: at season creation, after picking a crop, they can optionally back-fill up to three previous years — year, area planted, and a per-category total each — which are saved directly as already-closed seasons. This has no separate code path in the estimation engine: a back-filled season is an ordinary completed season, so `generate_estimate()` (§4.2.3) picks it up as history exactly as if it had been recorded live, letting a returning farmer skip the benchmark entirely from their very first season in the app.
 
+Every category card, on the season screen and on the farm-wide Costs page alike, opens onto a detail view (Figure 4.3a) showing exactly which recorded entries added up to that category's total — the specific answer to "how did my fertiliser cost get to that number," not just the number itself.
+
+*Figure 4.3a — Category detail: every recorded entry behind "Land work," and how it compares to the standard benchmark for this crop and acreage.*
+![Category detail](screenshots/15_category_detail.png)
+
 #### 4.2.3 The estimation engine
 
 Clicking *Generate Estimate* calls the `generate_estimate(season_id)` PL/pgSQL function. For each cost category, the function:
@@ -275,6 +280,11 @@ The dashboard (Figure 4.5) rolls estimates and recorded totals up to farm and cr
 *Figure 4.5 — Dashboard, farm-level rollup across two crops and three seasons.*
 ![Dashboard](screenshots/05_dashboard_populated.png)
 
+The farm-wide Costs page (Figure 4.5a) carries its own dashboard rather than just a table — a category pie chart, search across every recorded item, and the same expandable category-to-detail behaviour described above, so a farmer can go from "where is my money going" to the individual entry behind any slice without leaving the page.
+
+*Figure 4.5a — Costs page: category pie chart and an expanded category showing its individual entries across seasons.*
+![Costs overview](screenshots/14_costs_overview.png)
+
 A separate comparison screen lets a farmer compare their own recorded per-acre spend against the benchmark directly (Figure 4.6), independent of whether they have generated a formal estimate, or compare crops against each other where more than one is being grown (Figure 4.7). All ten seeded crops, Cassava included, now carry indicative per-acre norms (§3.3.2), so every crop is usable in the benchmark tab as well as the crop-vs-crop and season-vs-season comparisons, which are driven entirely by recorded costs regardless of benchmark coverage.
 
 *Figure 4.6 — "Me vs Standard" comparison, corroborating the same fertiliser overspend shown in Figure 4.4.*
@@ -294,7 +304,10 @@ Every screen is usable at 360px width (Figure 4.8); cost entry, the weekly check
 
 Three further tools sit alongside the core recording-and-estimating flow, each addressing a distinct question a farmer might have.
 
-**Cost Lab** (`/lab`) answers "what would this cost, hypothetically" without touching a real season. A farmer picks a crop, a season window, and an acreage; every category is seeded from the same benchmark math `generate_estimate()` itself uses — a new database function, `get_crop_benchmark_breakdown()`, computes it directly from `crop_input_norms` and `cost_benchmarks` given a crop and acreage rather than requiring an existing `seasons` row. The farmer can then drag any category to see the scenario's total, per-acre cost, and percentage against the standard rate — entirely client-side, so nothing is written to the database until the farmer actually starts a real season.
+**Cost Lab** (`/lab`, Figure 4.9) answers "what would this cost, hypothetically" without touching a real season. A farmer picks a crop, a season window, and an acreage; a database function, `get_crop_benchmark_lines()`, returns one row per underlying input — not a lump category total, but "20 person-days of labour at GHS 90/day," "5 x 50kg bags of NPK at GHS 461.25/bag" — computed directly from `crop_input_norms` and `cost_benchmarks` given a crop and acreage, with no `seasons` row required. Each slider then drags a real quantity a farmer actually thinks in, with the cost shown live as quantity × rate, and a plain-language summary ("that's 12% more than the standard rate ... GHS 84.00 above it") rather than a bare percentage. Entirely client-side — nothing is written to the database until the farmer actually starts a real season.
+
+*Figure 4.9 — Cost Lab: each input's real quantity and rate, not an abstract cedi amount, with a live scenario summary.*
+![Cost Lab](screenshots/16_cost_lab.png)
 
 **Category Budgets** answer a different question: not "is this above the national-average benchmark," but "is this above what *I* am willing to spend this season." A farmer can cap any category for an active season (e.g. "no more than GHS 500 on labour"); the season page shows a progress bar per category, and the cost-entry form itself warns, before the cost is saved, if the amount being entered would push that category over its cap. This is deliberately independent of the benchmark comparison — a category can be within the MoFA-derived benchmark and still over a farmer's own budget, or the reverse.
 
@@ -351,13 +364,10 @@ Two limitations identified during an earlier review of this report — benchmark
 ## References
 
 1. Ministry of Food and Agriculture (Ghana), *Agriculture in Ghana: Facts and Figures*, Statistics, Research and Information Directorate (SRID), 2018 edition — source of national average crop yields (Table 4.6), benchmark input prices (Table 7.3), and fertiliser subsidy price structure (Table 7.5) used throughout the benchmark layer (§3.3.2, §4.2.3).
-2. Esoko Networks — market information and agronomic SMS platform. *[Insert full citation / URL — not supplied by the team; add before submission.]*
-3. AgroCenta — farmer aggregation and market-access platform. Available at: https://agrocenta.com/ (Accessed: *[insert access date]*).
-4. Farmerline — Mergdata advisory platform. Available at: https://farmerline.co/ (Accessed: *[insert access date]*).
-5. Supabase Inc., *Supabase Documentation* — Auth, Row Level Security, and PostgREST reference material used throughout the implementation. Available at: https://supabase.com/docs (Accessed: *[insert access date]*).
-6. PostgreSQL Global Development Group, *PostgreSQL 17 Documentation*, chapters on Row Security Policies and PL/pgSQL. *[Insert URL and access date.]*
-
-> **Note to the team before submission:** the access dates above and the Esoko and PostgreSQL URLs still need to be filled in, and every entry's exact citation format must be checked against the department's required style (APA/IEEE) before this report is submitted.
+2. AgroCenta — farmer aggregation and market-access platform. Available at: https://agrocenta.com/ (Accessed: 2 September 2026).
+3. Farmerline — Mergdata advisory platform. Available at: https://farmerline.co/ (Accessed: 2 September 2026).
+4. Supabase Inc., *Supabase Documentation* — Auth, Row Level Security, and PostgREST reference material used throughout the implementation. Available at: https://supabase.com/docs (Accessed: 2 September 2026).
+5. PostgreSQL Global Development Group, *PostgreSQL 17 Documentation*, chapters on Row Security Policies and PL/pgSQL. Available at: https://www.postgresql.org/docs/17/ (Accessed: 2 September 2026).
 
 ---
 
@@ -378,7 +388,7 @@ in this report:
 
 ### Appendix B — Sample Screenshots
 
-See Figures 4.1–4.8 in Chapter Four, and the full-resolution originals under `docs/screenshots/` in the repository:
+See Figures 4.1–4.9 in Chapter Four, and the full-resolution originals under `docs/screenshots/` in the repository:
 
 | File | Shows |
 |---|---|
@@ -386,13 +396,17 @@ See Figures 4.1–4.8 in Chapter Four, and the full-resolution originals under `
 | `02_signup.png` | Sign-up flow |
 | `03_farm_setup.png` | Farm setup |
 | `05_dashboard_populated.png` | Dashboard with real data (demo account) |
-| `06_season_detail.png` | Season detail, costs recorded (demo account) |
-| `07_estimate_report.png` | Estimate report with a flagged category (demo account) |
+| `06_season_detail.png` | Season detail — checklist, Category Budgets, cost distribution, recorded entries (demo account) |
+| `07_estimate_report.png` | Estimate report with a flagged category and "Record a Cost" (demo account) |
 | `08_compare_benchmark.png` | "Me vs Standard" comparison (demo account) |
 | `09_mobile_dashboard.png` | Mobile dashboard, 390px width (demo account) |
 | `10_signin.png` | Sign-in screen |
 | `11_seasons_list.png` | Seasons list, all three demo seasons |
-| `12_compare_crops.png` | Crop vs Crop comparison (demo account) |
+| `12_compare_crops.png` | Crop vs Crop comparison with year filter (demo account) |
+| `13_landing_features.png` | Landing page's "Built for the real season" interactive feature section |
+| `14_costs_overview.png` | Costs page: category pie chart and an expanded category (demo account) |
+| `15_category_detail.png` | Category detail page — every recorded entry behind one category (demo account) |
+| `16_cost_lab.png` | Cost Lab: quantity-based sliders and scenario summary |
 
 ### Appendix C — User Manual (Quick Start)
 

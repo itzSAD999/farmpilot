@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 41 issues in full technical detail, for a
-technical reader. This section describes the same 41 issues in plain
+Section 4 below describes all 42 issues in full technical detail, for a
+technical reader. This section describes the same 42 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -84,6 +84,7 @@ to define each one.
 | 39 | A whole file of code, sitting quietly in the project, turned out to be completely unused by the actual running app — and it contained its own, separate copy of the list of cost categories that had quietly gone out of date compared to the real one actually used everywhere else (calling the same category two different names in two different places). | Confirmed nothing in the app used the file at all, then deleted it, rather than fix or keep testing something nobody ever calls. |
 | 40 | The single biggest finding of this whole testing effort: the app was supposed to let a farmer record a cost even with no phone signal, and save it for later automatically — all the actual machinery for that existed and was well-built — but nothing in the real "record a cost" screen was ever connected to it. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not have it saved for later like the report and README both said it would. | Connected the recording form to the offline-saving system that already existed, so a cost recorded with no signal is now genuinely saved and automatically sent once signal returns — and proved it really works by checking it against the real database, including the specific case of the same saved item accidentally being sent twice (it correctly does not create a duplicate). |
 | 41 | Built the Twi-language feature that had been deliberately postponed until now ("only build this once everything else is done"): a farmer can now hear advice spoken aloud in Twi and read it in Twi instead of English. Before writing any of it, the real outside service was tested directly first — and it's a good thing that happened, because three things about it turned out different from what was assumed (the exact Twi dialect code, the shape of one response, and the audio file format), each of which would have caused a confusing failure if just guessed at instead of checked. | Built it properly: generated real Twi text and real spoken audio for all 8 advice categories, only ever calling the outside service once per category, ever (never while a farmer is actually using the app), with the app quietly falling back to English if anything is ever missing. Every generated translation is clearly marked "not yet checked by a person" in the database, since a machine translation of a farming term can come out wrong, and nothing in this project automatically marks one as trustworthy — only a real Twi speaker listening to it can do that. |
+| 42 | On the farm-wide costs page, tapping a category to see every recorded item opened a long dropdown right there on the page — fine for a few entries, but a farm with fifty entries in one category would have made that dropdown the entire page. Separately, on the estimate report, there was no way to click a category and see the individual items that added up to its number. | Gave the farm-wide category breakdown its own proper page instead of a dropdown, with a search box and a way to filter to just one season. Made the estimate report's categories clickable too, taking you to the same kind of detail page. |
 
 ---
 
@@ -1308,6 +1309,48 @@ live database confirms all 8 rows: `reviewed = false`, `source =
 'khaya_tts_v2'`, real Twi text, real Storage URLs. A direct `curl` fetch
 of one audio URL returns `200`, `content-type: audio/wav`, real WAV
 file-signature bytes.
+
+---
+
+### Issue #42 — Farm-wide category breakdown had no room to be a list, and the Estimate Report's categories didn't link anywhere
+**Severity:** Low (UX gap, requested directly during review of Issue #41's
+work: "if you have like 50 items the dropdown would be too long"). The
+farm-wide Costs page's category cards expanded into an inline accordion
+showing every recorded entry for that category across every season —
+workable for a handful of entries, but a farm with fifty recorded items
+in one category would turn that one card into the entire page. Separately,
+the Estimate Report's "Where Your Money Goes" category rows (§4.2.3)
+showed a "Recorded" or "Predicted" figure but had no way to click through
+and see what actually built up a recorded number — a farmer had to
+navigate back to the season page first.
+
+**Fix.** A new page, `src/pages/FarmCategoryDetail.tsx`
+(`/costs/category/:category`), is the farm-wide equivalent of the
+existing season-scoped `CategoryDetail.tsx` — every entry for one
+category across every season, with a search box and a season filter,
+instead of an accordion. The Costs page's category cards now link there
+directly rather than expanding in place. Each category heading on the
+Estimate Report now links to the existing `/season/:id/category/:category`
+page, reusing `CategoryDetail.tsx` as-is — including for a still-Predicted
+category, where it correctly shows the "nothing recorded yet, add the
+first one" state rather than an empty or broken page. A search box was
+also added to `CategoryDetail.tsx` itself (shown once a season has more
+than 5 entries in a category), for the same underlying reason. On both
+pages, the summary total deliberately stays fixed to the *real, full*
+total regardless of what the search or filter narrows the list down to —
+a search box that quietly changed "how much have I spent" would be worse
+than no search box at all.
+
+**Evidence.** `npx tsc -b --noEmit` and `npm run build` both clean. Live
+Puppeteer walkthrough on the demo account: clicking "Fertiliser" on
+`/costs` navigates to `/costs/category/fertiliser` (not an accordion),
+correctly showing both the 2025 (subsidised) and 2026 (open-market)
+entries with season labels, GHS 8,000.00 total across 2 seasons; typing
+"subsidised" into the search narrows to the one matching 2025 entry while
+the header total stays at GHS 8,000.00. Clicking "Fertiliser" on
+`/report/74` (the flagged Maize 2026 estimate) navigates to
+`/season/57/category/fertiliser`, the correct season-scoped page, showing
+the real +42% variance.
 
 ---
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSeason } from '../api/seasons';
@@ -17,6 +17,7 @@ export function CategoryDetail() {
 
   const [isCostModalOpen, setIsCostModalOpen] = useState(false);
   const [editingCostId, setEditingCostId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
 
   const { data: season, isLoading: isSeasonLoading } = useQuery({
     queryKey: ['season', seasonId],
@@ -47,11 +48,23 @@ export function CategoryDetail() {
   const editingCost = allCosts?.find((c) => c.id === editingCostId) || null;
   const isLoading = isSeasonLoading || isCostsLoading;
   const config = CATEGORIES[cat];
-  const entries = (allCosts || [])
-    .filter((c) => c.category === cat)
-    .sort((a, b) => new Date(b.date_incurred || b.created_at).getTime() - new Date(a.date_incurred || a.created_at).getTime());
+  const allEntriesForCategory = useMemo(
+    () =>
+      (allCosts || [])
+        .filter((c) => c.category === cat)
+        .sort((a, b) => new Date(b.date_incurred || b.created_at).getTime() - new Date(a.date_incurred || a.created_at).getTime()),
+    [allCosts, cat]
+  );
+  const entries = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allEntriesForCategory;
+    return allEntriesForCategory.filter((c) => (c.description || '').toLowerCase().includes(q));
+  }, [allEntriesForCategory, search]);
 
-  const subtotalPesewas = entries.reduce((sum, c) => sum + c.amount_pesewas, 0);
+  // The summary card always reflects the full season total, regardless of
+  // search — only the list below narrows, so "how much did I really spend
+  // vs. benchmark" never looks wrong while searching.
+  const subtotalPesewas = allEntriesForCategory.reduce((sum, c) => sum + c.amount_pesewas, 0);
   const variancePct = benchmarkPesewas && benchmarkPesewas > 0
     ? Math.round(((subtotalPesewas - benchmarkPesewas) / benchmarkPesewas) * 100)
     : null;
@@ -120,15 +133,34 @@ export function CategoryDetail() {
         </button>
       </div>
 
+      {allEntriesForCategory.length > 5 && (
+        <div className="relative mb-4">
+          <svg className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search description..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+          />
+        </div>
+      )}
+
       {entries.length === 0 ? (
         <div className="bg-white dark:bg-white/5 rounded-[24px] p-10 border border-gray-100 dark:border-white/10 text-center">
-          <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Nothing recorded in {config.label.toLowerCase()} yet for this season.</p>
-          <button
-            onClick={() => { setEditingCostId(null); setIsCostModalOpen(true); }}
-            className="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors"
-          >
-            Record the first one
-          </button>
+          {allEntriesForCategory.length === 0 ? (
+            <>
+              <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Nothing recorded in {config.label.toLowerCase()} yet for this season.</p>
+              <button
+                onClick={() => { setEditingCostId(null); setIsCostModalOpen(true); }}
+                className="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors"
+              >
+                Record the first one
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 font-medium">No entries match "{search}".</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

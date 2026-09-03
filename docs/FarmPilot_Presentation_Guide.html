@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FarmPilot Mini Project Report</title>
+<style>
+  @page { size: A4; margin: 2.5cm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.55; max-width: 850px; margin: 40px auto; padding: 0 20px; font-size: 12pt; }
+  h1 { font-size: 21pt; margin-top: 1.4em; padding-bottom: 0.3em; border-bottom: 2.5px solid #1B5E20; letter-spacing: 0.02em; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; text-align: center; border-bottom: none; font-size: 19pt; line-height: 1.35; letter-spacing: 0.01em; }
+  h2 { font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h3 { font-size: 13.5pt; margin-top: 1.3em; color: #14461a; }
+  h4 { font-size: 12pt; margin-top: 1.1em; font-style: italic; }
+  p { margin: 0.6em 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3ee; font-weight: bold; }
+  code { background: #f2f2f2; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.92em; }
+  pre.code { background: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 9.5pt; line-height: 1.4; }
+  pre.code code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid #1B5E20; margin: 1em 0; padding: 0.4em 1em; background: #f4f9f4; color: #333; }
+  img { display: block; margin: 10px auto; max-width: 100%; }
+  figure { margin: 1.4em 0; text-align: center; page-break-inside: avoid; }
+  figure img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  figcaption { margin-top: 0.5em; font-size: 10pt; font-style: italic; color: #555; }
+  .figure-wrap { text-align: center; margin: 1.4em 0; page-break-inside: avoid; }
+  .figure-wrap img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  /* A paragraph that is nothing but "*Figure N.M — ...*" is the report's
+     own manually-numbered caption — style it like one, sitting just above
+     its image (the caption line always precedes the image in the source). */
+  p:has(> em:only-child) { text-align: center; font-size: 10pt; font-style: italic; color: #555; margin: 1.4em 0 -0.6em; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+  .diagram-note { background: #fff8e6; border: 1px solid #e8d38a; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 10.5pt; }
+  ul, ol { margin: 0.5em 0; padding-left: 1.6em; }
+  li { margin: 0.25em 0; }
+  a { color: #1B5E20; }
+  
+  /* Title page: the info table (Course/Supervisor/...) and Team table right
+     after the H1, before the Abstract's H2, read like a cover page. */
+  h1:first-of-type ~ table:nth-of-type(-n+2) { margin: 1.5em auto; max-width: 520px; }
+  h1:first-of-type ~ table:nth-of-type(-n+2) td, h1:first-of-type ~ table:nth-of-type(-n+2) th { text-align: center; }
+  h1:first-of-type ~ p:nth-of-type(-n+2) { text-align: center; font-size: 12.5pt; }
+</style>
+</head>
+<body>
+<h1 id="farmpilot-presentation-guide">FarmPilot — Presentation Guide</h1>
+<p><strong>This is a personal prep document, not a submitted deliverable.</strong> It exists so you can walk into the presentation and answer "what did you actually build and why" for any part of the system without hesitating. Everything here is drawn from the real report, SDD, PRD, and Development Log — this is the condensed, spoken-out-loud version of those, not new content.</p>
+<hr/>
+<h2 id="1-the-elevator-pitch-30-seconds">1. The elevator pitch (30 seconds)</h2>
+<p>FarmPilot answers two questions a smallholder Ghanaian farmer currently has no way to answer: <strong>what should this season cost</strong>, and <strong>where am I overspending</strong>. A farmer logs what they actually spend — seeds, fertiliser, labour, and so on — and the system compares that, category by category, against an independent standard built from real MoFA price and application data. If a category comes in more than 30% over standard, it's flagged with the exact percentage, the money that could be saved, and one specific, practical suggestion — not generic advice. A farmer's very first season already gets a usable estimate, because the comparison never depends on the farmer having any history of their own.</p>
+<h2 id="2-the-one-idea-everything-is-built-around">2. The one idea everything is built around</h2>
+<p>If you remember only one thing to say, say this: <strong>you cannot detect overspending by comparing a farmer only to their own past records.</strong> If the only reference point is your own history, your numbers always equal your own baseline — variance is always zero, by construction. Overspending only becomes visible when you compare against something <em>independent</em> of the farmer being measured. That's the whole reason the "benchmark" (MoFA-derived standard prices and per-acre input norms) exists as a completely separate data source from anything a farmer ever enters. This was also the site of the single most serious bug found during development (see §6 below) — the first version of the estimator violated this exact principle by accident.</p>
+<h2 id="3-how-it-actually-works-step-by-step">3. How it actually works, step by step</h2>
+<ol>
+<li><strong>Sign up</strong> (phone or email) → <strong>set up a farm</strong> (name, region, district, acreage) — required once before anything else is reachable.</li>
+<li><strong>Start a season</strong>: pick a crop, year, growing window, area planted. If the farmer already has real figures from up to 3 previous years for this crop, they can enter those right here instead of starting blind — those become instantly-usable history.</li>
+<li><strong>Record costs</strong> against the season, in one of 8 fixed categories (seeds, fertiliser, agrochemicals, land prep, labour, transport, storage, other), either as a flat total or a quantity × rate (e.g. "3 bags × GHS 461.25").</li>
+<li><strong>Generate an estimate.</strong> A single database function (<code>generate_estimate</code>) does three things per category: (a) decides whether to predict from the farmer's own history or the standard benchmark, depending on whether they have a completed prior season of that crop; (b) if the farmer has <em>actually recorded</em> a cost this season, uses that real number instead of a prediction; (c) for anything actually recorded, compares it to the fixed benchmark and flags it if it's more than 30% over.</li>
+<li><strong>See the report</strong>: total estimated cost, a category breakdown labelled "Recorded" or "Predicted," and for anything flagged — the exact percentage over, the possible saving in cedis, and a specific suggestion (e.g. "check the subsidy window before buying fertiliser at market price").</li>
+<li>Everything else — the dashboard, Compare, Cost Lab, the weekly check-in, FarmBot, Twi audio — supports that core loop; none of it works without it.</li>
+</ol>
+<h2 id="4-every-feature-one-line-each-and-why-it-exists">4. Every feature, one line each, and why it exists</h2>
+<table>
+<thead><tr><th>Feature</th><th>Why it exists</th></tr></thead>
+<tbody>
+<tr><td>Benchmark-vs-history estimation engine</td><td>The core deliverable — §2 above</td></tr>
+<tr><td>Weekly Cost Check-in</td><td>A standing prompt asking "did you spend anything this week?" — the recording habit is the actual adoption risk, not the math</td></tr>
+<tr><td>History back-fill at season creation</td><td>A returning farmer with real past figures shouldn't be forced through the "no history yet" benchmark path on day one</td></tr>
+<tr><td>Category Budgets</td><td>A farmer's own personal spending cap per category, independent of the benchmark — "don't let me spend more than GHS 500 on labour," warned live while recording</td></tr>
+<tr><td>Cost Lab</td><td>A what-if sandbox — try quantities and rates before committing to a real season, nothing saved until you do</td></tr>
+<tr><td>Compare (season/crop/benchmark)</td><td>Three ways to see spend against something — each other's seasons, each other's crops, or the standard rate</td></tr>
+<tr><td>FarmBot (AI assistant)</td><td>Answers questions using the farmer's <em>real</em> recorded and flagged data, not generic chat</td></tr>
+<tr><td>Agronomic guide library</td><td>Deeper how-to content matched to whatever category is currently flagged</td></tr>
+<tr><td>Offline cost recording</td><td>A farmer in a field with no signal can still record a cost — queues locally, syncs automatically on reconnect (this was broken until very late in the build — see §6)</td></tr>
+<tr><td>PDF export</td><td>Native browser print-to-PDF for the report and costs pages — something to hand a lender or cooperative</td></tr>
+<tr><td>Twi advice translation + audio</td><td>A farmer more comfortable in Twi can read and hear flagged-category advice, not just English</td></tr>
+</tbody></table>
+<h2 id="5-architecture-decisions-the-why-not-just-the-what">5. Architecture decisions — the "why," not just the "what"</h2>
+<p>Say these in your own words if asked "why did you build it this way":</p>
+<ul>
+<li><strong>No separate backend server.</strong> The estimation logic runs as a function <em>inside</em> the PostgreSQL database (PL/pgSQL), not a separate API service. Reasoning: it runs right next to the data it needs, the same database-level security automatically protects it, and there's one fewer piece of infrastructure to build and secure. Trade-off accepted: PL/pgSQL is less common and harder to unit-test than a general-purpose language — worth it for a project this size.</li>
+<li><strong>Row-level security, not app-level checks.</strong> "A farmer can only see their own data" is enforced <em>by the database itself</em>, on every single query, regardless of which part of the app asked. This can't be bypassed by an app bug, because the app isn't what's enforcing it. Proven directly with an automated test using two real, independent accounts (Issue #36).</li>
+<li><strong>Money as whole pesewas (integers), never floating-point cedis.</strong> Eliminates rounding drift entirely — a well-known class of bug in financial software.</li>
+<li><strong>Benchmark data is generated once and cached, never called live.</strong> The same principle governs both the MoFA benchmark data (seeded once via migration) and the newer Twi translation/audio (generated once via a script, read from a cache at runtime, never calling the third-party AI API while a farmer is using the app — this matters concretely because that API is capped at 100 calls/month on the free tier).</li>
+<li><strong>One shared Supabase project for dev and production</strong>, not separate environments — a deliberate trade-off for a three-person team on a 14-day build, accepted with mitigations (every change goes through a committed migration file, so the database can be rebuilt from scratch).</li>
+</ul>
+<h2 id="6-the-three-most-important-bugs-found-tell-these-stories-if-asked-what-went-wrong">6. The three most important bugs found — tell these stories if asked "what went wrong"</h2>
+<p>These are the best answers to "what was hard" or "what did you learn," because they're real, specific, and show the testing process actually caught something meaningful — not a rehearsed list.</p>
+<ol>
+<li><strong>The estimator could never detect overspending, on day one of the project's first serious test.</strong> The first version compared a farmer's "estimated" figure against a "benchmark" figure computed from the <em>same source</em> whenever no history existed — so on any farmer's first season, the two numbers were identical by construction, and no category could ever be flagged, no matter how much someone actually overspent. Caught by testing the engine directly against a deliberately-inflated known figure, not by looking at the UI. Fixed by explicitly checking whether the farmer had <em>actually recorded</em> a cost this season, and only ever comparing that real figure — never a prediction — against the benchmark.</li>
+<li><strong>A data-loading mistake inflated every cost estimate roughly 5×</strong> — a re-run seed script silently duplicated benchmark rows instead of updating them, because a plain <code>UNIQUE</code> constraint doesn't treat two <code>NULL</code> rows as conflicting the way a partial index does. Found and fixed during the hardening pass.</li>
+<li><strong>Offline cost recording was fully built but never actually connected to the real recording form.</strong> The whole queue-and-retry system existed — correct code, a dedicated database column built specifically for safe retries — but the one function that actually puts a write into that queue had zero callers anywhere in the app. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not get the "saves and syncs later" behaviour the report claimed. Found only because writing an automated test for it required tracing the actual call path — and it wasn't there. This is arguably the single best answer to "why does testing matter," because a human clicking through the app with a good connection would never have noticed.</li>
+</ol>
+<h2 id="7-what-s-automated-what-s-manual-and-what-s-genuinely-not-tested-at-all">7. What's automated, what's manual, and what's genuinely not tested at all</h2>
+<p>Be straight about this if asked — it's a stronger answer than pretending everything is covered.</p>
+<p><strong>Automated and passing (67 unit tests, 64 integration tests, both re-runnable on demand):</strong></p>
+<ul>
+<li>The estimation engine itself — benchmark method, history method, flagging, non-flagging, variance/advice/saving computation</li>
+<li>Every category-budget behaviour (setting, replacing, deleting, spent/remaining/over-budget arithmetic)</li>
+<li>Farm/season/cost CRUD, including cascade deletion (deleting a season removes its costs)</li>
+<li>Cross-user Row-Level-Security isolation, using two genuinely independent accounts</li>
+<li>All three Compare views, the dashboard rollups, the guide-matching logic</li>
+<li>Authentication (sign-up, duplicate rejection, sign-in, wrong password)</li>
+<li>A database trigger that writes overspend notifications automatically</li>
+<li>The offline queue's actual write path against the real database, including the no-duplicate-on-retry guarantee</li>
+<li>The Twi advice cache, including the real translated content and a genuinely downloadable audio file</li>
+<li>Every pure formatting/conversion/validation function (money, phone numbers, category lists, the acreage-split rule)</li>
+</ul>
+<p><strong>Verified manually (Puppeteer, screenshots, or by hand), not re-checked automatically:</strong></p>
+<ul>
+<li>Every screen's visual layout and responsiveness (mobile especially)</li>
+<li>Dark mode across all pages</li>
+<li>The actual click-through UX of every feature (what a farmer sees and taps)</li>
+<li>PDF export's printed output</li>
+<li>The speaker button's real audio playback in a real browser</li>
+<li>Anything involving FarmBot's live AI responses (inherently non-deterministic — not meaningfully testable the same way)</li>
+</ul>
+<p><strong>Not tested at all, and worth saying so if asked directly:</strong></p>
+<ul>
+<li>Translation <em>quality</em> — whether the generated Twi is natural, correct phrasing a farmer would find clear. This can only be judged by a native speaker, not a test. Every generated row is explicitly marked "not yet reviewed" in the database for exactly this reason.</li>
+<li>No CI pipeline runs any of this automatically on every push — the suite exists and passes, but only when someone runs it by hand.</li>
+<li>No UI-level component tests (e.g. React Testing Library) — all business logic is covered; clicking-and-checking-what-renders is not.</li>
+<li>The indicative benchmark norms for 9 of the 10 crops are not yet verified against CSIR-CRI extension data or real farm records — stated plainly as indicative, not sourced fact.</li>
+</ul>
+<h2 id="8-numbers-to-have-ready">8. Numbers to have ready</h2>
+<ul>
+<li><strong>41</strong> issues found and fixed in the post-build hardening pass, each documented with root cause, fix, and live evidence.</li>
+<li><strong>67</strong> automated unit tests, <strong>64</strong> automated integration tests (against the real, live database).</li>
+<li><strong>21</strong> numbered database migrations (schema is 100% reproducible from committed SQL files — no manual step).</li>
+<li><strong>8</strong> cost categories, <strong>10</strong> crops with benchmark coverage.</li>
+<li><strong>30%</strong> — the default overspend-flagging threshold.</li>
+<li><strong>100 calls/month</strong> — the Khaya AI free-tier quota the whole localisation feature is designed around never exceeding (uses 16 calls total, once, ever).</li>
+</ul>
+<h2 id="9-if-you-get-asked-a-hard-question">9. If you get asked a hard question</h2>
+<ul>
+<li><strong>"Why should I trust this estimate is accurate?"</strong> → It isn't presented as precise — it's explicitly built from 2018 MoFA national averages with a stated inflation multiplier, and the report says plainly that this doesn't yet vary by region or true smallholder farm scale. The value isn't perfect precision; it's having <em>any</em> independent reference point at all, where today there is none.</li>
+<li><strong>"What would you do differently with more time?"</strong> → Region-specific benchmark data, verified crop norms for all 10 crops (currently indicative for 9 of them), UI-level test coverage, and a CI pipeline — all listed honestly in the report's own Recommendations section, not things discovered just for this answer.</li>
+<li><strong>"How do you know the security actually works, not just that you wrote a policy?"</strong> → Because it's tested directly: two real, independent accounts, one trying to read/update/delete the other's farm through raw database queries (not just through the app's own UI, which could hide a bug) — and it fails every time, provably.</li>
+</ul>
+<hr/>
+<p><em>This document is not part of the formal submission set (Report, PRD, SDD, Development Log) — it's a study aid built from them.</em></p>
+</body>
+</html>

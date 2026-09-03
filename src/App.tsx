@@ -21,6 +21,7 @@ import { GuideDetail } from './pages/GuideDetail';
 import { CostsOverview } from './pages/CostsOverview';
 import { Lab } from './pages/Lab';
 import { CategoryDetail } from './pages/CategoryDetail';
+import { FarmCategoryDetail } from './pages/FarmCategoryDetail';
 
 export function App() {
   return (
@@ -152,6 +153,16 @@ export function App() {
             <ProtectedRoute>
               <AppShell>
                 <CategoryDetail />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/costs/category/:category"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <FarmCategoryDetail />
               </AppShell>
             </ProtectedRoute>
           }

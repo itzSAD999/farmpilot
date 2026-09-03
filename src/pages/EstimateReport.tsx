@@ -407,7 +407,13 @@ export function EstimateReport() {
                     <div className="flex justify-between items-end mb-3">
                       <div className="flex flex-col">
                         <span className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors print:text-black flex items-center">
-                          {readableCategory}
+                          <Link
+                            to={`/season/${line.season_id}/category/${line.category}`}
+                            className="hover:underline print:no-underline print:pointer-events-none"
+                            title={line.is_actual ? `See every ${readableCategory.toLowerCase()} entry behind this number` : `Nothing recorded in ${readableCategory.toLowerCase()} yet — tap to record one`}
+                          >
+                            {readableCategory}
+                          </Link>
                           <span
                             className={`ml-2 inline-flex items-center text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border print:hidden ${
                               line.is_actual

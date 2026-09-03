@@ -50,8 +50,9 @@
 <thead><tr><th></th><th></th></tr></thead>
 <tbody>
 <tr><td><strong>Document type</strong></td><td>Product Requirements Document (PRD)</td></tr>
-<tr><td><strong>Version</strong></td><td>1.2</td></tr>
+<tr><td><strong>Version</strong></td><td>1.3</td></tr>
 <tr><td><strong>Status</strong></td><td>Approved for build</td></tr>
+<tr><td><strong>Changes in 1.3</strong></td><td>Budgeting extended from one tier to four (§7.15): a total cap per crop, one overall Farm Budget, that Farm Budget assigned across categories farm-wide, and a category cap within a specific crop — on top of the existing per-season Category Budgets (§7.15A); cost recording now checks all five tiers live before saving (FR-15.10); FarmBot has read access to every tier (FR-15.11)</td></tr>
 <tr><td><strong>Changes in 1.2</strong></td><td>Estimation engine now compares this season's <em>actually recorded</em> costs against benchmark, not just a prediction against itself (see §7.6, BR-5/BR-6); per-category "don't know this cost" benchmark fill (FR-4.13); interactive cost-tracking checklist on the report's cold-start screen (FR-9.10); quick-add-cost entry point from the dashboard (FR-4.14); weekly check-in day added to farm setup (FR-2.6, §7.4A); fixed a data bug that had silently 5×'d every Maize benchmark figure (§8.4)</td></tr>
 <tr><td><strong>Changes in 1.1</strong></td><td>Phone-first auth · dashboard rollups · offline capture · local languages</td></tr>
 <tr><td><strong>Product</strong></td><td>FarmPilot — farm cost estimation and reduction tool</td></tr>
@@ -544,6 +545,41 @@
 <tr><td>FR-14.5</td><td>FarmBot handles network errors gracefully without crashing the application</td><td>P0</td></tr>
 <tr><td>FR-14.6</td><td>FarmBot has access to the real overspend flags computed by the estimation engine (category, variance percentage, potential saving, advice) for the most recent estimate on each of the user's seasons, and is instructed to lead with them — not a generic guess — when asked about overspending</td><td>P0</td></tr>
 </tbody></table>
+<h3 id="7-15-budgeting">7.15 Budgeting</h3>
+<p>The benchmark comparison (§2.3, FR-7) tells a farmer when a category is</p>
+<p>above the <em>standard</em> rate — a fixed, external number the farmer doesn't</p>
+<p>control. A farmer separately wants to express their own ceiling — their</p>
+<p>own cash on hand, not MoFA's national average — and to do so at whichever</p>
+<p>level they're actually thinking at: one category this season, a whole</p>
+<p>crop, a whole category across every crop, a whole farm, or a specific</p>
+<p>category within a specific crop. These are five independent, optional</p>
+<p>caps; none of them replace or adjust the benchmark, and a category can be</p>
+<p>within benchmark while over a farmer's own budget, or the reverse.</p>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-15.1</td><td>A farmer can set a spending cap for one category within one season (Category Budgets)</td><td>P1</td></tr>
+<tr><td>FR-15.2</td><td>A farmer can set one total spending cap for a crop, across every season of that crop on the farm, independent of year or growing window</td><td>P1</td></tr>
+<tr><td>FR-15.3</td><td>A farmer can set one overall spending cap for the whole farm — every season, crop, and category combined</td><td>P1</td></tr>
+<tr><td>FR-15.4</td><td>A farmer can assign portions of the farm-wide cap across the 8 cost categories, farm-wide rather than tied to one season</td><td>P1</td></tr>
+<tr><td>FR-15.5</td><td>A farmer can set a spending cap for one category within one specific crop, across every season of that crop</td><td>P1</td></tr>
+<tr><td>FR-15.6</td><td>Every budget shows the amount spent, the amount remaining, and whether it has been exceeded, computed from the same recorded costs the rest of the app already uses — never a second, separately-entered total</td><td>P0</td></tr>
+<tr><td>FR-15.7</td><td>A farmer can view every budget they've set in one place, search it by crop or category name, and filter to only over-budget or only not-yet-set caps</td><td>P1</td></tr>
+<tr><td>FR-15.8</td><td>Budgets are reachable from Settings and from the main navigation</td><td>P1</td></tr>
+<tr><td>FR-15.9</td><td>A crop-level or crop-and-category budget is editable in context from that crop's season screen, not only from the dedicated Budgets page</td><td>P2</td></tr>
+<tr><td>FR-15.10</td><td>Recording a new cost checks it against every budget tier that applies (the season-category cap, the crop-and-category cap, the farm-wide category cap, the crop total, and the farm total) and warns the farmer, before saving, if any would be exceeded</td><td>P1</td></tr>
+<tr><td>FR-15.11</td><td>The AI assistant (FarmBot) has read access to every budget a farmer has set, and answers "am I within budget" from those caps rather than from the benchmark comparison</td><td>P2</td></tr>
+</tbody></table>
+<p><strong>Why five tiers, not one.</strong> An earlier pass (§16.4 of the companion</p>
+<p>System Design Document has the full account) built only the per-season</p>
+<p>Category Budget. In practice a farmer plans at several altitudes at</p>
+<p>once — "what's my whole season's spend," "what's this crop going to cost</p>
+<p>me all year," "what's my ceiling on fertiliser no matter which crop it's</p>
+<p>for" — and forcing all of that through a single season+category cap meant</p>
+<p>re-entering the same intent every season. Each tier is optional and</p>
+<p>independent by design (P1), rather than requiring a farmer to reconcile</p>
+<p>five numbers that must sum to one another, which would turn a planning</p>
+<p>aid into a second bookkeeping burden.</p>
 <hr/>
 <h2 id="8-data-requirements">8. Data Requirements</h2>
 <h3 id="8-1-what-the-product-must-hold">8.1 What the product must hold</h3>
@@ -560,6 +596,7 @@
 <tr><td>Farmer — farm</td><td>Name, district, region, total area, weekly check-in day</td></tr>
 <tr><td>Farmer — season</td><td>Crop, year, window, area planted, harvest quantity and unit, revenue, completion status</td></tr>
 <tr><td>Farmer — costs</td><td>Category, description, quantity, unit, unit price, amount, date</td></tr>
+<tr><td>Farmer — budgets</td><td>Five independent, optional caps (§7.15): per season+category, per crop total, per farm total, per category farm-wide, and per crop+category</td></tr>
 <tr><td>Output — estimate</td><td>Method, seasons used, area, total, settings snapshot, timestamp</td></tr>
 <tr><td>Output — lines</td><td>Category, estimated amount, benchmark amount, variance, flag, advice, potential saving</td></tr>
 <tr><td>Sync</td><td>Device-generated <code>client_id</code> and <code>updated_at</code> on seasons and costs, for idempotent offline flush</td></tr>
@@ -726,6 +763,7 @@
 <tr><td>6</td><td>Season detail</td><td>Season header; cost item list with category, description, amount, delete; add-cost form (with per-category "don't know this cost" benchmark fill); running total; close-season control</td><td>Generate estimate</td></tr>
 <tr><td>7</td><td>Report</td><td>Estimated total; method note; category breakdown with amount, share, and a Recorded/Predicted label per category; flagged categories first and visually distinct, each with variance, possible saving, and advice; audio playback where a local language is selected; total possible saving; where there is nothing to show yet, an interactive cost-tracking checklist in place of a dead end</td><td>Back to season</td></tr>
 <tr><td>8</td><td>Settings</td><td>Preferred language; link an email address to a phone account</td><td>Save</td></tr>
+<tr><td>9</td><td>Budgets</td><td>Stat row (Farm Budget, farm spent, budgets set, over-budget count); Farm Budget cap; donut chart of farm-wide category allocation; By Category / By Crop card grids, each with a progress bar and inline edit; a crop card expands to that crop's own category caps; search and an All / Over Budget / Not Set filter; a read-only breakdown of actual spend by season and crop</td><td>Set/edit a budget</td></tr>
 </tbody></table>
 <h3 id="11-1-report-layout-requirement">11.1 Report layout requirement</h3>
 <pre class="code"><code>┌─────────────────────────────────────────────────────┐
@@ -789,6 +827,7 @@
 <tr><td>BR-16</td><td>A phone number identifies exactly one account; normalisation happens before lookup</td></tr>
 <tr><td>BR-17</td><td>An offline write carries a device-generated <code>client_id</code>; a replay of the same <code>client_id</code> is ignored, never duplicated</td></tr>
 <tr><td>BR-18</td><td>A cached translation is served in preference to a fresh API call</td></tr>
+<tr><td>BR-19</td><td>Every budget tier (§7.15) is independent and optional; none require reconciliation against one another, and a "spent" figure is always computed from <code>season_costs</code>, never entered separately</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="13-edge-cases-and-error-handling">13. Edge Cases and Error Handling</h2>

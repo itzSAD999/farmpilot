@@ -6,7 +6,8 @@ Department of Computer Science · Mini Project 2025/2026
 | | |
 |---|---|
 | **Document type** | Software Design Document (SDD) / System Architecture Document |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
+| **Changes in 1.3** | Budgeting extended from one tier (Category Budgets) to five (§20): `crop_budgets`, `farm_budgets`, `farm_category_budgets` (migrations 022–023), and `crop_category_budgets` (024), each with its own status view following the same shape; `AddCostForm` checks all applicable tiers live before saving; FarmBot's context extended to include every tier |
 | **Changes in 1.2** | `generate_estimate()` rewritten to compare this season's actually-recorded costs against benchmark, not a prediction against itself (§9.2); `estimate_lines.is_actual` added; `get_category_benchmark_pesewas()` RPC for per-category "don't know this cost" fill (§7.1); fixed `crop_input_norms` duplicate-row bug via partial unique indexes (§6.5); interactive cost-tracking checklist replaces the report's dead-end empty state (§13.1) |
 | **Changes in 1.1** | Phone-first auth (profiles) · sync columns · rollup views · translation cache |
 | **Project** | FarmPilot — farm cost estimation and reduction tool |
@@ -36,6 +37,7 @@ Department of Computer Science · Mini Project 2025/2026
 17. Risks and Mitigations
 18. Future Work
 19. Localisation — Twi Translation and Audio (Khaya AI)
+20. Budgeting — Multi-Tier Spending Caps
 
 ---
 
@@ -1197,6 +1199,57 @@ Storage writes require an authenticated session, consistent with the rest of thi
 ### 19.6 What is verified automatically vs. what still needs a human
 
 `src/lib/khaya.integration.test.ts` proves, against the live database, that all 8 categories have real cached text and a genuinely publicly-downloadable audio URL, and that the English-fallback path works correctly for an unknown category. What it cannot and does not claim to verify is *translation quality* — whether "Wo aduannuru a wode di dwuma no boro nea wɔhwɛ kwan no so..." is natural, correct Twi that a farmer would find clear rather than stilted or wrong. `reviewed` is `false` on every row the script writes and is never set to `true` by any code path in this project; a native Twi speaker must listen to each of the 8 clips and flip it by hand (directly in the database, or via a future review UI — not yet built) before this feature is presented as demo-ready rather than "generated but unverified."
+
+---
+
+## 20. Budgeting — Multi-Tier Spending Caps
+
+### 20.1 Purpose
+
+The benchmark comparison (§9) tells a farmer when a category is above the *standard* rate — a fixed, external number the farmer doesn't set. Budgets are a separate, farmer-owned ceiling, checked against the same recorded spend but never against the benchmark. The two are deliberately independent: a category can be within benchmark and still over a farmer's own budget, or the reverse (PRD §7.15).
+
+What shipped first (migration 015, `category_budgets`) covered exactly one tier — one category, one season. In practice a farmer plans at several altitudes at once, so four more tiers were added, each scoped differently but sharing one design:
+
+| Tier | Table | Scope | Migration |
+|---|---|---|---|
+| Category (season) | `category_budgets` | one `(season_id, category)` | 015 |
+| Crop (total) | `crop_budgets` | one `(farm_id, crop_id)` — every season of that crop | 022 |
+| Farm (total) | `farm_budgets` | one per `farm_id` | 023 |
+| Category (farm-wide) | `farm_category_budgets` | one `(farm_id, category)` — every crop and season | 023 |
+| Crop × Category | `crop_category_budgets` | one `(farm_id, crop_id, category)` — every season of that crop | 024 |
+
+### 20.2 Data model
+
+Every table follows the same shape: `id`, its scoping foreign key(s), `category cost_category` where applicable, `limit_pesewas bigint not null check (limit_pesewas > 0)`, `created_at`, `updated_at`, and a `unique` constraint on the scoping columns so `upsert(..., { onConflict: '<scope columns>' })` is how the client always sets or replaces a cap — there is no separate "does one already exist" check on the client. RLS on all four new tables follows the existing farm-ownership pattern (`exists (select 1 from farms f where f.id = <table>.farm_id and f.user_id = auth.uid())`), the same shape as every other farmer-owned table in this schema (§8.2).
+
+Each table has a matching `v_<table>_status` view (`security_invoker = true`, so RLS on the underlying tables is still what actually restricts access — the view grants nothing on its own) that joins the cap against a `left join lateral` sum of `season_costs`, scoped identically to the cap itself (e.g. `crop_budgets` sums every `season_costs` row whose `season.farm_id` and `season.crop_id` match; `farm_category_budgets` sums every row whose `season.farm_id` matches and `category` matches, across every crop). Every view exposes the same five computed columns: `spent_pesewas`, `remaining_pesewas`, `is_over_budget`, `pct_used`. The client never computes "am I over budget" itself — it reads the view.
+
+This mirrors `v_category_budget_status` (015) deliberately: adding a tier meant adding a table and a view in the same shape, not designing a new client-side aggregation each time, and it's why `src/api/cropBudgets.ts`, `farmBudgets.ts`, and `cropCategoryBudgets.ts` (§20.3) read almost identically to `budgets.ts`.
+
+### 20.3 Data access layer
+
+| Function | Table / view | Notes |
+|---|---|---|
+| `listCropBudgets(farmId)`, `setCropBudget`, `deleteCropBudget` | `crop_budgets` / `v_crop_budget_status` | `src/api/cropBudgets.ts` |
+| `getFarmBudget(farmId)`, `setFarmBudget`, `deleteFarmBudget` | `farm_budgets` / `v_farm_budget_status` | `getFarmBudget` returns `null` via `.maybeSingle()` rather than throwing, since a farm has at most one row and often none yet |
+| `listFarmCategoryBudgets`, `setFarmCategoryBudget`, `deleteFarmCategoryBudget` | `farm_category_budgets` / `v_farm_category_budget_status` | `src/api/farmBudgets.ts` |
+| `listCropCategoryBudgets`, `setCropCategoryBudget`, `deleteCropCategoryBudget` | `crop_category_budgets` / `v_crop_category_budget_status` | `src/api/cropCategoryBudgets.ts` |
+
+Each module also exports its own `handle*BudgetError()`, mapping a network failure, a `23505` unique-constraint hit (a stale UI trying to insert a second cap for the same scope instead of updating the existing one), and everything else to a farmer-readable message — the same three-way mapping `budgets.ts` already used, kept as three near-identical functions rather than one shared one, matching this project's existing preference for an explicit, grep-able error mapper per module over a shared abstraction that would obscure which table's constraint actually fired.
+
+### 20.4 Runtime integration
+
+**Recording a cost.** `AddCostForm.tsx` is the one form used from the season page, the dashboard's quick-add, and the estimate report's "Record a Cost" action. It already read the season-level `category_budgets` cap (§9.2 of the PRD's predecessor to this pass). It now also resolves the season's `farm_id`/`crop_id` (via `getSeason(seasonId)`, sharing the `['season', seasonId]` query-cache key `SeasonDetail.tsx` already populates — no extra request when opened from there) and checks the pending amount against `crop_category_budgets`, `farm_category_budgets`, and `crop_budgets` in addition to the season-level cap and `farm_budgets`. Each tier that would be exceeded renders its own amber warning; none of the checks block the save — they inform, matching the existing category-budget warning's behaviour exactly. All five checks are skipped while editing an existing cost (`enabled: step === 2 && !isEditing`), since a budget's `spent_pesewas` already includes the value being edited and re-adding it would double-count.
+
+**FarmBot.** The system prompt (`src/components/domain/FarmBot.tsx`) fetches all four new tiers alongside the existing season-category budgets and includes a "Budgets" section listing every cap, its spend, and whether it's over — with an explicit instruction to answer a budget question from these figures rather than from the benchmark's overspend flags, and to say plainly that nothing has been set rather than inventing a number.
+
+**Navigation.** `/budgets` (`src/pages/CropBudgets.tsx`) is the single page covering every tier except the per-season Category Budgets, which stay on the season screen where they're scoped. It is reachable from Settings and from the desktop sidebar (which shows "Budgets" in place of the "Help" link removed in this pass — Help remains reachable from Settings only), and from the Dashboard via a summary widget showing Farm Budget spend and an over-budget count.
+
+### 20.5 What is verified vs. what is a planning aid, not an enforcement
+
+Every `is_over_budget`/`pct_used` figure is computed by the database view directly from `season_costs`, the same table the estimation engine and every cost report already read — there is no second, independently-entered "spent" figure that could drift out of sync. This was confirmed live: after seeding the demo account's budgeting rows (`supabase/demo_seed.sql`), each view was queried directly and its `spent_pesewas`/`is_over_budget`/`pct_used` matched hand-computed totals exactly (e.g. `crop_category_budgets` for Maize/Fertiliser: limit GHS 7,000, real recorded spend GHS 8,000 across both Maize seasons, `pct_used = 114`, `is_over_budget = true`).
+
+What is *not* enforced, by design (BR-19): nothing requires a farm-wide category budget to sum to the Farm Budget, or a crop's category budgets to sum to that crop's total. These are independent planning aids a farmer sets at whichever altitude is useful to them, not a ledger that must reconcile — the same reasoning that kept `category_budgets` independent of the benchmark in the first place.
 
 ---
 

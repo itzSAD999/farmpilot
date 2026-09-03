@@ -5,6 +5,10 @@ season should cost, and where they are spending more than they need to.
 Built as a Year 3 mini project for the Department of Computer Science,
 Kwame Nkrumah University of Science and Technology (2025/2026).
 
+**Course:** CSM 366 — Mini Project, BSc Computer Science, Year 3
+**Team:** Osmond Abdul-Karim Woriwi · Aboagye Jeffery Ohene · Ayisha Abdullah
+**Supervisor:** Dr. Najim Ussiph
+
 **Live app:** https://farmpilot-chi.vercel.app
 **Repository:** https://github.com/itzSAD999/farmpilot
 
@@ -15,6 +19,19 @@ Kwame Nkrumah University of Science and Technology (2025/2026).
 Email:    kwame.mensah@farmpilot.demo
 Password: FarmPilotDemo2026!
 ```
+
+## Key features
+
+- **Estimation engine** — a per-category cost estimate for a season, from the farmer's own history where it exists and an independent MoFA-derived benchmark otherwise; never a prediction compared against itself (see Development Log Issue #3).
+- **Overspend detection** — any *actually recorded* category more than 30% above benchmark is flagged with the variance, a possible saving in cedis, and a specific, sourced suggestion.
+- **Budgets** — five independent, farmer-set spending caps (category-in-season, crop total, farm total, category farm-wide, category-in-crop), each checked live while recording a cost.
+- **Cost Lab** (`/lab`) — a what-if sandbox for trying quantities and rates before recording anything for real.
+- **Compare** — season-vs-season, crop-vs-crop (up to 4 crops, exact season/window pairs, bar or radar view), and me-vs-benchmark.
+- **Weekly Check-in** — a standing prompt to log shared costs across active seasons, split by planted acreage.
+- **FarmBot** — an AI assistant with live read access to the farmer's real farm, seasons, costs, overspend flags, and budgets.
+- **Offline cost recording** — costs entered with no signal queue locally and sync automatically on reconnect, with no duplicate on a retried flush.
+- **Twi localisation** — a flagged category's advice can be read and heard in Twi, generated once and cached, never called live.
+- **PDF export** — the Estimate Report and Costs pages print cleanly via the browser's native print-to-PDF.
 
 ## How it works
 
@@ -30,11 +47,14 @@ from the benchmark alone — the whole design exists to make that true.
 
 Beyond that core loop: **Cost Lab** (`/lab`) is a what-if sandbox for
 trying different cost assumptions before recording anything for real;
-**Category Budgets** let a farmer cap their own spend per category per
-season, independent of the benchmark, with a live warning while
-recording a cost that would exceed it; the Estimate Report and Costs
+**Budgets** (`/budgets`) let a farmer cap their own spend, independent of
+the benchmark, at five levels — one category in one season, a crop's
+total across every season, the whole farm, a category farm-wide, or a
+category within one specific crop — with a live warning while recording
+a cost that would exceed any of them; the Estimate Report and Costs
 pages can each be downloaded as a PDF; and an AI assistant (FarmBot)
-answers questions using the farmer's real recorded and flagged data.
+answers questions using the farmer's real recorded, flagged, and
+budgeted data.
 
 ## Documentation
 
@@ -45,7 +65,7 @@ Everything about the project — not just the code — lives in `docs/`:
 | [`FarmPilot_PRD.md`](docs/FarmPilot_PRD%20(1).md) | Product requirements: goals, scope, functional/non-functional requirements, business rules (also available as a self-contained `.html`) |
 | [`FarmPilot_SDD.md`](docs/FarmPilot_SDD.md) | System design: architecture, data model, the estimation algorithm, security model, and the Twi localisation feature (§19) (also available as a self-contained `.html`) |
 | [`FarmPilot_MiniProject_Report.md`](docs/FarmPilot_MiniProject_Report.md) | The submitted mini-project report (also available as a self-contained, Word-openable `.html` with every screenshot embedded) |
-| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 47-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
+| [`FarmPilot_Development_Log.md`](docs/FarmPilot_Development_Log.md) | Full build history, architecture-decision index, and a 48-item issue register from a post-build hardening pass — root cause, fix, and live verification evidence for each |
 | [`FarmPilot_Presentation_Guide.md`](docs/FarmPilot_Presentation_Guide.md) | Not a submitted deliverable — a condensed study aid for presenting the project: the elevator pitch, how it works step by step, every architecture decision explained in plain terms, and what's automated vs. manually tested vs. not tested at all |
 | [`CHANGELOG.md`](docs/CHANGELOG.md) | Raw, PR-by-PR change history |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (why the system is built the way it is) |
@@ -54,6 +74,20 @@ Everything about the project — not just the code — lives in `docs/`:
 
 Start with the PRD for *why*, the SDD for *how*, and the Development Log
 for *what changed and what was found wrong along the way*.
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Frontend | React 19 + TypeScript, Vite, Tailwind CSS v4, TanStack Query, React Hook Form + Zod, Recharts |
+| Backend | Supabase — managed PostgreSQL 17, Auth (GoTrue), auto-generated REST (PostgREST), Storage |
+| Business logic | PL/pgSQL functions (`generate_estimate`, `quick_fill_costs`, and the budget status views) — no separate application server |
+| AI | Claude via OpenRouter (FarmBot); Ghana NLP's Khaya AI for Twi translation/TTS, generated once and cached |
+| Offline | `vite-plugin-pwa` + IndexedDB (`idb`) |
+| Hosting | Vercel (frontend), Supabase (database) |
+| Testing | Vitest — unit (network-free) and integration (against the live, linked database) |
+
+See `FarmPilot_SDD.md` §4 for the full stack with justification for each choice.
 
 ## Project structure
 
@@ -67,7 +101,7 @@ farmpilot/
 │   ├── lib/                  supabase client, database.types.ts (generated), money/categories helpers
 │   └── pages/                One file per route
 ├── supabase/
-│   ├── migrations/           Numbered, applied-in-order schema history (001–021)
+│   ├── migrations/           Numbered, applied-in-order schema history (001–024)
 │   └── demo_seed.sql         Reproducible demonstration account — see docs/…Report.md Appendix D
 ├── scripts/
 │   ├── test_crud.ts          Manual end-to-end CRUD smoke test
@@ -116,17 +150,18 @@ npm run test:watch    # same, in watch mode
 npm run test:integration   # hits the real, linked Supabase project — needs .env
 ```
 
-Unit tests (`vitest.config.ts`, 67 tests) cover pesewa/cedi conversion,
+Unit tests (`vitest.config.ts`, 76 tests) cover pesewa/cedi conversion,
 category-list and Ghana-region/district consistency, every API module's
-error-message mapping, and the Weekly Check-in's proportional-by-acreage
-split rule. Integration tests (`vitest.integration.config.ts`, 64 tests,
-run one file at a time — see Issue #38 on why) exercise every
-`src/api/*.ts` module directly against the linked database — recording,
-`generate_estimate()` and the benchmark RPCs, comparisons, budgets,
-dashboards, guides, auth, and a database trigger that writes overspend
-notifications with no application code involved — using throwaway test
-accounts and farms created and torn down within each run, so nothing in
-the demo account or your own data is touched. See
+error-message mapping — including all five budget tiers' — and the
+Weekly Check-in's proportional-by-acreage split rule. Integration tests
+(`vitest.integration.config.ts`, 64 tests, run one file at a time — see
+Issue #38 on why) exercise every `src/api/*.ts` module directly against
+the linked database — recording, `generate_estimate()` and the benchmark
+RPCs, comparisons, budgets, dashboards, guides, auth, and a database
+trigger that writes overspend notifications with no application code
+involved — using throwaway test accounts and farms created and torn down
+within each run, so nothing in the demo account or your own data is
+touched. See
 `FarmPilot_Development_Log.md`, Issues #34, #36–38, for what each tier
 covers and why.
 
@@ -154,7 +189,7 @@ or `npx supabase db query --linked -f <file>`) rather than
 reflect them — see `FarmPilot_SDD.md` §16.3.
 
 **Setting up a brand-new Supabase project from scratch:** run every file
-in `supabase/migrations/` in numeric order (001 → 021) — either paste
+in `supabase/migrations/` in numeric order (001 → 024) — either paste
 each into the Supabase Dashboard's SQL Editor one at a time, or, once
 `npx supabase login` and `npx supabase link --project-ref <your-ref>`
 are done, run each with `npx supabase db query --linked -f <file>`. They

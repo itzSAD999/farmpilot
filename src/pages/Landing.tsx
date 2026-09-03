@@ -105,6 +105,7 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
   const [coldStartMode, setColdStartMode] = useState<'new' | 'returning'>('new');
   const [twiLang, setTwiLang] = useState<'en' | 'tw'>('en');
   const [twiAudioPlaying, setTwiAudioPlaying] = useState(false);
+  const [budgetSpentCedis, setBudgetSpentCedis] = useState(2800);
 
   // The real, pre-generated fertiliser clip from the live "audio" Storage
   // bucket (public read — this page is unauthenticated, so the same
@@ -671,6 +672,53 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
         </div>
       </div>
     );
+  } else if (feature === 'budgets') {
+    const limit = 4000;
+    const isOver = budgetSpentCedis > limit;
+    const pct = Math.min(100, (budgetSpentCedis / limit) * 100);
+    content = (
+      <div className="space-y-6">
+        <h3 className="text-3xl font-bold text-white tracking-tight">Your Own Spending Caps</h3>
+        <p className="text-white/60 leading-relaxed text-lg">
+          Drag your Labour spend and watch it check against a budget you set yourself — separate from the benchmark. Set one for a category, a crop, or the whole farm.
+        </p>
+
+        <div className={`bg-white/5 rounded-3xl p-8 border transition-colors duration-300 ${isOver ? 'border-red-500/50' : pct > 80 ? 'border-amber-500/50' : 'border-white/10'}`}>
+          <div className="flex justify-between text-xs mb-2">
+            <span className="text-white/50 uppercase tracking-widest font-bold">Maize · Labour Budget</span>
+            <span className={`font-bold ${isOver ? 'text-red-400' : pct > 80 ? 'text-amber-400' : 'text-white'}`}>GH₵ {budgetSpentCedis.toLocaleString()} / GH₵ {limit.toLocaleString()}</span>
+          </div>
+          <input
+            type="range" min="500" max="6000" step="100"
+            value={budgetSpentCedis}
+            onChange={(e) => setBudgetSpentCedis(parseFloat(e.target.value))}
+            className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-white/10 ${isOver ? 'accent-red-500' : pct > 80 ? 'accent-amber-500' : 'accent-emerald-500'}`}
+          />
+          <div className="relative h-2.5 rounded-full bg-white/10 overflow-hidden mt-4 mb-6">
+            <div
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${isOver ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          {isOver ? (
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 animate-fade-in">
+              <svg className="w-5 h-5 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              <div>
+                <p className="text-red-300 font-bold text-sm">GH₵ {(budgetSpentCedis - limit).toLocaleString()} over your own budget</p>
+                <p className="text-white/50 text-xs mt-1">This is your own cap, not the benchmark — Labour can be within the standard rate and still be over what you personally set aside for it.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4">
+              <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <p className="text-emerald-300 font-bold text-sm">GH₵ {(limit - budgetSpentCedis).toLocaleString()} remaining on this budget.</p>
+            </div>
+          )}
+          <p className="text-white/40 text-sm mt-4">This is one of five independent levels — a category in one season, a crop's total, the whole farm, a category farm-wide, or a category within one crop — all set from the Budgets page.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1115,6 +1163,23 @@ export function Landing() {
                       Twi
                       <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072" /></svg>
                     </span>
+                  </div>
+                ),
+              },
+              {
+                key: 'budgets',
+                title: 'Your own spending caps, five ways',
+                body: 'Separate from the benchmark, set a cap for one category this season, a crop’s total, the whole farm, a category farm-wide, or a category within one crop — and get warned live before a cost pushes you over.',
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m-6 4h6m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />,
+                accent: 'text-red-400',
+                preview: (
+                  <div className="mt-2 mb-5 bg-black/40 rounded-xl p-3 border border-white/5">
+                    <div className="flex justify-between text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1.5">
+                      <span>Labour Budget</span><span className="text-amber-400">GH₵ 2,800 / 4,000</span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="absolute inset-y-0 left-0 bg-amber-500 rounded-full" style={{ width: '70%' }} />
+                    </div>
                   </div>
                 ),
               },

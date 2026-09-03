@@ -64,8 +64,8 @@
 </ol>
 <hr/>
 <h2 id="0-plain-language-summary-no-jargon">0. Plain-Language Summary — No Jargon</h2>
-<p>Section 4 below describes all 47 issues in full technical detail, for a</p>
-<p>technical reader. This section describes the same 47 issues in plain</p>
+<p>Section 4 below describes all 48 issues in full technical detail, for a</p>
+<p>technical reader. This section describes the same 48 issues in plain</p>
 <p>language — what was actually wrong, in everyday terms, and what was done</p>
 <p>about it — for anyone reading this who isn't a programmer. Each row here</p>
 <p>corresponds exactly to the same-numbered entry in §4, so "Issue #12"</p>
@@ -124,6 +124,7 @@
 <tr><td>45</td><td>A handful of rough edges in the new Twi feature, found only once it was actually being used: the setting was labeled just "Language," which made it sound like the whole app would switch, not just the advice; the AI assistant didn't actually speak Twi even when that language was chosen; and there was still no real way for a person to confirm a translation was accurate — the honest gap flagged in the previous entry. Also found: a technical naming mistake meant the secret key for the translation service was stored in a way that, by convention, signals "safe to expose in the browser," which it is not.</td><td>Relabeled the setting "Advice Language" with a clear one-line explanation, and made it a simple two-button choice instead of a dropdown. Made the AI assistant genuinely reply in Twi when that's selected. Built a proper page where a real Twi speaker can listen to each clip and confirm it with one tap — confirmed the tool works correctly, then left every clip exactly as "not yet confirmed," since nobody claimed to actually be that reviewer. Fixed the naming mistake so the secret key can no longer be mistaken for one that's safe to expose. Also added: a full notification history page, and a proper in-app Help page that the AI assistant now also reads from, so it can correctly answer "how does this work" questions instead of guessing.</td></tr>
 <tr><td>46</td><td>On the website's homepage, the demo showing off the Twi feature had a speaker icon that looked exactly like the real one in the app — but it didn't actually play anything when you tapped it, it was just a picture of a speaker.</td><td>Made it a real button that plays the actual pre-generated Twi recording, the same one a real farmer would hear, confirmed to work even for a visitor who isn't signed in at all.</td></tr>
 <tr><td>47</td><td>The speaker button only ever worked if you'd switched to Twi — a farmer reading in English got no "listen to this" option at all, even though the whole point of adding audio in the first place was to help farmers who read poorly listen instead.</td><td>Made the speaker button work for English too, using the phone or computer's own built-in reading-aloud feature (free, built into every modern browser) rather than needing anything special generated for it — only Twi ever needed that.</td></tr>
+<tr><td>48</td><td>The app already had one kind of personal spending limit (a cap per category, per season — Issue #26), but a farmer couldn't set one overall limit for the whole farm, one for a whole crop across every season it's grown, or one for a specific category within a specific crop (e.g. "for my Maize: no more than GHS 300 on labour") — and there was no single place to see every limit at a glance or search/filter them. Recording a new cost also only ever checked the one season-level limit, not any of these.</td><td>Added three more layers of spending limit — one overall total for the farm, one total per crop across all its seasons, and one for a category within a specific crop — on top of the existing one, plus a redesigned Budgets page (stat cards, a donut chart, search, and an All / Over Budget / Not Set filter) reachable from Settings and now from the sidebar too. Recording a new cost now checks all four limits at once and warns before saving if any would be exceeded. The AI assistant can also see and talk about all four. Sample data for every limit was added to the demo account so the feature is visible the moment you log in, not just in an empty state.</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
@@ -1442,6 +1443,84 @@
 <p>clickable with no error even in English mode, where previously no button</p>
 <p>rendered at all for that state.</p>
 <hr/>
+<h3 id="issue-48-budgets-were-one-flat-tier-per-season-per-category-a-farmer-thinks-in-several-at-once">Issue #48 — Budgets were one flat tier (per season, per category); a farmer thinks in several at once</h3>
+<p><strong>Severity:</strong> N/A (feature addition, requested directly, in several</p>
+<p>follow-up passes as the shape of what was wanted became clearer). Category</p>
+<p>Budgets (Issue #26, migration 015) let a farmer cap one category within</p>
+<p>one season — useful, but it doesn't cover how a farmer actually plans:</p>
+<p>one number for the whole farm, one running total for a crop across every</p>
+<p>season it's grown regardless of year, or a cap on a specific category</p>
+<p><em>within</em> a specific crop (e.g. "for my Maize this year: Labour GHS 4,000,</p>
+<p>Seeds GHS 1,500") — nor was there anywhere to see every limit at a glance,</p>
+<p>search or filter them, or have the app actually check a new cost against</p>
+<p>anything other than the one season-level cap.</p>
+<p><strong>Fix.</strong> Three further budgeting tables added, each with its own status</p>
+<p>view following the same <code>limit_pesewas</code> / <code>spent_pesewas</code> /</p>
+<p><code>remaining_pesewas</code> / <code>is_over_budget</code> / <code>pct_used</code> shape as</p>
+<p><code>v_category_budget_status</code> so every tier is consumed identically on the</p>
+<p>client:</p>
+<ul>
+<li><strong><code>crop_budgets</code></strong> (migration 022) — one total cap per crop, summed</li>
+</ul>
+<p>  against every one of the farm's seasons for that crop, any year or</p>
+<p>  window.</p>
+<ul>
+<li><strong><code>farm_budgets</code></strong> and <strong><code>farm_category_budgets</code></strong> (migration 023) —</li>
+</ul>
+<p>  one overall ceiling for the whole farm, and that same ceiling optionally</p>
+<p>  assigned across the 8 categories farm-wide (not tied to one season).</p>
+<ul>
+<li><strong><code>crop_category_budgets</code></strong> (migration 024) — the most granular tier: a</li>
+</ul>
+<p>  cap for one category within one crop, farm-wide across every season of</p>
+<p>  that crop.</p>
+<p>A new page, <code>src/pages/CropBudgets.tsx</code> (<code>/budgets</code>), replaced a first,</p>
+<p>plainer version with a dashboard-styled one matching the Costs page's own</p>
+<p>visual language directly on request: a stat row (Farm Budget, Farm Spent,</p>
+<p>Budgets Set, Over Budget count), a donut chart of the farm-wide category</p>
+<p>allocation, a By Category / By Crop toggle rendering each tier as a</p>
+<p>clickable card grid instead of a stacked list, a search box, and an</p>
+<p>All / Over Budget / Not Set filter applied to both views — grouping the</p>
+<p>way a farmer would actually triage rather than always scrolling every</p>
+<p>card. Expanding a crop card in the By Crop view reveals that crop's own</p>
+<p>per-category rows (<code>crop_category_budgets</code>), which is where "Maize:</p>
+<p>Labour GHS 4,000" is actually set. A read-only "How It Splits — Season &</p>
+<p>Crop" section at the bottom reuses the dashboard's existing rollup data</p>
+<p>(<code>getCropSummary</code>, <code>listSeasons</code>) rather than inventing a second set of</p>
+<p>totals to keep in sync with the real one.</p>
+<p><code>AddCostForm.tsx</code> — the same form used from the season page, the</p>
+<p>dashboard's quick-add, and the estimate report's "Record a Cost" — now</p>
+<p>checks a pending cost against every tier that applies to it (the new</p>
+<p>crop-category, farm-wide category, and crop total, alongside the existing</p>
+<p>season-category check) and shows a live amber warning before saving if</p>
+<p>any would be exceeded, using the season's own <code>farm_id</code>/<code>crop_id</code></p>
+<p>(fetched once, sharing the <code>['season', seasonId]</code> cache key</p>
+<p><code>SeasonDetail.tsx</code> already populates, so no extra request when opened</p>
+<p>from there). <code>FarmBot.tsx</code>'s system prompt gained a "Budgets" section</p>
+<p>covering all four tiers, with explicit instruction to answer "am I within</p>
+<p>budget" from these caps rather than conflating the question with</p>
+<p>benchmark overspend flags, and to say plainly when nothing has been set</p>
+<p>rather than guessing a number.</p>
+<p>Two navigation changes, both requested directly: the desktop sidebar's</p>
+<p>"Help" link was swapped for a "Budgets" link (Help remains reachable from</p>
+<p>Settings only, where it already lived), and the Dashboard gained a</p>
+<p>Budgets summary card (spend vs. Farm Budget, over-budget count) linking</p>
+<p>through to <code>/budgets</code>. <code>supabase/demo_seed.sql</code> seeds all five budgeting</p>
+<p>rows now on the demo account with real, deliberately mixed states against</p>
+<p>its actual recorded spend — some comfortably under, some close, some</p>
+<p>already over — so every visual state in the new UI is visible on first</p>
+<p>login rather than only in an empty state.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code>, <code>npm test</code> (growing from 70 to 76</p>
+<p>across this pass as each new API module's error-mapping test was added),</p>
+<p>and <code>npm run build</code> all clean after every step. Every migration (022–024)</p>
+<p>was applied directly against the live, linked Supabase project and its</p>
+<p>status view queried directly afterward; the returned <code>spent_pesewas</code>,</p>
+<p><code>is_over_budget</code>, and <code>pct_used</code> figures for every seeded row matched the</p>
+<p>hand-computed totals exactly (e.g. Maize Fertiliser: limit GHS 7,000,</p>
+<p>real recorded spend GHS 8,000 across both Maize seasons, <code>pct_used = 114</code>,</p>
+<p><code>is_over_budget = true</code>) — not simulated, and not just "the code compiles</p>
+<p>and looks right."</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table — a summary of what</p>
 <p>was checked and whether it passed. This section gives the full, detailed</p>
@@ -1523,7 +1602,12 @@
 <tr><td><code>src/pages/ReviewTranslations.tsx</code>, <code>src/pages/Notifications.tsx</code>, <code>src/pages/Help.tsx</code></td><td>Issue #45</td></tr>
 <tr><td><code>src/pages/Landing.tsx</code> (working speaker button in the Twi demo)</td><td>Issue #46</td></tr>
 <tr><td><code>src/lib/khaya.ts</code> (<code>speakEnglish</code>), <code>src/pages/EstimateReport.tsx</code>, <code>src/pages/Landing.tsx</code></td><td>Issue #47 (speaker button works for English too)</td></tr>
-<tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
+<tr><td><code>supabase/migrations/022_crop_budgets.sql</code> – <code>024_crop_category_budgets.sql</code></td><td>Issue #48 (Budgets: crop total, farm total, farm-wide category, and crop×category tiers, each with a status view)</td></tr>
+<tr><td><code>src/api/cropBudgets.ts</code>, <code>farmBudgets.ts</code>, <code>cropCategoryBudgets.ts</code></td><td>Issue #48</td></tr>
+<tr><td><code>src/pages/CropBudgets.tsx</code> (<code>/budgets</code>)</td><td>Issue #48 (dashboard-styled Budgets page: stats, donut chart, search/filter, By Category / By Crop grids)</td></tr>
+<tr><td><code>src/components/domain/AddCostForm.tsx</code> (live multi-tier budget warnings), <code>FarmBot.tsx</code> (budget-aware system prompt)</td><td>Issue #48</td></tr>
+<tr><td><code>src/components/layout/AppShell.tsx</code> (sidebar Budgets link), <code>src/pages/Dashboard.tsx</code> (Budgets summary widget)</td><td>Issue #48</td></tr>
+<tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D) — also seeds all five budgeting tiers as of Issue #48</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
 <tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>
 <tr><td><code>docs/FarmPilot_PRD.md</code>, <code>docs/FarmPilot_SDD.md</code></td><td>Requirements and design, both updated to v1.2 to reflect this pass</td></tr>

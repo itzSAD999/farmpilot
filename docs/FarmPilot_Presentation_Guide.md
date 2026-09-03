@@ -28,7 +28,7 @@ If you remember only one thing to say, say this: **you cannot detect overspendin
 | Benchmark-vs-history estimation engine | The core deliverable — §2 above |
 | Weekly Cost Check-in | A standing prompt asking "did you spend anything this week?" — the recording habit is the actual adoption risk, not the math |
 | History back-fill at season creation | A returning farmer with real past figures shouldn't be forced through the "no history yet" benchmark path on day one |
-| Category Budgets | A farmer's own personal spending cap per category, independent of the benchmark — "don't let me spend more than GHS 500 on labour," warned live while recording |
+| Budgets | A farmer's own spending caps, independent of the benchmark, at five levels — one category in one season, a crop's total, the whole farm, a category farm-wide, or a category within one crop — warned live while recording a cost against whichever caps apply |
 | Cost Lab | A what-if sandbox — try quantities and rates before committing to a real season, nothing saved until you do |
 | Compare (season/crop/benchmark) | Three ways to see spend against something — each other's seasons, each other's crops, or the standard rate |
 | FarmBot (AI assistant) | Answers questions using the farmer's *real* recorded and flagged data, not generic chat |
@@ -59,7 +59,7 @@ These are the best answers to "what was hard" or "what did you learn," because t
 
 Be straight about this if asked — it's a stronger answer than pretending everything is covered.
 
-**Automated and passing (67 unit tests, 64 integration tests, both re-runnable on demand):**
+**Automated and passing (76 unit tests, 64 integration tests, both re-runnable on demand):**
 - The estimation engine itself — benchmark method, history method, flagging, non-flagging, variance/advice/saving computation
 - Every category-budget behaviour (setting, replacing, deleting, spent/remaining/over-budget arithmetic)
 - Farm/season/cost CRUD, including cascade deletion (deleting a season removes its costs)
@@ -87,9 +87,10 @@ Be straight about this if asked — it's a stronger answer than pretending every
 
 ## 8. Numbers to have ready
 
-- **41** issues found and fixed in the post-build hardening pass, each documented with root cause, fix, and live evidence.
-- **67** automated unit tests, **64** automated integration tests (against the real, live database).
-- **21** numbered database migrations (schema is 100% reproducible from committed SQL files — no manual step).
+- **48** issues found and fixed in the post-build hardening pass, each documented with root cause, fix, and live evidence.
+- **76** automated unit tests, **64** automated integration tests (against the real, live database).
+- **24** numbered database migrations (schema is 100% reproducible from committed SQL files — no manual step).
+- **5** independent budget tiers — season+category, crop total, farm total, farm-wide category, crop×category.
 - **8** cost categories, **10** crops with benchmark coverage.
 - **30%** — the default overspend-flagging threshold.
 - **100 calls/month** — the Khaya AI free-tier quota the whole localisation feature is designed around never exceeding (uses 16 calls total, once, ever).

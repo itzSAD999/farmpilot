@@ -843,6 +843,84 @@ the new history (or re-cloned) rather than merged.
 
 ---
 
+### Issue #34 — No automated tests existed anywhere in the project
+**Severity:** Medium (a real methodological gap, raised directly in
+supervisor review of this project: "show me one test that runs in CI
+without you at the keyboard"). Every fix in this log up to this point
+was verified by hand — live Puppeteer walkthroughs, direct SQL queries
+against the linked project, before/after screenshots. That evidence is
+real, but it is not repeatable by anyone else without re-doing the same
+manual steps, and `vitest` had sat in `package.json` as a dependency
+the whole project without a single test using it (one exception found:
+`src/lib/phone.test.ts` already existed and passed, but nothing ran it —
+there was no `test` script).
+
+**Fix.** Two-tier suite, split so the fast one has no excuse not to be
+run:
+- **Unit** (`npm test` / `vitest.config.ts`) — fast, network-free, pure
+  functions only: `money.test.ts` (pesewa/cedi conversion and
+  round-tripping), `categories.test.ts` (category/essentials
+  consistency), and `splitByAcreage.test.ts` for the Weekly Check-in's
+  proportional-split rule (Issue #16), which was extracted out of
+  `WeeklyCatchUp.tsx` into a standalone pure function
+  (`src/lib/splitByAcreage.ts`) specifically so it could be tested in
+  isolation — the exact 1-acre/5-acre → 100/500 worked example from
+  Issue #16's own evidence is now a permanent regression test, not a
+  one-off manual check.
+- **Integration** (`npm run test:integration` /
+  `vitest.integration.config.ts`) — hits the real, linked Supabase
+  project against a throwaway test farm created and torn down within
+  each run. Targets `generate_estimate()` directly: no-history/nothing-
+  recorded (benchmark method, nothing flagged), a category recorded 80%
+  over the benchmark (flagged, variance/advice/saving all populated), a
+  category recorded under benchmark (not flagged), and history taking
+  over once a prior completed season exists — the exact cases Issues #3
+  and #4 were about, now checked by a machine instead of only by memory.
+  Also covers Category Budgets' `v_category_budget_status` view and
+  `get_crop_benchmark_lines()`'s acreage scaling.
+
+**Evidence.** `npm test`: 39 passed. `npm run test:integration`: 6
+passed (after the fix in Issue #35, below — the first run found a real
+bug).
+
+---
+
+### Issue #35 — `get_crop_benchmark_lines()` and `get_crop_benchmark_breakdown()` disagreed by a few pesewas
+**Severity:** Low (found by the new test suite on its first run, not
+user-facing — the app never called the affected function). The new
+integration test asserted that `get_crop_benchmark_lines()`'s per-input
+rows, summed back up, equal `get_crop_benchmark_breakdown()`'s
+per-category totals for the same crop/acreage — both read the same
+`crop_input_norms` x `cost_benchmarks` join, so they should agree. The
+first run failed: 43,853 vs. 43,841 pesewas for one category.
+Root cause: the two functions round at different points —
+`get_crop_benchmark_breakdown()` (migration 014) sums the exact,
+unrounded per-input values and rounds once at the end; `get_crop_
+benchmark_lines()` (migration 016) rounds each line's quantity and unit
+price individually, by design, since the Lab UI displays and lets a
+farmer adjust those exact numbers. Summing independently-rounded lines
+does not always reproduce a total rounded once — ordinary floating-point
+behaviour, not a logic error in either function individually.
+
+**Fix.** A full-codebase search confirmed `get_crop_benchmark_breakdown()`
+has had zero callers since Cost Lab was rewritten around
+`get_crop_benchmark_lines()` (Issue #30) — so rather than reconcile two
+rounding strategies serving a function nothing uses, migration 017 drops
+it outright, matching this project's existing practice of removing
+confirmed-dead code (Issue #15) instead of patching around it. The now-
+invalid cross-function test was replaced with a same-function
+consistency check: doubling the acreage passed to `get_crop_benchmark_
+lines()` must exactly double every line's quantity while leaving its
+per-unit rate untouched (a market price is not a function of farm size).
+
+**Evidence.** `select proname from pg_proc where proname =
+'get_crop_benchmark_breakdown'` returns zero rows post-migration.
+`npm run test:integration`: 6/6 passed after the fix. `npx tsc -b
+--noEmit` and `npm run build` both stayed clean after removing the
+dead function and its wrapper from `src/api/lab.ts`.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table. Full evidence for
@@ -868,6 +946,14 @@ each row:
 | — / Issue #25 | FarmBot has a guided first-open state | Empty input box | 4 suggested-prompt chips + "New chat" | Live screenshot |
 | — / Issue #26 | Live over-budget warning while recording a cost | Did not exist | "This would put you GHS 40.00 over your GHS 10.00 seeds budget" | Live walkthrough |
 | — / Issue #27 | App chrome absent from a printed/PDF page | Sidebar, nav, FarmBot all printed | All hidden via `.print-hide`; report/costs render cleanly | Puppeteer `emulateMediaType('print')` |
+| — / Issue #28 | `createFarm()` rejects non-finite/absurd area before any network call | Would send `null` to a NOT NULL column | Rejected client-side with a clear message | Manual boundary check |
+| — / Issue #29 | GhanaMap shows the region name on hover | No feedback until click | Live "Tap to select" label | Code review (shared component, both call sites) |
+| — / Issue #30 | Cost Lab quantity scaling / category-card navigation | Abstract cedi sliders; cards did nothing | Quantity x rate sliders; cards navigate to detail | Live Puppeteer walkthrough, `/season/58/category/land_prep` |
+| — / Issue #31 | Farm-wide Costs page category cards expand to entries | Plain non-interactive divs | Toggle expands to every entry with a working link | Live walkthrough, `/season/57/category/fertiliser` |
+| — / Issue #32 | InfoTip coverage on analysis pages | Estimate Report, Dashboard had none | Added to both | `npx tsc -b --noEmit` |
+| — / Issue #33 | Recovery-codes file absent from all git history, both branches | Present in `044b8ce` onward | `git log --all -- <path>` returns nothing, local and remote | `git log`, `git fetch` + re-check |
+| — / Issue #34 | Automated test suite exists and passes | 0 automated tests in the project | 39 unit + 6 integration, both passing | `npm test`, `npm run test:integration` |
+| — / Issue #35 | `get_crop_benchmark_lines()` vs `get_crop_benchmark_breakdown()` totals agree | 43,853 vs 43,841 pesewas (dead function found via new test) | Dead function dropped (migration 017); replacement test passes | `npm run test:integration` before/after |
 
 Every fix in §4 was verified against the live, linked Supabase project —
 not a local mock or an assumed-correct code review — using either a
@@ -885,11 +971,12 @@ that are lower priority than what shipped in this pass:
 |---|---|---|
 | Verify indicative norms for all ten crops against CSIR-CRI / real records | High | Blocks presenting the new crop data as sourced fact rather than indicative |
 | Region-specific benchmark data | Medium | Currently a single national average (ADR-011's caveat) |
-| Automated regression suite around `generate_estimate()` | Medium | Issues #3 and #4 were both caught by manual testing; neither had an automated check |
 | Field-officer / aggregator role | Low | Explicitly out of scope for this project window (PRD §15) |
 | SMS OTP phone verification | Low | Explicitly deferred (PRD FR-1.13, ADR-006) — not implemented, and correctly documented as such throughout |
 | Region-specific and per-crop-scale (not just per-acre) budget defaults | Low | Category Budgets (Issue #26) are entirely farmer-set with no suggested starting value yet |
 | A saved/named history of Cost Lab scenarios | Low | Lab (Issue #24) is intentionally a stateless sandbox — nothing persists across a reload today |
+| Wider automated test coverage (client-side components, not just business logic) | Medium | Issue #34 covers the estimation engine and pure utility functions; UI-level component/interaction tests (e.g. React Testing Library) are still all manual (Puppeteer, run by hand) |
+| CI pipeline running `npm test` on every push | Low | The suite exists and passes locally; nothing runs it automatically yet |
 
 ---
 
@@ -905,6 +992,8 @@ that are lower priority than what shipped in this pass:
 | `supabase/migrations/014_crop_benchmark_breakdown.sql` | Issue #24 (Cost Lab) |
 | `supabase/migrations/015_category_budgets.sql` | Issue #26 (Category Budgets) |
 | `supabase/migrations/016_crop_benchmark_lines.sql` | Issue #30 (Cost Lab quantity-based redesign) |
+| `supabase/migrations/017_drop_unused_benchmark_breakdown.sql` | Issue #35 |
+| `src/api/estimates.integration.test.ts`, `src/lib/*.test.ts` | Issue #34 (automated test suite) |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |
 | `docs/DECISIONS.md` | Full ADR text |

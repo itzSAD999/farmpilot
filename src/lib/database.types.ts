@@ -776,17 +776,6 @@ export type Database = {
         }
         Returns: number
       }
-      get_crop_benchmark_breakdown: {
-        Args: {
-          p_area_acres: number
-          p_crop_id: number
-          p_season_window: Database["public"]["Enums"]["season_window"]
-        }
-        Returns: {
-          benchmark_pesewas: number
-          category: Database["public"]["Enums"]["cost_category"]
-        }[]
-      }
       get_crop_benchmark_lines: {
         Args: {
           p_area_acres: number

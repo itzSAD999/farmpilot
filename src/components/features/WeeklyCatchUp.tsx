@@ -4,6 +4,7 @@ import { useFarm } from '../../hooks/useFarm';
 import { listSeasons } from '../../api/seasons';
 import { addCost, getExpectedCategoriesForCrop, CostCategory } from '../../api/costs';
 import { CATEGORIES } from '../../lib/categories';
+import { splitByAcreage } from '../../lib/splitByAcreage';
 
 interface WeeklyCatchUpProps {
   onComplete?: () => void;
@@ -113,21 +114,9 @@ export function WeeklyCatchUp({ onComplete }: WeeklyCatchUpProps) {
     const amountPesewas = Math.round(amount * 100);
 
     // Split proportionally to each season's planted acreage, not evenly —
-    // a 1-acre and a 5-acre active season sharing a category should not
-    // absorb the same share of a combined cost. Falls back to an even
-    // split only if no season in the group has a usable area (e.g. 0).
-    const totalArea = currentStep.seasonAreas.reduce((a, b) => a + b, 0);
-    const shares = totalArea > 0
-      ? currentStep.seasonAreas.map(area => area / totalArea)
-      : currentStep.seasonIds.map(() => 1 / currentStep.seasonIds.length);
-    const amounts = shares.map(share => Math.round(amountPesewas * share));
-    // Rounding can leave the sum a pesewa or two off the entered total —
-    // correct it on the largest share so the total always reconciles.
-    const roundingDiff = amountPesewas - amounts.reduce((a, b) => a + b, 0);
-    if (roundingDiff !== 0) {
-      const largestIdx = shares.indexOf(Math.max(...shares));
-      amounts[largestIdx] += roundingDiff;
-    }
+    // see splitByAcreage.ts (and its test suite) for the rule and the
+    // rounding-reconciliation guarantee.
+    const amounts = splitByAcreage(amountPesewas, currentStep.seasonAreas);
 
     try {
       const promises = currentStep.seasonIds.map((seasonId, idx) =>

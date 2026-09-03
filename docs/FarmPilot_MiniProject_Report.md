@@ -334,6 +334,8 @@ Testing combined direct database-level verification of the estimation engine (th
 
 Tests T2, T6, T7, and T10 each led directly to a correction in the implementation rather than only confirming existing behaviour — a reflection of testing being carried out throughout implementation rather than only after it (§3.1).
 
+**Automated tests.** T1–T12 above were run by hand — a real limitation, since manual evidence cannot be re-checked automatically after a later change. To address this directly, an automated suite was added, split into two tiers to keep the fast one always runnable: `npm test` (39 tests) covers pure client-side logic with no network dependency — pesewa/cedi conversion and round-tripping, category-list consistency, and the Weekly Check-in's proportional-by-acreage split rule (extracted into a standalone function specifically so it could be unit tested, with the exact 1-acre/5-acre worked example from earlier testing now a permanent regression test); `npm run test:integration` (6 tests) hits the real, linked database against a throwaway test farm created and torn down within each run, re-running T1, T2, T3, and T5 above as machine-checked assertions rather than one-off manual runs, plus coverage of Category Budgets and the Cost Lab benchmark RPC's acreage scaling. The first run of the integration suite found a genuine, previously-unknown defect: two benchmark functions serving the same crop/acreage disagreed by a few pesewas due to differing rounding order, traced to one of them being dead code left over from an earlier version of Cost Lab and removed once confirmed unused. That the very first run of the new suite surfaced a real bug is itself the argument for having written it.
+
 ---
 
 ## Chapter Five: Conclusion
@@ -344,11 +346,11 @@ FarmPilot was built to answer two questions a smallholder farmer cannot currentl
 
 ### 5.2 Limitations
 
-Two limitations identified during an earlier review of this report — benchmark coverage limited to one crop, and the weekly check-in splitting a shared cost evenly rather than by planted acreage — were corrected before submission and are recorded as resolved in the Development Log (Appendix E) rather than listed here as outstanding. What remains:
+Two limitations identified during an earlier review of this report — benchmark coverage limited to one crop, and the weekly check-in splitting a shared cost evenly rather than by planted acreage — were corrected before submission and are recorded as resolved in the Development Log (Appendix E) rather than listed here as outstanding. A third — the complete absence of automated tests — was also corrected before submission (§4.3); it is left here as a partial limitation only because the automated suite does not yet cover UI-level component behaviour, only business logic. What remains:
 
 - **Benchmark source data is nationally averaged and dated (2018 MoFA figures, inflated by a configurable multiplier).** It does not vary by region, and does not reflect farm-scale differences — figures partly informed by larger commercial-scale records may understate what is realistic for a true smallholder plot, which is stated plainly in the report rather than presented as precise (ADR-011, Appendix E).
 - **The newly added norms for the nine non-maize crops (§3.3.2) are indicative, not field-verified** — seeded from general smallholder agronomic knowledge, in the same "INDICATIVE — verify with CSIR-CRI" status the original maize norms already carried, and still need checking against extension records before being presented as sourced fact.
-- **Business logic implemented in PL/pgSQL is harder to unit-test in isolation** than the same logic in a general-purpose language; verification relied on integration-style tests run directly against the live database (§4.3) rather than a conventional unit-test suite.
+- **Automated coverage is business-logic-only, not UI-level.** The estimation engine and pure utility functions are now covered by an automated suite (§4.3), but component- and interaction-level behaviour (what a farmer actually clicks through) is still verified manually; no CI pipeline runs the suite automatically on push.
 - **Phone-based identity is not SMS-verified.** A phone number functions as an account identifier, not a communication channel, in the current implementation.
 - **No support for multiple farms per user or for a field-officer/aggregator role**, both of which were identified during design as valuable but out of scope for the project window.
 
@@ -357,7 +359,7 @@ Two limitations identified during an earlier review of this report — benchmark
 - Verify the indicative application-rate norms for all ten crops against CSIR-CRI extension recommendations or real farm records, replacing the "INDICATIVE" source label with a field-verified one crop by crop.
 - Source region-specific benchmark data where available, to remove the single-national-average approximation.
 - Introduce a lightweight aggregator/field-officer role, since farmer-side data entry is a known adoption barrier in comparable systems (§2.2), and the schema was designed not to preclude this extension.
-- Add automated regression tests around the estimation engine specifically (§4.3, T2 and T7), since both defects found during this project were in logic that had no earlier automated check and were caught only by deliberate, manual, database-level testing.
+- Extend the automated suite added in this pass (§4.3) to component- and interaction-level UI tests, and wire `npm test` into a CI pipeline so it runs on every push rather than only on request.
 
 ---
 
@@ -446,7 +448,7 @@ npx supabase db query --linked -f supabase/demo_seed.sql
 A full account of the project treated as a real, shipped system rather
 than only a final snapshot: the six-week Python-based proposal versus
 what was actually built and why, a stage-by-stage development timeline,
-an index into all twelve architecture decisions, a thirty-three-item issue
+an index into all twelve architecture decisions, a thirty-five-item issue
 register from a full post-build hardening pass (each with root cause, fix,
 and live verification evidence), the complete testing record behind
 Chapter Four's summary table, and the outstanding backlog. Kept as a

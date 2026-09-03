@@ -737,6 +737,80 @@
 <p><code>main</code> will not fast-forward — it needs to be re-fetched and reset to</p>
 <p>the new history (or re-cloned) rather than merged.</p>
 <hr/>
+<h3 id="issue-34-no-automated-tests-existed-anywhere-in-the-project">Issue #34 — No automated tests existed anywhere in the project</h3>
+<p><strong>Severity:</strong> Medium (a real methodological gap, raised directly in</p>
+<p>supervisor review of this project: "show me one test that runs in CI</p>
+<p>without you at the keyboard"). Every fix in this log up to this point</p>
+<p>was verified by hand — live Puppeteer walkthroughs, direct SQL queries</p>
+<p>against the linked project, before/after screenshots. That evidence is</p>
+<p>real, but it is not repeatable by anyone else without re-doing the same</p>
+<p>manual steps, and <code>vitest</code> had sat in <code>package.json</code> as a dependency</p>
+<p>the whole project without a single test using it (one exception found:</p>
+<p><code>src/lib/phone.test.ts</code> already existed and passed, but nothing ran it —</p>
+<p>there was no <code>test</code> script).</p>
+<p><strong>Fix.</strong> Two-tier suite, split so the fast one has no excuse not to be</p>
+<p>run:</p>
+<ul>
+<li><strong>Unit</strong> (<code>npm test</code> / <code>vitest.config.ts</code>) — fast, network-free, pure</li>
+</ul>
+<p>  functions only: <code>money.test.ts</code> (pesewa/cedi conversion and</p>
+<p>  round-tripping), <code>categories.test.ts</code> (category/essentials</p>
+<p>  consistency), and <code>splitByAcreage.test.ts</code> for the Weekly Check-in's</p>
+<p>  proportional-split rule (Issue #16), which was extracted out of</p>
+<p>  <code>WeeklyCatchUp.tsx</code> into a standalone pure function</p>
+<p>  (<code>src/lib/splitByAcreage.ts</code>) specifically so it could be tested in</p>
+<p>  isolation — the exact 1-acre/5-acre → 100/500 worked example from</p>
+<p>  Issue #16's own evidence is now a permanent regression test, not a</p>
+<p>  one-off manual check.</p>
+<ul>
+<li><strong>Integration</strong> (<code>npm run test:integration</code> /</li>
+</ul>
+<p>  <code>vitest.integration.config.ts</code>) — hits the real, linked Supabase</p>
+<p>  project against a throwaway test farm created and torn down within</p>
+<p>  each run. Targets <code>generate_estimate()</code> directly: no-history/nothing-</p>
+<p>  recorded (benchmark method, nothing flagged), a category recorded 80%</p>
+<p>  over the benchmark (flagged, variance/advice/saving all populated), a</p>
+<p>  category recorded under benchmark (not flagged), and history taking</p>
+<p>  over once a prior completed season exists — the exact cases Issues #3</p>
+<p>  and #4 were about, now checked by a machine instead of only by memory.</p>
+<p>  Also covers Category Budgets' <code>v_category_budget_status</code> view and</p>
+<p>  <code>get_crop_benchmark_lines()</code>'s acreage scaling.</p>
+<p><strong>Evidence.</strong> <code>npm test</code>: 39 passed. <code>npm run test:integration</code>: 6</p>
+<p>passed (after the fix in Issue #35, below — the first run found a real</p>
+<p>bug).</p>
+<hr/>
+<h3 id="issue-35-get-crop-benchmark-lines-and-get-crop-benchmark-breakdown-disagreed-by-a-few-pesewas">Issue #35 — <code>get_crop_benchmark_lines()</code> and <code>get_crop_benchmark_breakdown()</code> disagreed by a few pesewas</h3>
+<p><strong>Severity:</strong> Low (found by the new test suite on its first run, not</p>
+<p>user-facing — the app never called the affected function). The new</p>
+<p>integration test asserted that <code>get_crop_benchmark_lines()</code>'s per-input</p>
+<p>rows, summed back up, equal <code>get_crop_benchmark_breakdown()</code>'s</p>
+<p>per-category totals for the same crop/acreage — both read the same</p>
+<p><code>crop_input_norms</code> x <code>cost_benchmarks</code> join, so they should agree. The</p>
+<p>first run failed: 43,853 vs. 43,841 pesewas for one category.</p>
+<p>Root cause: the two functions round at different points —</p>
+<p><code>get_crop_benchmark_breakdown()</code> (migration 014) sums the exact,</p>
+<p>unrounded per-input values and rounds once at the end; `get_crop_</p>
+<p>benchmark_lines()` (migration 016) rounds each line's quantity and unit</p>
+<p>price individually, by design, since the Lab UI displays and lets a</p>
+<p>farmer adjust those exact numbers. Summing independently-rounded lines</p>
+<p>does not always reproduce a total rounded once — ordinary floating-point</p>
+<p>behaviour, not a logic error in either function individually.</p>
+<p><strong>Fix.</strong> A full-codebase search confirmed <code>get_crop_benchmark_breakdown()</code></p>
+<p>has had zero callers since Cost Lab was rewritten around</p>
+<p><code>get_crop_benchmark_lines()</code> (Issue #30) — so rather than reconcile two</p>
+<p>rounding strategies serving a function nothing uses, migration 017 drops</p>
+<p>it outright, matching this project's existing practice of removing</p>
+<p>confirmed-dead code (Issue #15) instead of patching around it. The now-</p>
+<p>invalid cross-function test was replaced with a same-function</p>
+<p>consistency check: doubling the acreage passed to `get_crop_benchmark_</p>
+<p>lines()` must exactly double every line's quantity while leaving its</p>
+<p>per-unit rate untouched (a market price is not a function of farm size).</p>
+<p><strong>Evidence.</strong> `select proname from pg_proc where proname =</p>
+<p>'get_crop_benchmark_breakdown'` returns zero rows post-migration.</p>
+<p><code>npm run test:integration</code>: 6/6 passed after the fix. `npx tsc -b</p>
+<p>--noEmit<code> and </code>npm run build` both stayed clean after removing the</p>
+<p>dead function and its wrapper from <code>src/api/lab.ts</code>.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table. Full evidence for</p>
 <p>each row:</p>
@@ -761,6 +835,14 @@
 <tr><td>— / Issue #25</td><td>FarmBot has a guided first-open state</td><td>Empty input box</td><td>4 suggested-prompt chips + "New chat"</td><td>Live screenshot</td></tr>
 <tr><td>— / Issue #26</td><td>Live over-budget warning while recording a cost</td><td>Did not exist</td><td>"This would put you GHS 40.00 over your GHS 10.00 seeds budget"</td><td>Live walkthrough</td></tr>
 <tr><td>— / Issue #27</td><td>App chrome absent from a printed/PDF page</td><td>Sidebar, nav, FarmBot all printed</td><td>All hidden via <code>.print-hide</code>; report/costs render cleanly</td><td>Puppeteer <code>emulateMediaType('print')</code></td></tr>
+<tr><td>— / Issue #28</td><td><code>createFarm()</code> rejects non-finite/absurd area before any network call</td><td>Would send <code>null</code> to a NOT NULL column</td><td>Rejected client-side with a clear message</td><td>Manual boundary check</td></tr>
+<tr><td>— / Issue #29</td><td>GhanaMap shows the region name on hover</td><td>No feedback until click</td><td>Live "Tap to select" label</td><td>Code review (shared component, both call sites)</td></tr>
+<tr><td>— / Issue #30</td><td>Cost Lab quantity scaling / category-card navigation</td><td>Abstract cedi sliders; cards did nothing</td><td>Quantity x rate sliders; cards navigate to detail</td><td>Live Puppeteer walkthrough, <code>/season/58/category/land_prep</code></td></tr>
+<tr><td>— / Issue #31</td><td>Farm-wide Costs page category cards expand to entries</td><td>Plain non-interactive divs</td><td>Toggle expands to every entry with a working link</td><td>Live walkthrough, <code>/season/57/category/fertiliser</code></td></tr>
+<tr><td>— / Issue #32</td><td>InfoTip coverage on analysis pages</td><td>Estimate Report, Dashboard had none</td><td>Added to both</td><td><code>npx tsc -b --noEmit</code></td></tr>
+<tr><td>— / Issue #33</td><td>Recovery-codes file absent from all git history, both branches</td><td>Present in <code>044b8ce</code> onward</td><td><code>git log --all -- <path></code> returns nothing, local and remote</td><td><code>git log</code>, <code>git fetch</code> + re-check</td></tr>
+<tr><td>— / Issue #34</td><td>Automated test suite exists and passes</td><td>0 automated tests in the project</td><td>39 unit + 6 integration, both passing</td><td><code>npm test</code>, <code>npm run test:integration</code></td></tr>
+<tr><td>— / Issue #35</td><td><code>get_crop_benchmark_lines()</code> vs <code>get_crop_benchmark_breakdown()</code> totals agree</td><td>43,853 vs 43,841 pesewas (dead function found via new test)</td><td>Dead function dropped (migration 017); replacement test passes</td><td><code>npm run test:integration</code> before/after</td></tr>
 </tbody></table>
 <p>Every fix in §4 was verified against the live, linked Supabase project —</p>
 <p>not a local mock or an assumed-correct code review — using either a</p>
@@ -775,11 +857,12 @@
 <tbody>
 <tr><td>Verify indicative norms for all ten crops against CSIR-CRI / real records</td><td>High</td><td>Blocks presenting the new crop data as sourced fact rather than indicative</td></tr>
 <tr><td>Region-specific benchmark data</td><td>Medium</td><td>Currently a single national average (ADR-011's caveat)</td></tr>
-<tr><td>Automated regression suite around <code>generate_estimate()</code></td><td>Medium</td><td>Issues #3 and #4 were both caught by manual testing; neither had an automated check</td></tr>
 <tr><td>Field-officer / aggregator role</td><td>Low</td><td>Explicitly out of scope for this project window (PRD §15)</td></tr>
 <tr><td>SMS OTP phone verification</td><td>Low</td><td>Explicitly deferred (PRD FR-1.13, ADR-006) — not implemented, and correctly documented as such throughout</td></tr>
 <tr><td>Region-specific and per-crop-scale (not just per-acre) budget defaults</td><td>Low</td><td>Category Budgets (Issue #26) are entirely farmer-set with no suggested starting value yet</td></tr>
 <tr><td>A saved/named history of Cost Lab scenarios</td><td>Low</td><td>Lab (Issue #24) is intentionally a stateless sandbox — nothing persists across a reload today</td></tr>
+<tr><td>Wider automated test coverage (client-side components, not just business logic)</td><td>Medium</td><td>Issue #34 covers the estimation engine and pure utility functions; UI-level component/interaction tests (e.g. React Testing Library) are still all manual (Puppeteer, run by hand)</td></tr>
+<tr><td>CI pipeline running <code>npm test</code> on every push</td><td>Low</td><td>The suite exists and passes locally; nothing runs it automatically yet</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="7-appendix-file-and-migration-index">7. Appendix — File and Migration Index</h2>
@@ -794,6 +877,8 @@
 <tr><td><code>supabase/migrations/014_crop_benchmark_breakdown.sql</code></td><td>Issue #24 (Cost Lab)</td></tr>
 <tr><td><code>supabase/migrations/015_category_budgets.sql</code></td><td>Issue #26 (Category Budgets)</td></tr>
 <tr><td><code>supabase/migrations/016_crop_benchmark_lines.sql</code></td><td>Issue #30 (Cost Lab quantity-based redesign)</td></tr>
+<tr><td><code>supabase/migrations/017_drop_unused_benchmark_breakdown.sql</code></td><td>Issue #35</td></tr>
+<tr><td><code>src/api/estimates.integration.test.ts</code>, <code>src/lib/*.test.ts</code></td><td>Issue #34 (automated test suite)</td></tr>
 <tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>
 <tr><td><code>docs/DECISIONS.md</code></td><td>Full ADR text</td></tr>

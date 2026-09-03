@@ -1,0 +1,29 @@
+-- ============================================================
+-- FarmPilot — Migration 017
+-- Drops: get_crop_benchmark_breakdown(crop_id, season_window, area_acres)
+--
+-- WHY THIS EXISTS
+-- Found by the new integration test suite (see
+-- src/api/estimates.integration.test.ts), not by hand: this function
+-- (migration 014) and its replacement, get_crop_benchmark_lines()
+-- (migration 016), compute a crop's benchmark from the same
+-- crop_input_norms x cost_benchmarks join but round at different
+-- points — get_crop_benchmark_breakdown() sums the exact, unrounded
+-- per-input values and rounds once at the end; get_crop_benchmark_lines()
+-- rounds each line's quantity and unit price individually so the UI can
+-- display and adjust them, which means summing its rounded lines back
+-- up can land a few pesewas away from get_crop_benchmark_breakdown()'s
+-- answer for the same crop/acreage.
+--
+-- That divergence is real but harmless in practice: Cost Lab (the only
+-- caller) switched to get_crop_benchmark_lines() when it was rewritten
+-- around real per-input quantities (Issue #30) and has not called
+-- get_crop_benchmark_breakdown() since — confirmed via a full-codebase
+-- search before writing this migration. Rather than reconcile two
+-- rounding strategies serving different purposes for a function nothing
+-- calls, the function is dropped, matching this project's existing
+-- practice of removing confirmed-dead code (Issue #15) rather than
+-- leaving it to silently drift further from what's actually used.
+-- ============================================================
+
+drop function if exists get_crop_benchmark_breakdown(bigint, season_window, numeric);

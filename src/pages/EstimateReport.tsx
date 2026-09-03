@@ -11,6 +11,9 @@ import { CATEGORIES, ESSENTIAL_CATEGORIES } from '../lib/categories';
 import type { CostCategory } from '../api/costs';
 import { AddCostForm } from '../components/domain/AddCostForm';
 import { InfoTip } from '../components/ui/InfoTip';
+import { useAuth } from '../hooks/useAuth';
+import { getProfile } from '../api/auth';
+import { getTwiAdvice, playAdviceAudio, type AdviceTranslation } from '../lib/khaya';
 
 export function EstimateReport() {
   const { estimateId } = useParams<{ estimateId: string }>();
@@ -21,7 +24,16 @@ export function EstimateReport() {
   const [editAmount, setEditAmount] = useState<string>('');
   const [costModalCategory, setCostModalCategory] = useState<CostCategory | undefined>(undefined);
   const [isCostModalOpen, setIsCostModalOpen] = useState(false);
-  
+  const [loadingAudioCategory, setLoadingAudioCategory] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: getProfile,
+    enabled: !!user?.id,
+  });
+  const showTwiText = profile?.preferred_language === 'tw';
+
   const { data: reportLines, isLoading, isError, refetch } = useQuery({
     queryKey: ['report', estimateId],
     queryFn: () => getReport(Number(estimateId)),
@@ -55,6 +67,32 @@ export function EstimateReport() {
     queryFn: () => getGuidesFor(rawSeasonId!),
     enabled: !!rawSeasonId,
   });
+
+  // Reads only from the pre-generated cache (scripts/generate_khaya.ts) —
+  // never calls the Khaya API itself. Computed from reportLines directly
+  // (not the later-derived flaggedLines) so this hook can sit above the
+  // component's early returns below, same as every other query here.
+  const flaggedCategoriesForAdvice = (reportLines ?? [])
+    .filter((l) => l.is_flagged)
+    .map((l) => l.category);
+  const { data: twiAdviceByCategory } = useQuery({
+    queryKey: ['twiAdvice', flaggedCategoriesForAdvice.join(',')],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        flaggedCategoriesForAdvice.map(
+          async (category) => [category, await getTwiAdvice(category)] as const
+        )
+      );
+      return Object.fromEntries(entries) as Record<string, AdviceTranslation>;
+    },
+    enabled: flaggedCategoriesForAdvice.length > 0,
+  });
+
+  const handlePlayAdvice = async (category: string, audioUrl: string) => {
+    setLoadingAudioCategory(category);
+    await playAdviceAudio(audioUrl);
+    setLoadingAudioCategory(null);
+  };
 
   const needsSetup = !reportLines || reportLines.length === 0;
 
@@ -517,9 +555,38 @@ export function EstimateReport() {
                         BUG: Missing advice for flagged category. The estimate engine must provide advice.
                       </div>
                     ) : (
-                      <p className="text-orange-900/80 dark:text-orange-100/80 font-medium leading-relaxed text-sm print:text-gray-800 mb-4">
-                        {line.advice}
-                      </p>
+                      <div className="flex items-start gap-3 mb-4">
+                        <p className="text-orange-900/80 dark:text-orange-100/80 font-medium leading-relaxed text-sm print:text-gray-800 flex-1">
+                          {showTwiText && twiAdviceByCategory?.[line.category]?.text
+                            ? twiAdviceByCategory[line.category].text
+                            : line.advice}
+                        </p>
+                        {twiAdviceByCategory?.[line.category]?.audioUrl && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handlePlayAdvice(line.category, twiAdviceByCategory[line.category].audioUrl!);
+                            }}
+                            disabled={loadingAudioCategory === line.category}
+                            aria-label="Play this advice in Twi"
+                            title="Play this advice in Twi"
+                            className="flex-shrink-0 w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-800/60 flex items-center justify-center text-orange-700 dark:text-orange-300 transition-colors print:hidden disabled:opacity-60"
+                          >
+                            {loadingAudioCategory === line.category ? (
+                              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     )}
 
                     {guide && (

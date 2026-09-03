@@ -183,7 +183,7 @@ export function Profile() {
   const getLanguageName = (code: string) => {
     const langs: Record<string, string> = {
       en: "English",
-      tw: "Twi",
+      tw: "Twi (Akan)",
       ee: "Ewe",
       gaa: "Ga",
       dag: "Dagbani",
@@ -318,7 +318,7 @@ export function Profile() {
                 className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors appearance-none"
               >
                 <option value="en">English</option>
-                <option value="tw">Twi</option>
+                <option value="tw">Twi (Akan)</option>
                 <option value="ee">Ewe</option>
                 <option value="gaa">Ga</option>
                 <option value="dag">Dagbani</option>

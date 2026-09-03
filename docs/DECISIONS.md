@@ -182,7 +182,7 @@ the server function and are online-only. This is stated in the UI.
 
 ## ADR-009 — Localisation via Khaya API with cached translations
 
-**Status:** Proposed (P2 — last item, only if everything else is done) · **Date:** 2026-08-30
+**Status:** Accepted, implemented for Twi only · **Date:** 2026-08-30, implemented 2026-09-03
 
 **Context.** Farmers are more comfortable in Twi, Dagbani, Ga, or Ewe
 than English. Khaya AI (Ghana NLP) provides translation and
@@ -198,7 +198,21 @@ costly, and pointless for text that changes once a season.
 
 **Risk noted.** Machine translation of agricultural terminology is
 unreliable. Translations are stored with `reviewed = false` until a
-native speaker checks them, and the UI marks unreviewed text.
+native speaker checks them.
+
+**Implementation note (2026-09-03).** Built exactly as decided —
+`scripts/generate_khaya.ts` (run once, not part of the app bundle) and
+`src/lib/khaya.ts` (runtime cache reader, never calls Khaya). All 8
+advice categories are generated for Twi; Ewe/Ga/Dagbani are not yet
+generated. One piece of this ADR's own risk mitigation is **not yet
+built**: "the UI marks unreviewed text" was the original intent, but the
+shipped UI (the Estimate Report's speaker button) does not currently
+show any reviewed/unreviewed indicator to the farmer — only the database
+row does. See `FarmPilot_SDD.md` §19 and `FarmPilot_PRD (1).md` §7.13 for
+the full, honest status, including three real corrections Step-1 API
+verification found before this was built (the language code, the
+response shape, and the audio format all differed from what was
+assumed).
 
 ---
 

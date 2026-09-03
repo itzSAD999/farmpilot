@@ -102,7 +102,12 @@ export function Lab() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </Link>
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Cost Lab</h1>
-        <InfoTip text="A sandbox — nothing here is saved to a real season or counted anywhere else in the app. Pick a crop and acreage, then adjust any input's real-world quantity to see how the total and per-acre cost move, before you commit to planting it for real." />
+        <InfoTip
+          variant="card"
+          title="What is Cost Lab?"
+          text="A sandbox — nothing here is saved to a real season or counted anywhere else in the app. Pick a crop and acreage, then adjust any input's real-world quantity (bags of fertiliser, person-days of labour) to see how the total and per-acre cost move, before you spend a single cedi or commit to planting it for real."
+          example="A farmer planning to grow 3 acres of maize next season opens Cost Lab, picks Maize and 3 acres, then drags the fertiliser slider from the standard 15 bags up to 20 bags. The total jumps from about GHS 1,200 to GHS 1,600 instantly — so she knows exactly what buying extra fertiliser will cost her before she ever goes to the market, and can decide if it's worth it, all without recording anything real yet."
+        />
       </div>
       <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-6">
         Try different quantities and requirements against your farm before recording anything for real.

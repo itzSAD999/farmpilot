@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FarmPilot Mini Project Report</title>
+<style>
+  @page { size: A4; margin: 2.5cm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.55; max-width: 850px; margin: 40px auto; padding: 0 20px; font-size: 12pt; }
+  h1 { font-size: 21pt; margin-top: 1.4em; padding-bottom: 0.3em; border-bottom: 2.5px solid #1B5E20; letter-spacing: 0.02em; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; text-align: center; border-bottom: none; font-size: 19pt; line-height: 1.35; letter-spacing: 0.01em; }
+  h2 { font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h3 { font-size: 13.5pt; margin-top: 1.3em; color: #14461a; }
+  h4 { font-size: 12pt; margin-top: 1.1em; font-style: italic; }
+  p { margin: 0.6em 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3ee; font-weight: bold; }
+  code { background: #f2f2f2; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.92em; }
+  pre.code { background: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 9.5pt; line-height: 1.4; }
+  pre.code code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid #1B5E20; margin: 1em 0; padding: 0.4em 1em; background: #f4f9f4; color: #333; }
+  img { display: block; margin: 10px auto; max-width: 100%; }
+  figure { margin: 1.4em 0; text-align: center; page-break-inside: avoid; }
+  figure img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  figcaption { margin-top: 0.5em; font-size: 10pt; font-style: italic; color: #555; }
+  .figure-wrap { text-align: center; margin: 1.4em 0; page-break-inside: avoid; }
+  .figure-wrap img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  /* A paragraph that is nothing but "*Figure N.M — ...*" is the report's
+     own manually-numbered caption — style it like one, sitting just above
+     its image (the caption line always precedes the image in the source). */
+  p:has(> em:only-child) { text-align: center; font-size: 10pt; font-style: italic; color: #555; margin: 1.4em 0 -0.6em; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+  .diagram-note { background: #fff8e6; border: 1px solid #e8d38a; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 10.5pt; }
+  ul, ol { margin: 0.5em 0; padding-left: 1.6em; }
+  li { margin: 0.25em 0; }
+  a { color: #1B5E20; }
+  
+  /* Title page: the info table (Course/Supervisor/...) and Team table right
+     after the H1, before the Abstract's H2, read like a cover page. */
+  h1:first-of-type ~ table:nth-of-type(-n+2) { margin: 1.5em auto; max-width: 520px; }
+  h1:first-of-type ~ table:nth-of-type(-n+2) td, h1:first-of-type ~ table:nth-of-type(-n+2) th { text-align: center; }
+  h1:first-of-type ~ p:nth-of-type(-n+2) { text-align: center; font-size: 12.5pt; }
+</style>
+</head>
+<body>
+<h1 id="farmpilot-product-requirements-document">FarmPilot — Product Requirements Document</h1>
+<p><strong>Kwame Nkrumah University of Science and Technology</strong></p>
+<p>Department of Computer Science · Mini Project 2025/2026</p>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Document type</strong></td><td>Product Requirements Document (PRD)</td></tr>
+<tr><td><strong>Version</strong></td><td>1.2</td></tr>
+<tr><td><strong>Status</strong></td><td>Approved for build</td></tr>
+<tr><td><strong>Changes in 1.2</strong></td><td>Estimation engine now compares this season's <em>actually recorded</em> costs against benchmark, not just a prediction against itself (see §7.6, BR-5/BR-6); per-category "don't know this cost" benchmark fill (FR-4.13); interactive cost-tracking checklist on the report's cold-start screen (FR-9.10); quick-add-cost entry point from the dashboard (FR-4.14); weekly check-in day added to farm setup (FR-2.6, §7.4A); fixed a data bug that had silently 5×'d every Maize benchmark figure (§8.4)</td></tr>
+<tr><td><strong>Changes in 1.1</strong></td><td>Phone-first auth · dashboard rollups · offline capture · local languages</td></tr>
+<tr><td><strong>Product</strong></td><td>FarmPilot — farm cost estimation and reduction tool</td></tr>
+<tr><td><strong>Team</strong></td><td>Osmond Abdul-Karim Woriwi (21034402) · Aboagye Jeffery Ohene (21013336) · Ayisha Abdullah (20950630)</td></tr>
+<tr><td><strong>Timeline</strong></td><td>14 days</td></tr>
+<tr><td><strong>Companion document</strong></td><td><code>FarmPilot_SDD.md</code> — technical design</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li>Overview</li>
+<li>Problem Statement</li>
+<li>Goals and Non-Goals</li>
+<li>Target Users</li>
+<li>Success Metrics</li>
+<li>Product Principles</li>
+<li>Functional Requirements</li>
+<li>Data Requirements</li>
+<li>Content Requirements</li>
+<li>User Flows</li>
+<li>Screen Requirements</li>
+<li>Business Rules</li>
+<li>Edge Cases and Error Handling</li>
+<li>Non-Functional Requirements</li>
+<li>Out of Scope</li>
+<li>Assumptions</li>
+<li>Dependencies</li>
+<li>Release Criteria</li>
+<li>Delivery Plan</li>
+<li>Open Questions</li>
+<li>Appendix — Requirements Traceability</li>
+</ol>
+<hr/>
+<h2 id="1-overview">1. Overview</h2>
+<h3 id="1-1-product-summary">1.1 Product summary</h3>
+<p>FarmPilot is a web application that tells a small-scale Ghanaian farmer</p>
+<p>what a season should cost to run, and where he is spending more than he</p>
+<p>needs to.</p>
+<p>The farmer records his farm, his season, and what he spent. The system</p>
+<p>compares that spending against benchmark figures derived from published</p>
+<p>agricultural data and real farm records, then reports each cost category</p>
+<p>where he is above the expected level, with a specific suggestion for</p>
+<p>reducing it.</p>
+<h3 id="1-2-one-line-positioning">1.2 One-line positioning</h3>
+<blockquote>
+<p>A farmer records what he spent. FarmPilot tells him what it should have</p>
+<p>cost, and where the difference is.</p>
+</blockquote>
+<h3 id="1-3-why-this-product">1.3 Why this product</h3>
+<p>Existing agricultural platforms in Ghana serve organisations —</p>
+<p>cooperatives, aggregators, input dealers, and government — with the</p>
+<p>farmer as beneficiary rather than user. Farm cost visibility is delivered</p>
+<p>through an extension officer, if at all. FarmPilot addresses the cost</p>
+<p>question directly and in a form a farmer or a field officer can complete</p>
+<p>in a few minutes.</p>
+<h3 id="1-4-relationship-to-the-approved-proposal">1.4 Relationship to the approved proposal</h3>
+<table>
+<thead><tr><th>Proposal commitment</th><th>Status in this PRD</th></tr></thead>
+<tbody>
+<tr><td>Farmer account and recording form</td><td>Retained — FR-1, FR-3, FR-4</td></tr>
+<tr><td>Store each season's costs in one place</td><td>Retained — FR-3, FR-4</td></tr>
+<tr><td>Estimate cost of coming season from records</td><td>Retained — FR-6</td></tr>
+<tr><td>Find overspending and suggest reductions</td><td>Retained — FR-7, FR-8</td></tr>
+<tr><td>Show estimate and suggestions on one screen</td><td>Retained — FR-9</td></tr>
+<tr><td>React + TypeScript frontend</td><td>Retained</td></tr>
+<tr><td>Supabase for accounts and data</td><td>Retained</td></tr>
+<tr><td>Python (FastAPI) calculation service</td><td><strong>Removed</strong> — see §16.4</td></tr>
+<tr><td>Six-week schedule</td><td><strong>Compressed to 14 days</strong> — see §19</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="2-problem-statement">2. Problem Statement</h2>
+<h3 id="2-1-the-user-s-problem">2.1 The user's problem</h3>
+<p>A small-scale farmer spends on seeds, fertiliser, agrochemicals, land</p>
+<p>preparation, labour, transport, and storage every season. Almost none of</p>
+<p>this is written down. As a result he cannot answer two questions that</p>
+<p>directly determine his profit:</p>
+<ol>
+<li><strong>What should this season cost me?</strong></li>
+<li><strong>Where am I spending more than I need to?</strong></li>
+</ol>
+<p>Without an answer to the first, he cannot plan or borrow. Without an</p>
+<p>answer to the second, he repeats the same overspend every season.</p>
+<h3 id="2-2-why-it-persists">2.2 Why it persists</h3>
+<table>
+<thead><tr><th>Cause</th><th>Consequence</th></tr></thead>
+<tbody>
+<tr><td>No records kept</td><td>Nothing to analyse; the farmer reasons from memory</td></tr>
+<tr><td>No external comparison</td><td>Even a farmer who tracks spending has nothing to judge it against</td></tr>
+<tr><td>Advice is generic</td><td>Extension guidance is crop-level, not farm-level and not costed</td></tr>
+<tr><td>Subsidy windows missed</td><td>Fertiliser bought at open market costs roughly double the subsidised price</td></tr>
+</tbody></table>
+<h3 id="2-3-the-core-insight">2.3 The core insight</h3>
+<p>**Overspending cannot be detected by looking at a farmer's records</p>
+<p>alone.** Comparing a farmer only against his own history means his</p>
+<p>figures always equal his own baseline — variance is always zero and</p>
+<p>nothing can ever be flagged.</p>
+<p>Detecting overspend requires an <strong>independent benchmark</strong>: what the</p>
+<p>season <em>should</em> cost, derived from how much of each input an acre of that</p>
+<p>crop actually needs, priced at current rates.</p>
+<p>This single insight determines the entire product and data design.</p>
+<hr/>
+<h2 id="3-goals-and-non-goals">3. Goals and Non-Goals</h2>
+<h3 id="3-1-product-goals">3.1 Product goals</h3>
+<table>
+<thead><tr><th>#</th><th>Goal</th></tr></thead>
+<tbody>
+<tr><td>G1</td><td>A farmer with no prior records receives a usable cost estimate on first use</td></tr>
+<tr><td>G2</td><td>A farmer sees his season cost broken down by category, not as one number</td></tr>
+<tr><td>G3</td><td>The system identifies specific categories where spending exceeds the expected level</td></tr>
+<tr><td>G4</td><td>Each identified category carries an actionable suggestion, not generic advice</td></tr>
+<tr><td>G5</td><td>The farmer sees a quantified potential saving</td></tr>
+<tr><td>G6</td><td>Recording a full season takes under ten minutes</td></tr>
+<tr><td>G7</td><td>Benchmark data can be replaced without any code change</td></tr>
+</tbody></table>
+<h3 id="3-2-academic-goals">3.2 Academic goals</h3>
+<table>
+<thead><tr><th>#</th><th>Goal</th></tr></thead>
+<tbody>
+<tr><td>G8</td><td>Demonstrate relational data modelling with enforced integrity constraints</td></tr>
+<tr><td>G9</td><td>Demonstrate row-level authorisation, verified by test</td></tr>
+<tr><td>G10</td><td>Demonstrate business logic implemented in the database layer</td></tr>
+<tr><td>G11</td><td>Produce a working, deployed system within the assessment window</td></tr>
+<tr><td>G12</td><td>Document sources, limitations, and excluded scope honestly</td></tr>
+</tbody></table>
+<h3 id="3-3-non-goals">3.3 Non-goals</h3>
+<table>
+<thead><tr><th>#</th><th>Non-goal</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>N1</td><td>Predicting yield or weather</td><td>Separate problem, out of scope</td></tr>
+<tr><td>N2</td><td>Real-time market prices</td><td>Requires a data source the project does not have</td></tr>
+<tr><td>N3</td><td>Farmer-to-farmer comparison</td><td>Privacy implications and insufficient user base</td></tr>
+<tr><td>N4</td><td>Loan origination or payments</td><td>Regulated activity</td></tr>
+<tr><td>N5</td><td>Replacing extension services</td><td>The product informs, it does not advise agronomically</td></tr>
+<tr><td>N6</td><td>Serving commercial-scale farms</td><td>Benchmarks and design target smallholders</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="4-target-users">4. Target Users</h2>
+<h3 id="4-1-primary-persona-kwame-smallholder-farmer">4.1 Primary persona — Kwame, smallholder farmer</h3>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Age / location</strong></td><td>42, Ejisu district, Ashanti Region</td></tr>
+<tr><td><strong>Farm</strong></td><td>2.5 acres, maize in major season, maize and vegetables in minor</td></tr>
+<tr><td><strong>Device</strong></td><td>Android smartphone, 5" screen, mobile data, intermittent signal</td></tr>
+<tr><td><strong>Literacy</strong></td><td>Reads English adequately; more comfortable in Twi</td></tr>
+<tr><td><strong>Records</strong></td><td>None written. Recalls large purchases; does not recall small ones</td></tr>
+<tr><td><strong>Financial pattern</strong></td><td>Buys inputs when cash is available, not when cheapest. Missed the subsidy window last season</td></tr>
+<tr><td><strong>Goal</strong></td><td>Keep more of what he earns</td></tr>
+<tr><td><strong>Frustration</strong></td><td>Knows the money goes somewhere, cannot say where</td></tr>
+<tr><td><strong>Success looks like</strong></td><td>Being told, in cedis, which single change saves him the most</td></tr>
+</tbody></table>
+<h3 id="4-2-secondary-persona-ama-field-officer">4.2 Secondary persona — Ama, field officer</h3>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Role</strong></td><td>Cooperative secretary, records for approximately 30 farmers</td></tr>
+<tr><td><strong>Device</strong></td><td>Laptop, office connection</td></tr>
+<tr><td><strong>Behaviour</strong></td><td>Enters data on farmers' behalf after farm visits</td></tr>
+<tr><td><strong>Relevance</strong></td><td>Documented adoption barriers make officer-mediated entry the more realistic path at scale</td></tr>
+<tr><td><strong>Status in v1</strong></td><td>Not supported. Design does not preclude it — see §15 and SDD §18</td></tr>
+</tbody></table>
+<h3 id="4-3-evaluator-project-supervisor">4.3 Evaluator — project supervisor</h3>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Need</strong></td><td>Evidence of design reasoning, working software, honest treatment of limitations</td></tr>
+<tr><td><strong>Assesses</strong></td><td>Data model quality, security implementation, whether the system actually runs, source traceability</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="5-success-metrics">5. Success Metrics</h2>
+<h3 id="5-1-product-metrics">5.1 Product metrics</h3>
+<table>
+<thead><tr><th>#</th><th>Metric</th><th>Target</th><th>Measurement</th></tr></thead>
+<tbody>
+<tr><td>M1</td><td>Time to record one full season</td><td>< 10 minutes</td><td>Timed walkthrough with a test user</td></tr>
+<tr><td>M2</td><td>Estimate available on first use, no history</td><td>100% of new users</td><td>Functional test</td></tr>
+<tr><td>M3</td><td>Flagged categories carry advice</td><td>100% of flagged rows</td><td>Data assertion — no flag without advice</td></tr>
+<tr><td>M4</td><td>Report renders in one screen without navigation</td><td>Yes</td><td>Visual inspection at 360px</td></tr>
+<tr><td>M5</td><td>Every benchmark row carries a source</td><td>100%</td><td>NOT NULL constraint</td></tr>
+<tr><td>M6</td><td>Sign-up completable with a phone number only</td><td>Yes</td><td>Functional test</td></tr>
+<tr><td>M7</td><td>Dashboard farm total equals the sum of its seasons</td><td>Exact</td><td>Reconciliation test</td></tr>
+</tbody></table>
+<h3 id="5-2-technical-metrics">5.2 Technical metrics</h3>
+<table>
+<thead><tr><th>#</th><th>Metric</th><th>Target</th></tr></thead>
+<tbody>
+<tr><td>M8</td><td>Estimate generation time, 50 cost items</td><td>< 2 seconds</td></tr>
+<tr><td>M9</td><td>Cross-user data leakage</td><td>Zero rows, verified with two accounts</td></tr>
+<tr><td>M10</td><td>Monetary rounding drift</td><td>Zero — integer pesewas throughout</td></tr>
+<tr><td>M11</td><td>Fresh-project rebuild from migrations</td><td>Succeeds with no manual steps</td></tr>
+<tr><td>M12</td><td>Duplicate records after an interrupted offline flush</td><td>Zero</td></tr>
+</tbody></table>
+<h3 id="5-3-explicitly-not-measured">5.3 Explicitly not measured</h3>
+<p>Adoption, retention, and actual farmer savings. The assessment window</p>
+<p>does not permit longitudinal measurement, and claiming otherwise would be</p>
+<p>dishonest.</p>
+<hr/>
+<h2 id="6-product-principles">6. Product Principles</h2>
+<p>Decision rules for the build. Where a requirement is ambiguous, these</p>
+<p>resolve it.</p>
+<table>
+<thead><tr><th>#</th><th>Principle</th><th>Consequence</th></tr></thead>
+<tbody>
+<tr><td>P1</td><td><strong>The comparison must be external</strong></td><td>A benchmark is never derived from the user being measured</td></tr>
+<tr><td>P2</td><td><strong>Every number lives in the database</strong></td><td>No rate, price, or threshold appears in application code</td></tr>
+<tr><td>P3</td><td><strong>Amount is required, breakdown is optional</strong></td><td>A farmer who recalls only a total can still record</td></tr>
+<tr><td>P4</td><td><strong>Per acre is the unit of comparison</strong></td><td>Farms of different sizes remain comparable</td></tr>
+<tr><td>P5</td><td><strong>Money is integer pesewas</strong></td><td>No float arithmetic anywhere in the system</td></tr>
+<tr><td>P6</td><td><strong>Outputs are snapshots</strong></td><td>A farmer sees what he was told then, not a retroactively changed figure</td></tr>
+<tr><td>P7</td><td><strong>Advice must be specific</strong></td><td>"Reduce fertiliser spend" fails; naming the subsidy window passes</td></tr>
+<tr><td>P8</td><td><strong>State limitations plainly</strong></td><td>Unverified data is labelled as unverified in the product and the report</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="7-functional-requirements">7. Functional Requirements</h2>
+<p>Priority: <strong>P0</strong> must ship · <strong>P1</strong> ships if time allows · <strong>P2</strong> deferred.</p>
+<h3 id="7-1-authentication-and-account">7.1 Authentication and account</h3>
+<p>Target users are smallholder farmers who use mobile phones and often have</p>
+<p>no email address. Sign-up is therefore <strong>phone-first</strong>, with email offered</p>
+<p>as an alternative on the same screen.</p>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-1.1</td><td>A user can register with <strong>phone number and password</strong></td><td>P0</td></tr>
+<tr><td>FR-1.2</td><td>A user can register with email and password as an alternative</td><td>P0</td></tr>
+<tr><td>FR-1.3</td><td>Phone is the default option and appears first on both sign-up and sign-in</td><td>P0</td></tr>
+<tr><td>FR-1.4</td><td>Phone numbers are normalised — <code>+233 24 123 4567</code>, <code>024-123-4567</code>, and <code>0241234567</code> all resolve to the same account</td><td>P0</td></tr>
+<tr><td>FR-1.5</td><td>Invalid Ghana mobile numbers are rejected with a clear message</td><td>P0</td></tr>
+<tr><td>FR-1.6</td><td>The normalised number is shown back to the user before submit</td><td>P0</td></tr>
+<tr><td>FR-1.7</td><td>A user can sign in and sign out</td><td>P0</td></tr>
+<tr><td>FR-1.8</td><td>A session persists across page reload</td><td>P0</td></tr>
+<tr><td>FR-1.9</td><td>Unauthenticated users are redirected from protected routes to sign-in</td><td>P0</td></tr>
+<tr><td>FR-1.10</td><td>Duplicate registration shows a clear message, not a raw error</td><td>P0</td></tr>
+<tr><td>FR-1.11</td><td>A user may link an email address to a phone-registered account</td><td>P1</td></tr>
+<tr><td>FR-1.12</td><td>Password reset</td><td>P2</td></tr>
+<tr><td>FR-1.13</td><td>SMS OTP verification of the phone number</td><td>P2</td></tr>
+</tbody></table>
+<p><strong>Implementation note.</strong> Supabase phone auth requires OTP delivery</p>
+<p>through a paid SMS provider, which is out of scope. The client therefore</p>
+<p>normalises the phone number, derives a synthetic email</p>
+<p>(<code>0241234567@farmpilot.local</code>), and calls standard email sign-up. The real</p>
+<p>number is stored in <code>profiles</code>. The farmer never sees an email field</p>
+<p>unless they choose that option. See ADR-006.</p>
+<p><strong>Accepted limitation.</strong> The phone number is not verified. This is</p>
+<p>acceptable because it functions as an identifier, not a channel — nothing</p>
+<p>is ever sent to it. Enabling real SMS OTP later requires only switching on</p>
+<p>a provider; numbers are already stored and normalised.</p>
+<h3 id="7-2-farm">7.2 Farm</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-2.1</td><td>A user records one farm: name, district, region, total area in acres</td><td>P0</td></tr>
+<tr><td>FR-2.2</td><td>Farm setup is required before any other screen is reachable</td><td>P0</td></tr>
+<tr><td>FR-2.3</td><td>Total area must be greater than zero</td><td>P0</td></tr>
+<tr><td>FR-2.4</td><td>A user can edit farm details after creation</td><td>P1</td></tr>
+<tr><td>FR-2.5</td><td>A user can hold multiple farms</td><td>P2</td></tr>
+<tr><td>FR-2.6</td><td>A user picks a day of the week during farm setup as their weekly check-in day (§7.4A)</td><td>P1</td></tr>
+</tbody></table>
+<h3 id="7-3-season">7.3 Season</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-3.1</td><td>A user creates a season: crop, year, window, area planted</td><td>P0</td></tr>
+<tr><td>FR-3.2</td><td>Window is one of major, minor, dry</td><td>P0</td></tr>
+<tr><td>FR-3.3</td><td>The same crop in the same year and window cannot be created twice on one farm</td><td>P0</td></tr>
+<tr><td>FR-3.4</td><td>Area planted must be greater than zero</td><td>P0</td></tr>
+<tr><td>FR-3.5</td><td>Area planted must not exceed the farm's total area</td><td>P0</td></tr>
+<tr><td>FR-3.6</td><td>Seasons are listed with crop, year, window, total recorded, and status</td><td>P0</td></tr>
+<tr><td>FR-3.7</td><td>A user closes a season by entering harvest quantity and unit</td><td>P0</td></tr>
+<tr><td>FR-3.8</td><td>A closed season becomes available as history for future estimates</td><td>P0</td></tr>
+<tr><td>FR-3.9</td><td>A user can record revenue against a closed season</td><td>P1</td></tr>
+<tr><td>FR-3.10</td><td>A user can delete a season and its costs</td><td>P1</td></tr>
+</tbody></table>
+<h3 id="7-4-cost-recording">7.4 Cost recording</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-4.1</td><td>A user adds a cost item to a season</td><td>P0</td></tr>
+<tr><td>FR-4.2</td><td>Category is required, from the fixed list of eight</td><td>P0</td></tr>
+<tr><td>FR-4.3</td><td>Amount is required and must be zero or greater</td><td>P0</td></tr>
+<tr><td>FR-4.4</td><td>Quantity, unit, and unit price are optional</td><td>P0</td></tr>
+<tr><td>FR-4.5</td><td>Where quantity and unit price are supplied, amount is computed automatically</td><td>P0</td></tr>
+<tr><td>FR-4.6</td><td>A description may be attached to any item</td><td>P0</td></tr>
+<tr><td>FR-4.7</td><td>Items appear in the list immediately on save</td><td>P0</td></tr>
+<tr><td>FR-4.8</td><td>A running total is displayed on the season screen</td><td>P0</td></tr>
+<tr><td>FR-4.9</td><td>A user can delete an item, with confirmation</td><td>P0</td></tr>
+<tr><td>FR-4.10</td><td>A user can edit an existing item</td><td>P1</td></tr>
+<tr><td>FR-4.11</td><td>A date may be attached to any item</td><td>P1</td></tr>
+<tr><td>FR-4.12</td><td>Common inputs are offered as suggestions when a category is selected</td><td>P1</td></tr>
+<tr><td>FR-4.13</td><td>Where a benchmark exists for the season's crop and the selected category, the add-cost form offers to fill the amount with the standard rate scaled to the season's planted acreage, for a farmer who does not know what a category actually cost</td><td>P1</td></tr>
+<tr><td>FR-4.14</td><td>A cost item can be added from the dashboard without first opening a season, when the farm has exactly one active season; where it has more than one, the farmer is asked which season the cost belongs to first</td><td>P1</td></tr>
+</tbody></table>
+<h3 id="7-4a-weekly-check-in">7.4A Weekly check-in</h3>
+<p>A farmer rarely opens the app mid-season unless prompted — costs that</p>
+<p>should be logged as they happen (labour, transport) get forgotten and</p>
+<p>either lost or dumped into memory-based guesses weeks later. The weekly</p>
+<p>check-in is a standing prompt that asks, per category, "did you spend</p>
+<p>anything on X this week?" so recurring costs get captured close to when</p>
+<p>they happened, feeding the same <code>season_costs</code> rows the normal add-cost</p>
+<p>form does.</p>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-4A.1</td><td>The dashboard prompts a weekly check-in when it has been roughly a week since the last one, or when today is the farmer's chosen check-in day (FR-2.6) and they have not completed one today</td><td>P1</td></tr>
+<tr><td>FR-4A.2</td><td>The check-in asks one question per expected category across all of the farmer's active seasons, not per season — where two active seasons share an expected category, one question covers both</td><td>P1</td></tr>
+<tr><td>FR-4A.3</td><td>A farmer can answer "Nothing" to skip a category for that week without it counting as zero spend recorded</td><td>P1</td></tr>
+<tr><td>FR-4A.4</td><td>An amount entered against a category shared by multiple active seasons is split evenly across those seasons</td><td>P2</td></tr>
+<tr><td>FR-4A.5</td><td>Check-in entries are recorded as ordinary cost items — they are indistinguishable from normally-recorded costs to the estimation engine and appear in the same lists and totals</td><td>P0</td></tr>
+<tr><td>FR-4A.6</td><td>The farmer can dismiss a check-in without answering every question</td><td>P1</td></tr>
+</tbody></table>
+<p><strong>Accepted limitation (FR-4A.4).</strong> Splitting evenly rather than by</p>
+<p>planted acreage is a simplification: a 1-acre and a 5-acre active season</p>
+<p>sharing a "labour" question receive the same split regardless of size,</p>
+<p>which skews the per-acre figure for both until the farmer corrects it</p>
+<p>with an ordinary edit. Splitting proportionally by acreage is documented</p>
+<p>as future work (SDD §18) rather than built now, because it adds a second</p>
+<p>mental model (equal vs. proportional) to a screen designed to be</p>
+<p>answerable in seconds standing in a field.</p>
+<h3 id="7-5-cost-categories">7.5 Cost categories</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-5.1</td><td>Exactly eight categories exist: seeds, fertiliser, agrochemicals, land preparation, labour, transport, storage, other</td><td>P0</td></tr>
+<tr><td>FR-5.2</td><td>The list is fixed; users cannot add categories</td><td>P0</td></tr>
+<tr><td>FR-5.3</td><td>Categories are displayed with readable labels, not database identifiers</td><td>P0</td></tr>
+<tr><td>FR-5.4</td><td>The <code>other</code> category is included in totals but never flagged, and the UI states why</td><td>P0</td></tr>
+</tbody></table>
+<p><strong>Why the list is fixed (FR-5.2).</strong> Every category must map to a benchmark</p>
+<p>in order to be compared. A farmer-invented category has nothing to measure</p>
+<p>against, so it could never be flagged and would be silently invisible to</p>
+<p>the estimation engine — the feature would appear to work while doing</p>
+<p>nothing. Unusual spending goes under <code>other</code>, which counts toward the</p>
+<p>total but carries no advice, and the report says so. See ADR-004.</p>
+<h3 id="7-6-estimation">7.6 Estimation</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-6.1</td><td>A user generates an estimate for a season</td><td>P0</td></tr>
+<tr><td>FR-6.2</td><td>Where the farm has no prior completed season of that crop, the estimate uses benchmark data</td><td>P0</td></tr>
+<tr><td>FR-6.3</td><td>Where prior completed seasons exist, the estimate uses the farmer's own per-acre averages</td><td>P0</td></tr>
+<tr><td>FR-6.4</td><td>The method used and the number of seasons drawn on are shown to the user</td><td>P0</td></tr>
+<tr><td>FR-6.5</td><td>The estimate is produced per category and totalled</td><td>P0</td></tr>
+<tr><td>FR-6.6</td><td>The estimate is scaled by area planted</td><td>P0</td></tr>
+<tr><td>FR-6.7</td><td>The estimate is stored, with the settings in force at the time</td><td>P0</td></tr>
+<tr><td>FR-6.8</td><td>Estimate generation is unavailable until at least one cost item exists</td><td>P0</td></tr>
+<tr><td>FR-6.9</td><td>Re-running an estimate creates a new record rather than overwriting</td><td>P0</td></tr>
+<tr><td>FR-6.10</td><td>A user can view previous estimates for a season</td><td>P1</td></tr>
+<tr><td>FR-6.11</td><td>Where the farmer has already recorded an actual cost for a category this season, the estimate line for that category shows that recorded figure rather than a prediction, and is labelled "Recorded"; categories not yet recorded are labelled "Predicted"</td><td>P0</td></tr>
+<tr><td>FR-6.12</td><td>Overspend flagging (FR-7.x) applies only to "Recorded" lines — a still-predicted line has nothing real to compare yet</td><td>P0</td></tr>
+</tbody></table>
+<p><strong>Why FR-6.11/6.12 exist.</strong> The original engine computed the "estimate"</p>
+<p>and the "benchmark" for a first-time crop from the exact same figures, so</p>
+<p>they were always equal — variance was always 0% and nothing could ever be</p>
+<p>flagged, regardless of what a farmer actually recorded that season. This</p>
+<p>silently defeated FR-7 and FR-8 for every farmer growing a crop with no</p>
+<p>prior completed season of their own, which is every farmer's first</p>
+<p>season. The fix makes the estimate line for a category switch from a</p>
+<p>prediction to the farmer's own recorded figure the moment they record it,</p>
+<p>so the comparison in BR-6 has something real to compare once it exists.</p>
+<h3 id="7-7-overspend-detection">7.7 Overspend detection</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-7.1</td><td>Each category is compared against its benchmark figure for the same area</td><td>P0</td></tr>
+<tr><td>FR-7.2</td><td>Variance is calculated as a percentage above benchmark</td><td>P0</td></tr>
+<tr><td>FR-7.3</td><td>A category exceeding the configured threshold is flagged</td><td>P0</td></tr>
+<tr><td>FR-7.4</td><td>The threshold is configurable in the database, default 30%</td><td>P0</td></tr>
+<tr><td>FR-7.5</td><td>Potential saving is recorded as the amount above benchmark</td><td>P0</td></tr>
+<tr><td>FR-7.6</td><td>Categories with no benchmark are shown but never flagged</td><td>P0</td></tr>
+</tbody></table>
+<h3 id="7-8-cost-reduction-advice">7.8 Cost-reduction advice</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-8.1</td><td>Every flagged category displays a suggestion</td><td>P0</td></tr>
+<tr><td>FR-8.2</td><td>Suggestions are stored in the database, editable without code change</td><td>P0</td></tr>
+<tr><td>FR-8.3</td><td>Suggestions are specific and actionable, naming a mechanism the farmer can act on</td><td>P0</td></tr>
+<tr><td>FR-8.4</td><td>Exactly one suggestion exists per category</td><td>P0</td></tr>
+<tr><td>FR-8.5</td><td>Multiple suggestions per category, selected by severity</td><td>P2</td></tr>
+</tbody></table>
+<h3 id="7-9-report">7.9 Report</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-9.1</td><td>The report shows the estimated total for the season</td><td>P0</td></tr>
+<tr><td>FR-9.2</td><td>The report shows every category with amount and share of total</td><td>P0</td></tr>
+<tr><td>FR-9.3</td><td>Flagged categories are visually distinct</td><td>P0</td></tr>
+<tr><td>FR-9.4</td><td>Flagged categories are ordered first</td><td>P0</td></tr>
+<tr><td>FR-9.5</td><td>Each flag shows variance percentage and potential saving</td><td>P0</td></tr>
+<tr><td>FR-9.6</td><td>The total potential saving is shown</td><td>P0</td></tr>
+<tr><td>FR-9.7</td><td>The report notes when benchmark rather than history was used</td><td>P0</td></tr>
+<tr><td>FR-9.8</td><td>The report fits one scrollable screen at 360px width</td><td>P0</td></tr>
+<tr><td>FR-9.9</td><td>The report is printable or exportable to PDF</td><td>P2</td></tr>
+<tr><td>FR-9.10</td><td>Where a season has nothing to estimate yet (no benchmark for the crop, no history, no recorded costs), the report screen shows an interactive checklist of the categories a farmer should track, each marked as fixed (recorded) or needing fixing (not yet recorded); tapping a category opens the add-cost form directly, pre-set to that category</td><td>P0</td></tr>
+<tr><td>FR-9.11</td><td>The checklist in FR-9.10 uses the crop's own expected categories where benchmark norms exist for it; where they do not, it falls back to the same general checklist (seeds, land preparation, fertiliser, labour) used on the season screen, so every crop gets an actionable checklist</td><td>P1</td></tr>
+</tbody></table>
+<h3 id="7-10-data-integrity">7.10 Data integrity</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-10.1</td><td>A user can read and write only their own farm, seasons, costs, and estimates</td><td>P0</td></tr>
+<tr><td>FR-10.2</td><td>Reference data is readable by all signed-in users and writable by none</td><td>P0</td></tr>
+<tr><td>FR-10.3</td><td>Every benchmark row records its source</td><td>P0</td></tr>
+<tr><td>FR-10.4</td><td>Unverified benchmark rows are explicitly marked as placeholders</td><td>P0</td></tr>
+<tr><td>FR-10.5</td><td>Deleting a season deletes its costs and estimates</td><td>P0</td></tr>
+<tr><td>FR-10.6</td><td>Reference rows in use cannot be deleted</td><td>P0</td></tr>
+</tbody></table>
+<h3 id="7-11-dashboard-and-rollups">7.11 Dashboard and rollups</h3>
+<p>An estimate belongs to a <strong>season</strong> — one crop, one window, one year, one</p>
+<p>farm. This is correct: an acre of maize and an acre of cassava need</p>
+<p>entirely different inputs in different quantities, so a single farm-wide</p>
+<p>estimate would have to average across crops and would describe no actual</p>
+<p>field.</p>
+<p>The farmer, however, asks two questions: <em>"what does this crop cost me?"</em></p>
+<p>and <em>"what does my whole farm cost me?"</em> Both are answered by estimating</p>
+<p>per crop and rolling upward. See ADR-007.</p>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-11.1</td><td>The dashboard is the landing screen after sign-in</td><td>P0</td></tr>
+<tr><td>FR-11.2</td><td>It shows farm-level totals: seasons, crops, area planted, total recorded, total estimated, total possible saving</td><td>P0</td></tr>
+<tr><td>FR-11.3</td><td>It shows a per-crop breakdown: seasons, acres, total spent, cost per acre</td><td>P0</td></tr>
+<tr><td>FR-11.4</td><td>Cost per acre is displayed prominently, as it is the only figure comparable across crops of different sizes</td><td>P0</td></tr>
+<tr><td>FR-11.5</td><td>It lists all seasons with crop, year, window, recorded total, and status</td><td>P0</td></tr>
+<tr><td>FR-11.6</td><td>Re-running an estimate does not double the farm total — only the most recent estimate per season is counted</td><td>P0</td></tr>
+<tr><td>FR-11.7</td><td>The relationship between per-crop and farm-level figures is explained in one line so the numbers are not confusing</td><td>P0</td></tr>
+<tr><td>FR-11.8</td><td>The dashboard resolves in two queries, not one per season</td><td>P0</td></tr>
+</tbody></table>
+<h3 id="7-12-offline-capture">7.12 Offline capture</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-12.1</td><td>The app installs as a PWA on Android</td><td>P1</td></tr>
+<tr><td>FR-12.2</td><td>Farm, seasons, and existing costs are viewable offline after one online visit</td><td>P1</td></tr>
+<tr><td>FR-12.3</td><td>Cost items can be added, edited, and deleted while offline</td><td>P1</td></tr>
+<tr><td>FR-12.4</td><td>Offline writes queue locally and flush automatically on reconnect</td><td>P1</td></tr>
+<tr><td>FR-12.5</td><td>A replayed or interrupted flush never creates a duplicate record</td><td>P1</td></tr>
+<tr><td>FR-12.6</td><td>An offline banner and a pending-item count are always visible when offline</td><td>P1</td></tr>
+<tr><td>FR-12.7</td><td>Unsynced items are individually marked</td><td>P1</td></tr>
+<tr><td>FR-12.8</td><td>Estimate generation is disabled offline, with the reason shown</td><td>P1</td></tr>
+<tr><td>FR-12.9</td><td>A write that fails repeatedly is surfaced to the user, never silently dropped</td><td>P1</td></tr>
+</tbody></table>
+<p><strong>Scope boundary.</strong> Offline covers cost entry only — the one activity that</p>
+<p>happens standing in a field. Sign-in and estimate generation require</p>
+<p>connectivity and the UI says so.</p>
+<p><strong>Duplicate prevention.</strong> Each queued row carries a <code>client_id</code> UUID</p>
+<p>generated on the device, with a unique index server-side. A replayed write</p>
+<p>collides on the index instead of inserting again. Without this, a farmer</p>
+<p>who loses signal mid-save could record the same GHS 400 of fertiliser</p>
+<p>three times and his estimate would be silently wrong. See ADR-008.</p>
+<h3 id="7-13-local-languages">7.13 Local languages</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-13.1</td><td>A user can select a preferred language: English, Twi, Ewe, Ga, or Dagbani</td><td>P2</td></tr>
+<tr><td>FR-13.2</td><td>Advice messages are shown in the selected language</td><td>P2</td></tr>
+<tr><td>FR-13.3</td><td>Advice can be played as audio in the selected language</td><td>P2</td></tr>
+<tr><td>FR-13.4</td><td>Translations are fetched once and cached; no repeat API calls</td><td>P2</td></tr>
+<tr><td>FR-13.5</td><td>If the translation service is unavailable, English is shown without an error</td><td>P2</td></tr>
+<tr><td>FR-13.6</td><td>Unreviewed machine translations are marked as automatic</td><td>P2</td></tr>
+</tbody></table>
+<p><strong>Why audio matters more than text.</strong> Khaya AI (Ghana NLP) provides both</p>
+<p>translation and text-to-speech for Twi and Ewe. A farmer who reads English</p>
+<p>poorly can still listen. If only one half is built, it should be the</p>
+<p>audio. See ADR-009.</p>
+<p><strong>Implementation status (this pass).</strong> FR-13.1 (language selector), 13.2</p>
+<p>(Twi advice text), 13.3 (Twi advice audio), 13.4 (generate-once caching),</p>
+<p>and 13.5 (silent English fallback) are built and verified for **Twi</p>
+<p>only** — see <code>FarmPilot_SDD.md</code> §19 for the full design and how the live</p>
+<p>API's real behaviour differed from what was assumed before it was</p>
+<p>actually called. Ewe, Ga, and Dagbani remain selectable in the language</p>
+<p>dropdown (the schema and the generation script both already support</p>
+<p>them) but have no generated content yet, so a farmer who picks one of</p>
+<p>those three correctly and silently sees English throughout, exactly as</p>
+<p>FR-13.5 requires — not a broken state, just an ungenerated one.</p>
+<p>FR-13.6 is <strong>partially met</strong>: <code>advice_translations.reviewed</code> exists,</p>
+<p>defaults to <code>false</code>, and is never set <code>true</code> by any code path (only a</p>
+<p>human can), so the distinction is fully tracked in the database — but</p>
+<p>nothing in the UI yet shows a farmer-facing "machine-translated,</p>
+<p>unreviewed" label. Until a native Twi speaker reviews the 8 generated</p>
+<p>clips and the rows are flipped to <code>reviewed = true</code>, this is the one</p>
+<p>requirement in this section not fully closed out.</p>
+<h3 id="7-14-ai-assistant-farmbot">7.14 AI Assistant (FarmBot)</h3>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>FR-14.1</td><td>A user can interact with an AI assistant (FarmBot) available on all screens</td><td>P0</td></tr>
+<tr><td>FR-14.2</td><td>FarmBot has real-time context of the user's farm details, recorded costs, and estimated totals</td><td>P0</td></tr>
+<tr><td>FR-14.3</td><td>FarmBot has access to the user's active and completed seasons, along with crop and area planted details</td><td>P0</td></tr>
+<tr><td>FR-14.4</td><td>FarmBot provides specific, actionable agricultural advice tailored to the user's current farm data</td><td>P0</td></tr>
+<tr><td>FR-14.5</td><td>FarmBot handles network errors gracefully without crashing the application</td><td>P0</td></tr>
+<tr><td>FR-14.6</td><td>FarmBot has access to the real overspend flags computed by the estimation engine (category, variance percentage, potential saving, advice) for the most recent estimate on each of the user's seasons, and is instructed to lead with them — not a generic guess — when asked about overspending</td><td>P0</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="8-data-requirements">8. Data Requirements</h2>
+<h3 id="8-1-what-the-product-must-hold">8.1 What the product must hold</h3>
+<table>
+<thead><tr><th>Domain</th><th>Data</th></tr></thead>
+<tbody>
+<tr><td>Reference — crops</td><td>Name, local name, national average yield, potential yield</td></tr>
+<tr><td>Reference — prices</td><td>Input name, category, unit, year, price, price basis, source</td></tr>
+<tr><td>Reference — norms</td><td>Crop, input, quantity required per acre, applicable window, source</td></tr>
+<tr><td>Reference — advice</td><td>One message per category</td></tr>
+<tr><td>Reference — settings</td><td>Price multiplier, flag threshold</td></tr>
+<tr><td>Reference — translations</td><td>Cached Khaya translations of advice, with a reviewed flag</td></tr>
+<tr><td>Farmer — profile</td><td>Phone, linked email, full name, preferred language, auth method</td></tr>
+<tr><td>Farmer — farm</td><td>Name, district, region, total area, weekly check-in day</td></tr>
+<tr><td>Farmer — season</td><td>Crop, year, window, area planted, harvest quantity and unit, revenue, completion status</td></tr>
+<tr><td>Farmer — costs</td><td>Category, description, quantity, unit, unit price, amount, date</td></tr>
+<tr><td>Output — estimate</td><td>Method, seasons used, area, total, settings snapshot, timestamp</td></tr>
+<tr><td>Output — lines</td><td>Category, estimated amount, benchmark amount, variance, flag, advice, potential saving</td></tr>
+<tr><td>Sync</td><td>Device-generated <code>client_id</code> and <code>updated_at</code> on seasons and costs, for idempotent offline flush</td></tr>
+<tr><td>Rollups</td><td>Farm-level and crop-level aggregates, as views rather than stored tables</td></tr>
+</tbody></table>
+<p>Full schema in <code>FarmPilot_SDD.md</code> §6. Twelve tables, three views.</p>
+<h3 id="8-2-benchmark-data-the-critical-dependency">8.2 Benchmark data — the critical dependency</h3>
+<p>The benchmark is what makes overspend detectable. It requires two things</p>
+<p>per crop:</p>
+<ol>
+<li><strong>A price per unit</strong> — what a bag of NPK costs</li>
+<li><strong>A quantity per acre</strong> — how many bags an acre of maize needs</li>
+</ol>
+<p>Multiplied together and summed by category, these give the expected</p>
+<p>cost per acre.</p>
+<table>
+<thead><tr><th>Data</th><th>Source</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Crop yields</td><td>MoFA <em>Facts & Figures</em> 2018, Table 4.6</td><td>Obtained</td></tr>
+<tr><td>Input unit prices</td><td>MoFA <em>Facts & Figures</em> 2018, Table 7.3</td><td>Obtained, 2018 basis</td></tr>
+<tr><td>Fertiliser subsidy structure</td><td>MoFA <em>Facts & Figures</em> 2018, Table 7.5</td><td>Obtained</td></tr>
+<tr><td>Application rates per acre</td><td>Family commercial farm records (~100 acres)</td><td>To collect</td></tr>
+<tr><td>Labour rate per person-day</td><td>Family farm records</td><td>To collect</td></tr>
+<tr><td>Person-days per acre by activity</td><td>Family farm records</td><td>To collect</td></tr>
+<tr><td>Tractor ploughing per acre</td><td>Family farm records</td><td>To collect</td></tr>
+<tr><td>Seed price per kg</td><td>Family farm records</td><td>To collect</td></tr>
+<tr><td>Transport per bag</td><td>Family farm records</td><td>To collect</td></tr>
+<tr><td>Current input prices</td><td>Family farm records or farmer entry</td><td>To collect</td></tr>
+</tbody></table>
+<h3 id="8-3-benchmark-isolation-requirement">8.3 Benchmark isolation requirement</h3>
+<p>**All benchmark values must reside in <code>cost_benchmarks</code>,</p>
+<p><code>crop_input_norms</code>, and <code>app_settings</code> only.**</p>
+<p>This is a hard requirement, not a preference. It exists so the system can</p>
+<p>be built and tested to completion with placeholder values, and the real</p>
+<p>figures dropped in late without touching a single component or function.</p>
+<p>Verification: setting a placeholder to an absurd value (ploughing at GHS</p>
+<p>5 per acre) must visibly change the report total. If it does not, a value</p>
+<p>has been hardcoded somewhere and the requirement is violated.</p>
+<h3 id="8-4-known-data-integrity-issue-fixed">8.4 Known data-integrity issue, fixed</h3>
+<p><code>crop_input_norms</code> carries a uniqueness constraint on</p>
+<p><code>(crop_id, benchmark_id, season_window)</code> so the same input cannot be</p>
+<p>seeded twice for a crop. Postgres never treats two <code>NULL</code> values as</p>
+<p>equal for uniqueness purposes, and every seeded row has</p>
+<p><code>season_window = NULL</code> (it applies to every window) — so the constraint</p>
+<p>silently permitted unlimited duplicate rows. Re-running the seed script</p>
+<p>against the live database five times over the project's iteration left</p>
+<p>five copies of every Maize input, inflating every benchmark and</p>
+<p>"estimated cost" figure in the app by 5×. Fixed by de-duplicating the</p>
+<p>existing rows and replacing the constraint with two partial unique</p>
+<p>indexes — one for a specific window, one for <code>season_window IS NULL</code> —</p>
+<p>which is the correct way to enforce "NULL counts as a real, comparable</p>
+<p>value" in Postgres. See SDD §6.5.</p>
+<h3 id="8-5-data-collection-responsibility">8.5 Data collection responsibility</h3>
+<p>Collecting §8.2 rows marked "to collect" is a task with a named owner and</p>
+<p>a deadline, tracked separately from the build. The build does not block on</p>
+<p>it; the demo does.</p>
+<hr/>
+<h2 id="9-content-requirements">9. Content Requirements</h2>
+<h3 id="9-1-advice-messages">9.1 Advice messages</h3>
+<p>One per category, stored in <code>advice_rules</code>. Each must name a specific</p>
+<p>mechanism, not a general instruction.</p>
+<table>
+<thead><tr><th>Category</th><th>Mechanism the advice must reference</th></tr></thead>
+<tbody>
+<tr><td>Fertiliser</td><td>Government subsidy — roughly half price — and the district MoFA office as the point of contact</td></tr>
+<tr><td>Seeds</td><td>Certified seed from registered dealers; saved seed viable for one further generation</td></tr>
+<tr><td>Agrochemicals</td><td>Spray on inspection rather than schedule; check dilution rate</td></tr>
+<tr><td>Land preparation</td><td>Shared tractor booking; minimum tillage on land already under cultivation</td></tr>
+<tr><td>Labour</td><td>Timely first weeding reduces total rounds; nnoboa labour exchange reduces cash outlay</td></tr>
+<tr><td>Transport</td><td>Load aggregation with neighbouring farms; farmgate sale where the price gap is below haulage cost</td></tr>
+<tr><td>Storage</td><td>Sack reuse; storage losses driving repeat purchase</td></tr>
+<tr><td>Other</td><td>Move recurring items into a specific category to enable comparison</td></tr>
+</tbody></table>
+<h3 id="9-2-tone-and-language">9.2 Tone and language</h3>
+<ul>
+<li>Plain English, short sentences, no agricultural jargon without explanation</li>
+<li>Amounts always written as <code>GHS 1,234.56</code></li>
+<li>Never state a saving as certain — "possible saving", not "you will save"</li>
+<li>Where benchmark data is unverified, the report says so</li>
+</ul>
+<h3 id="9-3-empty-and-first-run-states">9.3 Empty and first-run states</h3>
+<table>
+<thead><tr><th>State</th><th>Content</th></tr></thead>
+<tbody>
+<tr><td>No farm</td><td>"Tell us about your farm to get started."</td></tr>
+<tr><td>No seasons</td><td>"Add your first season to begin recording costs."</td></tr>
+<tr><td>No costs on a season</td><td>"Add what you have spent so far. You need at least one item before we can estimate."</td></tr>
+<tr><td>Estimate from benchmark</td><td>"Based on standard rates for maize. Record this season and next year's estimate will use your own figures."</td></tr>
+<tr><td>No flags raised</td><td>"Nothing stands out as high this season."</td></tr>
+<tr><td>Estimate requested with nothing to show yet</td><td>An interactive checklist of expected categories, each marked fixed or needing fixing, so the farmer knows exactly what to record next instead of a dead end</td></tr>
+<tr><td>Recorded cost category on the report</td><td>Labelled "Recorded"</td></tr>
+<tr><td>Not-yet-recorded cost category on the report</td><td>Labelled "Predicted"</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="10-user-flows">10. User Flows</h2>
+<h3 id="10-1-first-time-user">10.1 First-time user</h3>
+<pre class="code"><code>  Sign up
+     │
+     ▼
+  Farm setup ─── name, district, total acres
+     │
+     ▼
+  Dashboard (empty)
+     │
+     ▼
+  New season ─── crop, year, window, area planted
+     │
+     ▼
+  Season detail ─── add cost items, one at a time
+     │              ┌──────────────┐
+     │              │ repeat 5–10× │
+     │              └──────┬───────┘
+     ▼                     │
+  Generate estimate ◄──────┘
+     │
+     ▼
+  Report ─── total · breakdown · flags · advice · possible saving</code></pre>
+<h3 id="10-2-returning-user-second-season">10.2 Returning user, second season</h3>
+<pre class="code"><code>  Sign in
+     │
+     ▼
+  Dashboard ─── previous season shown as complete
+     │
+     ▼
+  New season ─── same crop, next window
+     │
+     ▼
+  Season detail ─── record costs
+     │
+     ▼
+  Generate estimate
+     │
+     ▼
+  Report ─── now states "based on your 1 previous season"
+             comparison still against benchmark</code></pre>
+<h3 id="10-3-cost-entry-two-paths">10.3 Cost entry — two paths</h3>
+<pre class="code"><code>                  Add cost item
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+   Knows the total            Knows quantity and rate
+          │                           │
+   category + amount          category + quantity
+          │                   + unit + unit price
+          │                           │
+          │                           ▼
+          │                   amount computed
+          └─────────────┬─────────────┘
+                        ▼
+                 Saved to season</code></pre>
+<p>Both paths are first-class. The second yields richer data — the farmer's</p>
+<p>actual usage rate and actual price paid — and should be encouraged</p>
+<p>through form design, but never required.</p>
+<hr/>
+<h2 id="11-screen-requirements">11. Screen Requirements</h2>
+<table>
+<thead><tr><th>#</th><th>Screen</th><th>Must contain</th><th>Primary action</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Sign up</td><td>Email, password, confirm password, link to sign in</td><td>Create account</td></tr>
+<tr><td>2</td><td>Sign in</td><td>Email, password, link to sign up</td><td>Sign in</td></tr>
+<tr><td>3</td><td>Farm setup</td><td>Farm name, district, region, total acres</td><td>Save and continue</td></tr>
+<tr><td>4</td><td>Dashboard</td><td>Farm-level totals (seasons, crops, planted acres, recorded, estimated, possible saving); per-crop table with cost per acre; season cards showing crop, year, window, recorded total, status; quick "Add Cost" entry (season picker if more than one active season); empty state</td><td>New season</td></tr>
+<tr><td>5</td><td>New season</td><td>Crop select, year, window select, area planted with farm total shown for reference</td><td>Create season</td></tr>
+<tr><td>6</td><td>Season detail</td><td>Season header; cost item list with category, description, amount, delete; add-cost form (with per-category "don't know this cost" benchmark fill); running total; close-season control</td><td>Generate estimate</td></tr>
+<tr><td>7</td><td>Report</td><td>Estimated total; method note; category breakdown with amount, share, and a Recorded/Predicted label per category; flagged categories first and visually distinct, each with variance, possible saving, and advice; audio playback where a local language is selected; total possible saving; where there is nothing to show yet, an interactive cost-tracking checklist in place of a dead end</td><td>Back to season</td></tr>
+<tr><td>8</td><td>Settings</td><td>Preferred language; link an email address to a phone account</td><td>Save</td></tr>
+</tbody></table>
+<h3 id="11-1-report-layout-requirement">11.1 Report layout requirement</h3>
+<pre class="code"><code>┌─────────────────────────────────────────────────────┐
+│  Maize · Minor 2026 · 2.0 acres                     │
+│                                                     │
+│  Estimated cost for this season                     │
+│  GHS 5,336.00                                       │
+│  Based on standard rates (no previous seasons yet)  │
+├─────────────────────────────────────────────────────┤
+│  WHERE YOUR MONEY GOES                              │
+│                                                     │
+│  Fertiliser   GHS 2,360   ████████████████  44%     │
+│  Labour       GHS 1,440   ██████████        27%     │
+│  Land prep    GHS   700   █████             13%     │
+│  Agrochem     GHS   320   ██                 6%     │
+│  Seeds        GHS   300   ██                 6%     │
+│  Storage      GHS   216   █                  4%     │
+├─────────────────────────────────────────────────────┤
+│  ⚠  WHERE YOU CAN SAVE                              │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │ FERTILISER            +52.5% above expected   │  │
+│  │ Possible saving: GHS 1,240                    │  │
+│  │                                               │  │
+│  │ Government subsidy cuts NPK and Urea by about │  │
+│  │ half. Check with your district MoFA office    │  │
+│  │ for the subsidy window before buying at       │  │
+│  │ market price.                                 │  │
+│  └───────────────────────────────────────────────┘  │
+│                                                     │
+│  Total possible saving: GHS 1,240                   │
+└─────────────────────────────────────────────────────┘</code></pre>
+<p>Each line in "Where Your Money Goes" additionally carries a small</p>
+<p>Recorded/Predicted label (omitted from the mockup for space) — Recorded</p>
+<p>where the farmer has actually logged that category this season,</p>
+<p>Predicted where the figure is still the standard rate or their own</p>
+<p>history. Only Recorded lines can be flagged.</p>
+<h3 id="11-2-responsive-requirement">11.2 Responsive requirement</h3>
+<p>Every screen must be usable at 360px width. The report must not require</p>
+<p>horizontal scrolling. Tables become stacked rows below 480px.</p>
+<hr/>
+<h2 id="12-business-rules">12. Business Rules</h2>
+<table>
+<thead><tr><th>ID</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>BR-1</td><td>A season is uniquely identified by farm, crop, year, and window</td></tr>
+<tr><td>BR-2</td><td>A farmer may plant the same crop in two different windows of one year</td></tr>
+<tr><td>BR-3</td><td>Area planted may not exceed the farm's total area</td></tr>
+<tr><td>BR-4</td><td>A season contributes to history only when marked complete and holding at least one cost item</td></tr>
+<tr><td>BR-5</td><td>Method is <code>history</code> where one or more prior completed seasons of the same crop exist on the same farm; otherwise <code>benchmark</code>. Method governs the <em>prediction</em> shown for a category the farmer has not yet recorded a cost for this season — it does not change what a recorded category is compared against</td></tr>
+<tr><td>BR-6</td><td>Comparison is always against benchmark, never against the farmer's own history — history informs the prediction only. Comparison happens only for a category the farmer has actually recorded a cost for this season (<code>is_actual = true</code>); a category still showing a prediction has no comparison to make yet</td></tr>
+<tr><td>BR-7</td><td>A category is flagged where variance exceeds the threshold, default 30%</td></tr>
+<tr><td>BR-8</td><td>A category with no benchmark is displayed but never flagged</td></tr>
+<tr><td>BR-9</td><td>Potential saving is the amount above benchmark, never negative</td></tr>
+<tr><td>BR-10</td><td>Every flagged category carries advice; no flag may appear without it</td></tr>
+<tr><td>BR-11</td><td>All money is stored and computed in integer pesewas; cedis appear only at render</td></tr>
+<tr><td>BR-12</td><td>All comparison is per acre</td></tr>
+<tr><td>BR-13</td><td>An estimate stores the price multiplier in force when it ran</td></tr>
+<tr><td>BR-14</td><td>Re-running an estimate creates a new record; prior estimates are retained</td></tr>
+<tr><td>BR-15</td><td>Farm-level rollups count only the most recent estimate per season</td></tr>
+<tr><td>BR-16</td><td>A phone number identifies exactly one account; normalisation happens before lookup</td></tr>
+<tr><td>BR-17</td><td>An offline write carries a device-generated <code>client_id</code>; a replay of the same <code>client_id</code> is ignored, never duplicated</td></tr>
+<tr><td>BR-18</td><td>A cached translation is served in preference to a fresh API call</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="13-edge-cases-and-error-handling">13. Edge Cases and Error Handling</h2>
+<table>
+<thead><tr><th>#</th><th>Situation</th><th>Required behaviour</th></tr></thead>
+<tbody>
+<tr><td>E1</td><td>Estimate requested with no cost items</td><td>Action disabled with explanatory text; no error state</td></tr>
+<tr><td>E2</td><td>Crop selected has no benchmark norms</td><td>Estimate returns only categories the farmer has actually recorded, each shown as "Recorded" with no benchmark comparison (<code>other</code>-category treatment); if nothing has been recorded either, the report shows the interactive checklist (FR-9.10/9.11) using the general fallback categories instead of a dead end</td></tr>
+<tr><td>E3</td><td>Farmer records a category with no benchmark, e.g. "other"</td><td>Included in total, shown in breakdown, never flagged</td></tr>
+<tr><td>E4</td><td>Area planted entered as zero</td><td>Rejected client-side and by database constraint</td></tr>
+<tr><td>E5</td><td>Area planted exceeds farm total</td><td>Rejected with a message naming the farm total</td></tr>
+<tr><td>E6</td><td>Duplicate season for same crop, year, window</td><td>Rejected with a message pointing to the existing season</td></tr>
+<tr><td>E7</td><td>Negative amount entered</td><td>Rejected client-side and by database constraint</td></tr>
+<tr><td>E8</td><td>Farmer's spending is below benchmark in every category</td><td>Report shows no flags and the "nothing stands out" state</td></tr>
+<tr><td>E9</td><td>Estimate generation fails mid-way</td><td>Transactional — no partial estimate written; error surfaced to the user</td></tr>
+<tr><td>E10</td><td>Session expires during data entry</td><td>User redirected to sign-in; unsaved form input is lost and the user is told so</td></tr>
+<tr><td>E11</td><td>Network unavailable on save</td><td>Error shown, entry retained in the form for retry</td></tr>
+<tr><td>E12</td><td>Second user attempts to read another's data</td><td>Returns zero rows; no error revealing existence</td></tr>
+<tr><td>E13</td><td>Benchmark rows still hold placeholder values at demo</td><td>Report displays a notice that standard rates are provisional</td></tr>
+<tr><td>E14</td><td>Same phone entered in different formats</td><td>Normalised before lookup; resolves to one account</td></tr>
+<tr><td>E15</td><td>Phone number fails Ghana format validation</td><td>Rejected client-side with the expected format shown</td></tr>
+<tr><td>E16</td><td>Offline flush interrupted, then retried</td><td><code>client_id</code> collision treated as already applied; queue entry removed, no duplicate</td></tr>
+<tr><td>E17</td><td>Offline write fails five times</td><td>Moved to a visible failed list with a retry control; never silently dropped</td></tr>
+<tr><td>E18</td><td>User attempts to generate an estimate offline</td><td>Control disabled with the reason stated</td></tr>
+<tr><td>E19</td><td>Khaya API unavailable</td><td>English shown; no error surfaced to the farmer</td></tr>
+<tr><td>E20</td><td>Farmer has seasons but no estimates yet</td><td>Dashboard shows recorded totals with a shortcut to generate</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="14-non-functional-requirements">14. Non-Functional Requirements</h2>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Target</th><th>Verification</th></tr></thead>
+<tbody>
+<tr><td>NFR-1</td><td>Estimate generation</td><td>< 2s for 50 cost items</td><td>Timed test</td></tr>
+<tr><td>NFR-2</td><td>Report render</td><td>< 3s on 3G</td><td>Throttled test</td></tr>
+<tr><td>NFR-3</td><td>Mobile usability</td><td>Functional at 360px</td><td>Device test</td></tr>
+<tr><td>NFR-4</td><td>Data isolation</td><td>Zero cross-user rows</td><td>Two-account test</td></tr>
+<tr><td>NFR-5</td><td>Monetary accuracy</td><td>No rounding drift</td><td>Sum reconciliation</td></tr>
+<tr><td>NFR-6</td><td>Reproducibility</td><td>Rebuild from migrations with no manual steps</td><td>Fresh-project test</td></tr>
+<tr><td>NFR-7</td><td>Source traceability</td><td>Every benchmark row carries a source</td><td>NOT NULL constraint</td></tr>
+<tr><td>NFR-8</td><td>Availability</td><td>Best effort — free-tier hosting</td><td>Accepted limitation</td></tr>
+<tr><td>NFR-9</td><td>Browser support</td><td>Current Chrome, Firefox, Safari; Android Chrome</td><td>Manual check</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="15-out-of-scope">15. Out of Scope</h2>
+<p><strong>Moved into scope since v0.1:</strong> offline capture (P1, §7.12) and local</p>
+<p>languages (P2, §7.13). Both ship only if the P0 work is complete — see</p>
+<p>§19.</p>
+<table>
+<thead><tr><th>Excluded</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>Multiple farms per user</td><td>Not required to demonstrate the concept</td></tr>
+<tr><td>Field officer / aggregator accounts</td><td>Valuable and designed for, but not buildable in the window</td></tr>
+<tr><td>Farm modifiers — soil, tenure, terrain, mechanisation</td><td>Requires multipliers that cannot be sourced in time</td></tr>
+<tr><td>Pest and disease risk</td><td>A separate project</td></tr>
+<tr><td>Farmer-added cost categories</td><td>Would break the benchmark comparison</td></tr>
+<tr><td>SMS OTP phone verification</td><td>Requires a paid SMS provider</td></tr>
+<tr><td>SMS or USSD access</td><td>Different delivery channel entirely</td></tr>
+<tr><td>Market price integration</td><td>No available data source</td></tr>
+<tr><td>Cost per bag harvested</td><td>The correct efficiency measure, but requires reliable harvest data across seasons</td></tr>
+<tr><td>Regional benchmark variation</td><td>Requires regional data not available</td></tr>
+<tr><td>Loan or credit features</td><td>Regulated activity</td></tr>
+<tr><td>Separate Python calculation service</td><td>Unnecessary for the computation being performed</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="16-assumptions">16. Assumptions</h2>
+<table>
+<thead><tr><th>#</th><th>Assumption</th><th>If wrong</th></tr></thead>
+<tbody>
+<tr><td>A1</td><td>Users have a smartphone or laptop with intermittent internet</td><td>Product is unusable for those users; noted as a limitation</td></tr>
+<tr><td>A2</td><td>Users can read functional English</td><td>Adoption limited; local language (§7.13) moves from P2 to required</td></tr>
+<tr><td>A8</td><td>Users accept an unverified phone number as their identifier</td><td>Low risk — nothing is sent to the number; SMS OTP is the documented upgrade path</td></tr>
+<tr><td>A9</td><td>Khaya API remains available and free at the tier needed</td><td>Local language feature drops; it is P2 and non-blocking</td></tr>
+<tr><td>A3</td><td>Farmers can recall approximate season spending</td><td>Estimates degrade in accuracy; the quantity-and-rate path partially mitigates</td></tr>
+<tr><td>A4</td><td>Family farm records are obtainable within the window</td><td>Placeholders remain; product still functions, benchmark is not defensible</td></tr>
+<tr><td>A5</td><td>Family farm figures are transferable to smallholder scale</td><td>Benchmark reads as an efficiency ceiling rather than a realistic target — must be stated in the report</td></tr>
+<tr><td>A6</td><td>Maize is representative enough as the demonstration crop</td><td>Additional crops needed; schema already supports them</td></tr>
+<tr><td>A7</td><td>The 50% fertiliser subsidy structure still applies</td><td>The fertiliser advice becomes inaccurate; must be verified before demo</td></tr>
+</tbody></table>
+<h3 id="16-4-note-on-the-removed-python-service">16.4 Note on the removed Python service</h3>
+<p>The approved proposal specified a Python/FastAPI service for</p>
+<p>calculations. It has been removed. The computation is sums, averages, and</p>
+<p>a percentage comparison over the user's own rows — relational work that</p>
+<p>runs faster and more securely inside the database, with row-level</p>
+<p>authorisation applied automatically rather than re-implemented. Removing</p>
+<p>it eliminates a second deployment, cross-service authentication, and CORS</p>
+<p>configuration, none of which contribute to the product. The trade-off —</p>
+<p>business logic in PL/pgSQL is harder to unit test — is documented and</p>
+<p>accepted.</p>
+<hr/>
+<h2 id="17-dependencies">17. Dependencies</h2>
+<table>
+<thead><tr><th>#</th><th>Dependency</th><th>Owner</th><th>Needed by</th><th>Blocking</th></tr></thead>
+<tbody>
+<tr><td>D1</td><td>Supabase project provisioned</td><td>Team</td><td>Day 1</td><td>Everything</td></tr>
+<tr><td>D2</td><td>Schema migration applied</td><td>Osmond</td><td>Day 1</td><td>All development</td></tr>
+<tr><td>D3</td><td>Placeholder seed data loaded</td><td>Osmond</td><td>Day 1</td><td>Estimate testing</td></tr>
+<tr><td>D4</td><td>Family farm records obtained</td><td>Osmond</td><td>Day 10</td><td>Demo credibility, not the build</td></tr>
+<tr><td>D5</td><td>Subsidy structure verified current</td><td>Team</td><td>Day 12</td><td>Accuracy of fertiliser advice</td></tr>
+<tr><td>D6</td><td>Vercel deployment configured</td><td>Jeffery</td><td>Day 12</td><td>Demo</td></tr>
+<tr><td>D7</td><td>GitHub repository with branch protection</td><td>Team</td><td>Day 1</td><td>Collaboration</td></tr>
+<tr><td>D8</td><td>Khaya API key obtained from translation.ghananlp.org</td><td>Team</td><td>Day 13</td><td>Local languages only (P2)</td></tr>
+</tbody></table>
+<p>**D4 is the only dependency the product's credibility rests on, and the</p>
+<p>only one outside the team's direct control. The request for those records</p>
+<p>should be made on day 1, not day 10.**</p>
+<hr/>
+<h2 id="18-release-criteria">18. Release Criteria</h2>
+<p>The product ships when all of the following hold.</p>
+<h3 id="18-1-functional">18.1 Functional</h3>
+<ul>
+<li>[ ] Every P0 requirement in §7 is implemented and passing</li>
+<li>[ ] A new user can complete sign-up → farm → season → costs → estimate → report without assistance</li>
+<li>[ ] The report displays at least one flagged category with advice on the demonstration data</li>
+<li>[ ] Both cost entry paths — amount only, and quantity × rate — work</li>
+</ul>
+<h3 id="18-2-data">18.2 Data</h3>
+<ul>
+<li>[ ] All placeholder benchmark rows replaced, or explicitly labelled as provisional in the report</li>
+<li>[ ] Every <code>cost_benchmarks</code> row has a non-null source</li>
+<li>[ ] Maize has complete norms across all applicable categories</li>
+</ul>
+<h3 id="18-3-technical">18.3 Technical</h3>
+<ul>
+<li>[ ] Two-account test confirms zero cross-user data access</li>
+<li>[ ] Absurd-value test confirms no hardcoded rates</li>
+<li>[ ] Migration runs clean on a fresh Supabase project</li>
+<li>[ ] Deployed and reachable at a public URL</li>
+</ul>
+<h3 id="18-4-documentation">18.4 Documentation</h3>
+<ul>
+<li>[ ] SDD complete and matching the built system</li>
+<li>[ ] Final report includes sources, limitations, and excluded scope</li>
+<li>[ ] README includes setup instructions and environment variables</li>
+</ul>
+<hr/>
+<h2 id="19-delivery-plan">19. Delivery Plan</h2>
+<table>
+<thead><tr><th>Stage</th><th>Days</th><th>Output</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td><strong>1 — Foundation</strong></td><td>1</td><td>Supabase project, schema, placeholder seed, React scaffold, crops rendering from database</td><td>All three, together</td></tr>
+<tr><td><strong>2 — Capture</strong></td><td>2–5</td><td>Auth, farm setup, season creation, cost entry with running total</td><td>Jeffery: auth + farm · Ayisha: cost entry · Osmond: season</td></tr>
+<tr><td><strong>3 — Engine</strong></td><td>6–9</td><td><code>generate_estimate</code> wired, report screen, flags and advice rendering</td><td>Osmond: function · Ayisha: report UI · Jeffery: integration</td></tr>
+<tr><td><strong>4 — Dashboard</strong></td><td>9–10</td><td>Farm and crop rollups</td><td>Jeffery</td></tr>
+<tr><td><strong>5 — Benchmark swap</strong></td><td>10–12</td><td>Real benchmark data loaded, estimates recalculated</td><td>Osmond</td></tr>
+<tr><td><strong>6 — Hardening</strong></td><td>13</td><td>Security audit, error handling, accessibility, deploy</td><td>All three</td></tr>
+<tr><td><strong>7 — Optional</strong></td><td>13</td><td>Offline capture (P1), then local languages (P2)</td><td>If and only if stage 6 is complete</td></tr>
+<tr><td><strong>8 — Close</strong></td><td>14</td><td>Final report, demo rehearsal</td><td>All three</td></tr>
+</tbody></table>
+<p><strong>Ordering note.</strong> Hardening comes before the optional stages</p>
+<p>deliberately. A polished English app that works beats a half-translated</p>
+<p>one that does not, and the assessment is on whether the system runs.</p>
+<h3 id="19-1-parallel-track">19.1 Parallel track</h3>
+<p>Requesting family farm records starts <strong>day 1</strong>, not day 10. The build</p>
+<p>does not wait on it; the request should not wait either.</p>
+<h3 id="19-2-working-agreement">19.2 Working agreement</h3>
+<ul>
+<li>Schema frozen at end of day 1; changes require agreement from all three</li>
+<li>Branch per developer, pull request into <code>main</code>, one reviewer</li>
+<li>No direct pushes to <code>main</code></li>
+<li>The typed data access layer is the contract between frontend work streams</li>
+</ul>
+<hr/>
+<h2 id="20-open-questions">20. Open Questions</h2>
+<table>
+<thead><tr><th>#</th><th>Question</th><th>Owner</th><th>Needed by</th></tr></thead>
+<tbody>
+<tr><td>Q1</td><td>Do the family farm records exist in writing, or only in recall?</td><td>Osmond</td><td>Day 2</td></tr>
+<tr><td>Q2</td><td>Which crops does the family farm cover — is maize among them?</td><td>Osmond</td><td>Day 2</td></tr>
+<tr><td>Q3</td><td>Does the 50% fertiliser subsidy still operate in 2026?</td><td>Team</td><td>Day 12</td></tr>
+<tr><td>Q4</td><td>Is 30% the right flag threshold, or too sensitive once real data is loaded?</td><td>Team</td><td>Day 11</td></tr>
+<tr><td>Q5</td><td>Should a farmer with zero seasons see a benchmark estimate immediately, or be prompted to record first?</td><td>Team</td><td>Day 6</td></tr>
+<tr><td>Q6</td><td>Is harvest quantity required to close a season, or optional?</td><td>Team</td><td>Day 5</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="21-appendix-requirements-traceability">21. Appendix — Requirements Traceability</h2>
+<table>
+<thead><tr><th>Goal</th><th>Requirements</th><th>Verified by</th></tr></thead>
+<tbody>
+<tr><td>G1 — Estimate with no history</td><td>FR-6.2, FR-6.4</td><td>Functional test, new account</td></tr>
+<tr><td>G2 — Category breakdown</td><td>FR-6.5, FR-9.2</td><td>Report inspection</td></tr>
+<tr><td>G3 — Identify overspend</td><td>FR-7.1 – FR-7.5</td><td>Inflated-category test</td></tr>
+<tr><td>G4 — Actionable advice</td><td>FR-8.1, FR-8.3, §9.1</td><td>Content review</td></tr>
+<tr><td>G5 — Quantified saving</td><td>FR-7.5, FR-9.5, FR-9.6</td><td>Report inspection</td></tr>
+<tr><td>G6 — Under ten minutes</td><td>FR-4.1 – FR-4.8</td><td>Timed walkthrough</td></tr>
+<tr><td>G7 — Data swappable without code change</td><td>§8.3, FR-8.2</td><td>Absurd-value test</td></tr>
+<tr><td>G8 — Data modelling</td><td>SDD §6</td><td>Schema review</td></tr>
+<tr><td>G9 — Row-level authorisation</td><td>FR-10.1, FR-10.2</td><td>Two-account test</td></tr>
+<tr><td>G10 — Logic in database</td><td>FR-6.1 – FR-6.7</td><td>Code review</td></tr>
+<tr><td>G11 — Working deployed system</td><td>§18.3</td><td>Public URL</td></tr>
+<tr><td>G12 — Honest documentation</td><td>§15, §16, SDD §17</td><td>Report review</td></tr>
+</tbody></table>
+<hr/>
+<p><em>End of document.</em></p>
+</body>
+</html>

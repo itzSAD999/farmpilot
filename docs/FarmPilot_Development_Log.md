@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 40 issues in full technical detail, for a
-technical reader. This section describes the same 40 issues in plain
+Section 4 below describes all 41 issues in full technical detail, for a
+technical reader. This section describes the same 41 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -83,6 +83,7 @@ to define each one.
 | 38 | While running the new automated checks repeatedly back-to-back, sign-ups started failing — not because of anything wrong in the app, but because the login service itself (a service the app relies on, run by Supabase) has its own built-in limit on how many new accounts can be created in a short window, as a security measure, and running the checks over and over in quick succession tripped it. | Confirmed with a standalone test that the app's own code wasn't at fault — the login service's own safety limit was. Changed how the automated checks run (one at a time instead of all at once, and reusing one test account instead of creating a new one for almost every check) so the checks ask for far fewer new accounts overall. |
 | 39 | A whole file of code, sitting quietly in the project, turned out to be completely unused by the actual running app — and it contained its own, separate copy of the list of cost categories that had quietly gone out of date compared to the real one actually used everywhere else (calling the same category two different names in two different places). | Confirmed nothing in the app used the file at all, then deleted it, rather than fix or keep testing something nobody ever calls. |
 | 40 | The single biggest finding of this whole testing effort: the app was supposed to let a farmer record a cost even with no phone signal, and save it for later automatically — all the actual machinery for that existed and was well-built — but nothing in the real "record a cost" screen was ever connected to it. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not have it saved for later like the report and README both said it would. | Connected the recording form to the offline-saving system that already existed, so a cost recorded with no signal is now genuinely saved and automatically sent once signal returns — and proved it really works by checking it against the real database, including the specific case of the same saved item accidentally being sent twice (it correctly does not create a duplicate). |
+| 41 | Built the Twi-language feature that had been deliberately postponed until now ("only build this once everything else is done"): a farmer can now hear advice spoken aloud in Twi and read it in Twi instead of English. Before writing any of it, the real outside service was tested directly first — and it's a good thing that happened, because three things about it turned out different from what was assumed (the exact Twi dialect code, the shape of one response, and the audio file format), each of which would have caused a confusing failure if just guessed at instead of checked. | Built it properly: generated real Twi text and real spoken audio for all 8 advice categories, only ever calling the outside service once per category, ever (never while a farmer is actually using the app), with the app quietly falling back to English if anything is ever missing. Every generated translation is clearly marked "not yet checked by a person" in the database, since a machine translation of a farming term can come out wrong, and nothing in this project automatically marks one as trustworthy — only a real Twi speaker listening to it can do that. |
 
 ---
 
@@ -1223,6 +1224,84 @@ across the whole suite, up from 62.
 
 ---
 
+### Issue #41 — Twi translation and audio (Khaya AI), the P2 localisation feature from ADR-009, built and verified end to end
+**Severity:** N/A (planned feature work, gated behind "phase 9 —
+hardening and deploy" being finished; ADR-009 itself was already marked
+"Proposed (P2 — last item, only if everything else is done)," and
+Issues #34–40 are exactly that hardening pass). Requested directly, with
+a full 5-step spec, and implemented in the same sitting the spec was
+given, including live API verification before any integration code was
+written — not assumed against documentation.
+
+**Fix — what was built.**
+- `supabase/migrations/018_advice_audio_url.sql` — `audio_url text` on
+  `advice_translations`.
+- `supabase/migrations/019_audio_storage_bucket.sql` — the `audio`
+  Storage bucket (public read) and its `storage.objects` policies.
+- `supabase/migrations/020_advice_translations_write.sql` —
+  `advice_translations`' first-ever write policy (it had read-only RLS
+  since migration 003; nothing could previously insert into it at all).
+- `supabase/migrations/021_audio_bucket_listable.sql` — a second Storage
+  policy, on `storage.buckets` itself (separate from `storage.objects`),
+  found necessary only once the generation script's own idempotency
+  check revealed the bucket existed but was invisible to `listBuckets()`.
+- `scripts/generate_khaya.ts` — the one-off generation script (never
+  bundled into the app); signs in as a dedicated low-privilege account
+  rather than running fully anonymous, since this schema never grants
+  the anon role write access anywhere.
+- `src/lib/khaya.ts` — the only runtime-facing piece; reads the cache,
+  never calls Khaya, falls back to English silently.
+- `src/pages/EstimateReport.tsx` — a 44×44px speaker button on each
+  flagged category's advice card (hidden when no audio exists yet), a
+  loading state while playback starts, and the Twi text shown instead of
+  English only when `profiles.preferred_language = 'tw'`.
+- `src/pages/Profile.tsx` — the existing language selector (this already
+  existed, contrary to the spec's assumption of a new `Settings.tsx`)
+  relabelled "Twi (Akan)" for recognisability.
+
+**What Step 1's live verification actually caught, before any of the
+above was written:** the assumed Twi code `"tw"` does not exist — Khaya
+distinguishes `"twi"` (Asante) and `"atw"` (Akuapem); `"twi"` was chosen
+because the seeded demo farmer is in Ashanti Region, not by default.
+`/tts/v2/languages` returns `{"languages": {name: code}}`, not a flat
+array. Synthesized audio is WAV, not MP3. All three were confirmed by
+calling the real endpoints with curl before writing `generate_khaya.ts`,
+exactly as the spec's own Step 1 required — this is why the script's
+`resolveTwiLanguageCode()` and `uploadAudio()` look the way they do,
+not because those were the first guesses.
+
+**What actually ran:** all 8 categories were generated for real —
+16 live API calls (well inside the 100/month quota, confirmed
+idempotent: a second full run made zero further calls, correctly
+skipping every already-cached row). Every generated row carries
+`reviewed = false` and no code path anywhere sets it `true`; a native
+Twi speaker must listen to the 8 clips and flip that by hand before this
+is presented as verified rather than machine-generated. Live-verified in
+the browser (Puppeteer, signed in as the demo account) that the speaker
+button renders only on flagged categories with cached audio, shows a
+disabled/loading state immediately on tap, and that switching
+`preferred_language` to `tw` swaps the advice text live — the demo
+account's language was reset to `en` afterward so its documented state
+(Appendix D of the main report) stays accurate.
+
+**Known gap, stated plainly rather than hidden:** ADR-009's own original
+risk mitigation said "the UI marks unreviewed text" — this was not
+built. The `reviewed` flag is fully tracked in the database and
+respected by policy (never auto-set true), but nothing in the Estimate
+Report currently shows a farmer-facing "machine-translated, unreviewed"
+label. See `FarmPilot_SDD.md` §19.6 and `FarmPilot_PRD (1).md` §7.13.
+
+**Evidence.** `npx tsc -b --noEmit` and `npm run build` both clean.
+`src/lib/khaya.integration.test.ts` (4 tests) passes, confirming all 8
+categories have real cached text distinct from the English source and a
+genuinely publicly-downloadable audio URL. Direct SQL query against the
+live database confirms all 8 rows: `reviewed = false`, `source =
+'khaya_tts_v2'`, real Twi text, real Storage URLs. A direct `curl` fetch
+of one audio URL returns `200`, `content-type: audio/wav`, real WAV
+file-signature bytes.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table — a summary of what
@@ -1296,6 +1375,8 @@ that are lower priority than what shipped in this pass:
 | `supabase/migrations/015_category_budgets.sql` | Issue #26 (Category Budgets) |
 | `supabase/migrations/016_crop_benchmark_lines.sql` | Issue #30 (Cost Lab quantity-based redesign) |
 | `supabase/migrations/017_drop_unused_benchmark_breakdown.sql` | Issue #35 |
+| `supabase/migrations/018_advice_audio_url.sql` – `021_audio_bucket_listable.sql` | Issue #41 (Twi localisation: audio_url column, Storage bucket + policies, advice_translations write policy, bucket-listing policy) |
+| `scripts/generate_khaya.ts`, `src/lib/khaya.ts`, `src/lib/khaya.integration.test.ts` | Issue #41 |
 | `src/api/estimates.integration.test.ts`, `src/lib/*.test.ts` | Issue #34 (automated test suite) |
 | `src/api/farms.integration.test.ts`, `seasons.integration.test.ts`, `costs.integration.test.ts` | Issue #36 (CRUD, cascade deletion, cross-user RLS security) |
 | `src/api/auth.integration.test.ts`, `budgets.integration.test.ts`, `compare.integration.test.ts`, `dashboard.integration.test.ts`, `guides.integration.test.ts`, `notifications.integration.test.ts`, the new describe block in `estimates.integration.test.ts`, plus `auth.test.ts`, `budgets.test.ts`, `dashboard.test.ts`, `estimates.test.ts`, `src/lib/districts.test.ts`, `src/components/domain/GhanaMap.test.ts` | Issue #37 (remaining API modules, including the notification trigger) |

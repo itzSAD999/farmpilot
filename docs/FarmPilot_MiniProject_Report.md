@@ -317,6 +317,17 @@ Three further tools sit alongside the core recording-and-estimating flow, each a
 
 **Exporting a report.** Both the Estimate Report and the farm-wide Costs page carry a "Download PDF" action, using the browser's native print-to-PDF rather than a client-side PDF library — the report screen already needed a clean, chart-inclusive print layout for a farmer to hand to a lender or cooperative, so the browser's own "Save as PDF" destination was the more reliable route than a separately-maintained PDF renderer.
 
+#### 4.2.8 Twi translation and audio (Figure 4.10)
+
+A farmer more comfortable in Twi than English can now both read and hear the advice attached to a flagged category. Two Ghana NLP (Khaya AI) endpoints are involved — Translation and Text-to-Speech — but neither is ever called while the app is running: a one-off script (`scripts/generate_khaya.ts`) calls each exactly once per advice category, caches the translated text and a link to the generated audio clip in the database, and the running application only ever reads that cache. This was a deliberate architectural choice, not an afterthought — the free-tier quota (100 calls/month) makes a live-call design unworkable for content that never changes per farmer or per season, and the same generate-once-cache-forever principle already governs the benchmark data itself (§2.4).
+
+Before any integration code was written, the live API was called directly to confirm its actual behaviour rather than trusting assumed parameter names — and this caught three real discrepancies: there is no plain "Twi" code (the API distinguishes Asante Twi, `twi`, from Akuapem Twi, `atw`; Asante Twi was used, matching the demonstration farmer's Ashanti Region), the languages endpoint returns a name-to-code map rather than a flat list, and generated audio is WAV, not the assumed MP3. Each would have caused a confusing failure if coded against the original assumption instead of the verified reality.
+
+On the Estimate Report, a flagged category's advice card shows a speaker button only when cached audio exists for it, and shows the Twi text in place of English only when the farmer's saved language preference is Twi — otherwise it degrades silently to English, with no error surfaced for a language or category that has not yet been generated. All 8 categories have been generated for Twi as of this submission; every generated row is marked unreviewed in the database until a native Twi speaker listens and confirms it, which had not yet happened as of submission — the translations and audio are real and working, but not yet human-verified for accuracy.
+
+*Figure 4.10 — Estimate report with the Twi translation active and the speaker button visible on a flagged category.*
+![Twi advice](screenshots/17_twi_advice.png)
+
 ### 4.3 Testing
 
 Testing combined direct database-level verification of the estimation engine (the part of the system with the least visible surface area, and the part most likely to be silently wrong) with functional testing of the recording and reporting flows end to end.
@@ -389,6 +400,9 @@ in this report:
 - `supabase/migrations/001_schema.sql` — base schema, RLS policies, and the original estimation engine.
 - `supabase/migrations/010_estimate_actual_vs_benchmark.sql` — the actual-vs-benchmark correction described in §4.2.4.
 - `supabase/migrations/012_fix_crop_input_norms_duplicates.sql` — the duplicate-row fix described in T7 (§4.3).
+- `supabase/migrations/018–021` — the Twi localisation feature's schema: `audio_url` column, the Storage bucket and its policies, and `advice_translations`' first write policy (§4.2.8).
+- `scripts/generate_khaya.ts` — the one-off Khaya AI generation script (§4.2.8); never runs as part of the deployed application.
+- `src/lib/khaya.ts` — the runtime-only cache reader for Twi advice text and audio.
 - `src/pages/EstimateReport.tsx` — the report screen (Figure 4.4).
 - `src/hooks/useAuth.tsx`, `src/lib/supabase.ts` — authentication and session handling.
 
@@ -413,6 +427,7 @@ See Figures 4.1–4.9 in Chapter Four, and the full-resolution originals under `
 | `14_costs_overview.png` | Costs page: category pie chart and an expanded category (demo account) |
 | `15_category_detail.png` | Category detail page — every recorded entry behind one category (demo account) |
 | `16_cost_lab.png` | Cost Lab: quantity-based sliders and scenario summary |
+| `17_twi_advice.png` | Estimate report with Twi language active and the speaker button visible (demo account) |
 
 ### Appendix C — User Manual (Quick Start)
 
@@ -452,7 +467,7 @@ npx supabase db query --linked -f supabase/demo_seed.sql
 A full account of the project treated as a real, shipped system rather
 than only a final snapshot: the six-week Python-based proposal versus
 what was actually built and why, a stage-by-stage development timeline,
-an index into all twelve architecture decisions, a forty-item issue
+an index into all twelve architecture decisions, a forty-one-item issue
 register from a full post-build hardening pass (each with root cause, fix,
 and live verification evidence), the complete testing record behind
 Chapter Four's summary table, and the outstanding backlog. Kept as a

@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FarmPilot Mini Project Report</title>
+<style>
+  @page { size: A4; margin: 2.5cm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.55; max-width: 850px; margin: 40px auto; padding: 0 20px; font-size: 12pt; }
+  h1 { font-size: 21pt; margin-top: 1.4em; padding-bottom: 0.3em; border-bottom: 2.5px solid #1B5E20; letter-spacing: 0.02em; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; text-align: center; border-bottom: none; font-size: 19pt; line-height: 1.35; letter-spacing: 0.01em; }
+  h2 { font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h3 { font-size: 13.5pt; margin-top: 1.3em; color: #14461a; }
+  h4 { font-size: 12pt; margin-top: 1.1em; font-style: italic; }
+  p { margin: 0.6em 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3ee; font-weight: bold; }
+  code { background: #f2f2f2; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.92em; }
+  pre.code { background: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 9.5pt; line-height: 1.4; }
+  pre.code code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid #1B5E20; margin: 1em 0; padding: 0.4em 1em; background: #f4f9f4; color: #333; }
+  img { display: block; margin: 10px auto; max-width: 100%; }
+  figure { margin: 1.4em 0; text-align: center; page-break-inside: avoid; }
+  figure img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  figcaption { margin-top: 0.5em; font-size: 10pt; font-style: italic; color: #555; }
+  .figure-wrap { text-align: center; margin: 1.4em 0; page-break-inside: avoid; }
+  .figure-wrap img { border: 1px solid #ddd; border-radius: 6px; margin: 0 auto; }
+  /* A paragraph that is nothing but "*Figure N.M — ...*" is the report's
+     own manually-numbered caption — style it like one, sitting just above
+     its image (the caption line always precedes the image in the source). */
+  p:has(> em:only-child) { text-align: center; font-size: 10pt; font-style: italic; color: #555; margin: 1.4em 0 -0.6em; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+  .diagram-note { background: #fff8e6; border: 1px solid #e8d38a; padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 10.5pt; }
+  ul, ol { margin: 0.5em 0; padding-left: 1.6em; }
+  li { margin: 0.25em 0; }
+  a { color: #1B5E20; }
+  
+  /* Title page: the info table (Course/Supervisor/...) and Team table right
+     after the H1, before the Abstract's H2, read like a cover page. */
+  h1:first-of-type ~ table:nth-of-type(-n+2) { margin: 1.5em auto; max-width: 520px; }
+  h1:first-of-type ~ table:nth-of-type(-n+2) td, h1:first-of-type ~ table:nth-of-type(-n+2) th { text-align: center; }
+  h1:first-of-type ~ p:nth-of-type(-n+2) { text-align: center; font-size: 12.5pt; }
+</style>
+</head>
+<body>
+<h1 id="farmpilot-system-architecture-design-document">FarmPilot — System Architecture & Design Document</h1>
+<p><strong>Kwame Nkrumah University of Science and Technology</strong></p>
+<p>Department of Computer Science · Mini Project 2025/2026</p>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Document type</strong></td><td>Software Design Document (SDD) / System Architecture Document</td></tr>
+<tr><td><strong>Version</strong></td><td>1.2</td></tr>
+<tr><td><strong>Changes in 1.2</strong></td><td><code>generate_estimate()</code> rewritten to compare this season's actually-recorded costs against benchmark, not a prediction against itself (§9.2); <code>estimate_lines.is_actual</code> added; <code>get_category_benchmark_pesewas()</code> RPC for per-category "don't know this cost" fill (§7.1); fixed <code>crop_input_norms</code> duplicate-row bug via partial unique indexes (§6.5); interactive cost-tracking checklist replaces the report's dead-end empty state (§13.1)</td></tr>
+<tr><td><strong>Changes in 1.1</strong></td><td>Phone-first auth (profiles) · sync columns · rollup views · translation cache</td></tr>
+<tr><td><strong>Project</strong></td><td>FarmPilot — farm cost estimation and reduction tool</td></tr>
+<tr><td><strong>Team</strong></td><td>Osmond Abdul-Karim Woriwi (21034402) · Aboagye Jeffery Ohene (21013336) · Ayisha Abdullah (20950630)</td></tr>
+<tr><td><strong>Programme</strong></td><td>BSc Computer Science, Year 3</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li>Purpose and Scope</li>
+<li>System Overview</li>
+<li>Architecture</li>
+<li>Technology Stack</li>
+<li>Component Design</li>
+<li>Data Architecture</li>
+<li>Data Access Layer</li>
+<li>Security Architecture</li>
+<li>The Estimation Engine</li>
+<li>User Stories</li>
+<li>Use Cases</li>
+<li>Sequence Diagrams</li>
+<li>Screen Specifications</li>
+<li>Non-Functional Requirements</li>
+<li>Testing Strategy</li>
+<li>Deployment</li>
+<li>Risks and Mitigations</li>
+<li>Future Work</li>
+<li>Localisation — Twi Translation and Audio (Khaya AI)</li>
+</ol>
+<hr/>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<h3 id="1-1-purpose">1.1 Purpose</h3>
+<p>This document describes the complete technical design of FarmPilot: its</p>
+<p>architecture, data model, security model, calculation logic, and the</p>
+<p>behaviour expected of each component. It is the reference the</p>
+<p>implementation is built against.</p>
+<h3 id="1-2-scope">1.2 Scope</h3>
+<p>FarmPilot is a web application that allows a small-scale farmer to record</p>
+<p>farm spending and receive (a) an estimate of what the coming season</p>
+<p>should cost and (b) specific indications of where that cost is higher</p>
+<p>than it needs to be.</p>
+<p><strong>In scope:</strong> farmer authentication, farm and season records, itemised</p>
+<p>cost capture, cost estimation, overspend detection, cost-reduction</p>
+<p>suggestions.</p>
+<p><strong>Out of scope:</strong> offline operation, local-language interface, SMS or USSD</p>
+<p>access, market price integration, weather data, yield prediction,</p>
+<p>multi-farm portfolios, farmer-to-farmer comparison.</p>
+<h3 id="1-3-definitions">1.3 Definitions</h3>
+<table>
+<thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Season</strong></td><td>One planting of one crop on one farm in one window of one year</td></tr>
+<tr><td><strong>Window</strong></td><td>Major (Mar–Jul), minor (Sep–Nov), or dry (irrigated off-season)</td></tr>
+<tr><td><strong>Benchmark</strong></td><td>Externally sourced expected cost, used as the comparison point</td></tr>
+<tr><td><strong>Norm</strong></td><td>Quantity of an input required per acre for a given crop</td></tr>
+<tr><td><strong>Pesewa</strong></td><td>1/100 of a Ghana cedi; the unit all money is stored in</td></tr>
+<tr><td><strong>Variance</strong></td><td>Percentage by which an estimate exceeds its benchmark</td></tr>
+<tr><td><strong>Flag</strong></td><td>A category whose variance exceeds the configured threshold</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="2-system-overview">2. System Overview</h2>
+<h3 id="2-1-the-problem-being-solved">2.1 The problem being solved</h3>
+<p>Small-scale farmers in Ghana spend on seeds, fertiliser, labour, and</p>
+<p>transport each season without recording it. Because nothing is written</p>
+<p>down, a farmer cannot say what a season should cost or where he is</p>
+<p>spending more than necessary. The result is recurring overspend and</p>
+<p>reduced profit.</p>
+<h3 id="2-2-what-the-system-does">2.2 What the system does</h3>
+<pre class="code"><code>   ┌──────────┐      ┌───────────┐      ┌──────────┐
+   │  RECORD  │ ───► │  ESTIMATE │ ───► │  REDUCE  │
+   └──────────┘      └───────────┘      └──────────┘
+   Farm details      Expected cost      Flagged
+   Season details    for the season     categories +
+   Cost items        by category        suggestions</code></pre>
+<h3 id="2-3-the-central-design-problem">2.3 The central design problem</h3>
+<p>The proposal specifies that estimates come from the farmer's own records.</p>
+<p>A new farmer has none. Furthermore, comparing a farmer only against</p>
+<p>himself makes overspend undetectable — his figures would always equal his</p>
+<p>own baseline and variance would always be zero.</p>
+<p><strong>Resolution:</strong> the system carries an independent reference layer of</p>
+<p>benchmark data. This serves two purposes simultaneously:</p>
+<ol>
+<li>It produces an estimate for a farmer with no history (cold start).</li>
+<li>It provides the external comparison point that makes "overspending"</li>
+</ol>
+<p>   a meaningful statement.</p>
+<p>Benchmark cost is derived as:</p>
+<pre class="code"><code>  cost per acre  =  Σ ( quantity_per_acre  ×  price_per_unit )
+                      └── crop_input_norms   └── cost_benchmarks</code></pre>
+<h3 id="2-4-benchmark-data-provenance">2.4 Benchmark data provenance</h3>
+<table>
+<thead><tr><th>Data</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>Crop yields</td><td>MoFA <em>Agriculture in Ghana: Facts & Figures</em>, Table 4.6</td></tr>
+<tr><td>Input unit prices</td><td>MoFA <em>Facts & Figures</em>, Table 7.3</td></tr>
+<tr><td>Fertiliser subsidy rates</td><td>MoFA <em>Facts & Figures</em>, Table 7.5</td></tr>
+<tr><td>Application rates per acre</td><td>Family commercial farm records (~100 acres)</td></tr>
+<tr><td>Labour, ploughing, transport rates</td><td>Family farm records + local field survey</td></tr>
+</tbody></table>
+<p>Benchmark values are isolated in two tables. They are seeded with</p>
+<p>placeholders during development and replaced with real figures before</p>
+<p>final testing. **No component or function outside those tables contains a</p>
+<p>rate or price.** This is what allows the data to arrive late without any</p>
+<p>code change.</p>
+<hr/>
+<h2 id="3-architecture">3. Architecture</h2>
+<h3 id="3-1-architectural-style">3.1 Architectural style</h3>
+<p>Two-tier, client-to-database, with business logic held in the database</p>
+<p>layer. There is no intermediate application server.</p>
+<h3 id="3-2-deployment-view">3.2 Deployment view</h3>
+<pre class="code"><code>┌─────────────────────────────────────────────────────────────────┐
+│                          CLIENT TIER                            │
+│                                                                 │
+│   Browser (farmer's phone or laptop)                            │
+│   ┌──────────────────────────────────────────────────────┐      │
+│   │  React 18 + TypeScript  (static bundle on Vercel)    │      │
+│   │  ├── Pages / Routes                                  │      │
+│   │  ├── Components                                      │      │
+│   │  ├── Data access layer (typed Supabase queries)      │      │
+│   │  └── supabase-js client  ── holds anon key + JWT     │      │
+│   └──────────────────────────────────────────────────────┘      │
+└────────────────────────────┬────────────────────────────────────┘
+                             │  HTTPS · PostgREST · JWT bearer
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      SUPABASE (managed)                         │
+│                                                                 │
+│   ┌────────────────┐  ┌──────────────────────────────────────┐  │
+│   │   GoTrue Auth  │  │           PostgREST API              │  │
+│   │  email + pass  │  │  auto-generated REST over tables,    │  │
+│   │  issues JWT    │  │  views, and RPC functions            │  │
+│   └───────┬────────┘  └───────────────┬──────────────────────┘  │
+│           │                           │                         │
+│           ▼                           ▼                         │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │                    PostgreSQL 15                        │   │
+│   │  ┌───────────────────────────────────────────────────┐  │   │
+│   │  │  ROW LEVEL SECURITY  — enforced on every query    │  │   │
+│   │  └───────────────────────────────────────────────────┘  │   │
+│   │  Reference tables · Farmer tables · Output tables       │   │
+│   │  generate_estimate()  ·  v_estimate_report              │   │
+│   └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="3-3-why-no-application-server">3.3 Why no application server</h3>
+<p>The original proposal specified a Python/FastAPI service for</p>
+<p>calculations. This was removed. The reasoning:</p>
+<table>
+<thead><tr><th>Consideration</th><th>Outcome</th></tr></thead>
+<tbody>
+<tr><td>Nature of the computation</td><td>Sums, averages, and a percentage comparison over the user's own rows — relational work</td></tr>
+<tr><td>Data locality</td><td>Calculating in the database avoids transferring every cost row to a service and back</td></tr>
+<tr><td>Deployment cost</td><td>One deployment instead of two</td></tr>
+<tr><td>Integration cost</td><td>No CORS configuration, no JWT forwarding between services, no shared secret management</td></tr>
+<tr><td>Security</td><td>RLS is enforced automatically; an external service would need to re-implement authorisation</td></tr>
+<tr><td>Team size and timeline</td><td>Three developers, fourteen days</td></tr>
+</tbody></table>
+<p>Trade-off accepted: business logic in PL/pgSQL is harder to unit test than</p>
+<p>Python and ties the system to PostgreSQL. Both are acceptable for a</p>
+<p>project of this scope, and PostgreSQL is not a dependency the project</p>
+<p>would want to remove.</p>
+<h3 id="3-4-layered-view">3.4 Layered view</h3>
+<table>
+<thead><tr><th>Layer</th><th>Responsibility</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td>Presentation</td><td>Rendering, input capture, validation feedback</td><td>React components</td></tr>
+<tr><td>Routing / state</td><td>Navigation, session, server-state caching</td><td>React Router, TanStack Query</td></tr>
+<tr><td>Data access</td><td>Typed functions wrapping every query</td><td><code>src/api/*.ts</code></td></tr>
+<tr><td>Transport</td><td>REST, auth headers, serialisation</td><td><code>supabase-js</code></td></tr>
+<tr><td>Authorisation</td><td>Row-level access control</td><td>Postgres RLS policies</td></tr>
+<tr><td>Business logic</td><td>Estimation and flagging</td><td><code>generate_estimate()</code></td></tr>
+<tr><td>Persistence</td><td>Storage and integrity constraints</td><td>PostgreSQL tables</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="4-technology-stack">4. Technology Stack</h2>
+<table>
+<thead><tr><th>Concern</th><th>Choice</th><th>Justification</th></tr></thead>
+<tbody>
+<tr><td>UI framework</td><td>React 18</td><td>Component model suits repeated form and list structures; team familiarity</td></tr>
+<tr><td>Language</td><td>TypeScript</td><td>Types generated from the database schema catch field-name and shape errors at compile time</td></tr>
+<tr><td>Build tool</td><td>Vite</td><td>Fast dev server and simple static output for Vercel</td></tr>
+<tr><td>Styling</td><td>Tailwind CSS</td><td>Utility classes avoid a separate stylesheet architecture on a short timeline</td></tr>
+<tr><td>Server state</td><td>TanStack Query</td><td>Caching and invalidation for read-heavy screens without hand-written state logic</td></tr>
+<tr><td>Forms</td><td>React Hook Form + Zod</td><td>Schema-based validation mirroring database constraints</td></tr>
+<tr><td>Auth</td><td>Supabase Auth (GoTrue)</td><td>Issues the JWT that RLS depends on; no custom auth code</td></tr>
+<tr><td>Database</td><td>PostgreSQL 15 (Supabase)</td><td>Enums, constraints, RLS, and PL/pgSQL all required by the design</td></tr>
+<tr><td>API</td><td>PostgREST (Supabase)</td><td>Generated from schema; no endpoint code to write or maintain</td></tr>
+<tr><td>Business logic</td><td>PL/pgSQL function</td><td>Runs next to the data it reads</td></tr>
+<tr><td>Frontend hosting</td><td>Vercel</td><td>Git-push deployment, free tier, HTTPS by default</td></tr>
+<tr><td>Offline shell</td><td>vite-plugin-pwa + IndexedDB (idb)</td><td>Cost entry happens in a field; writes queue locally and flush on reconnect (P1)</td></tr>
+<tr><td>Local languages</td><td>Khaya AI API, Ghana NLP</td><td>Translation and text-to-speech for Twi, Ewe, Ga, Dagbani, Frafra (P2)</td></tr>
+<tr><td>AI Integration</td><td>Claude / OpenRouter</td><td>FarmBot uses OpenRouter to access Claude, providing intelligent, context-aware agricultural advice based on real-time farm state.</td></tr>
+<tr><td>Version control</td><td>Git / GitHub</td><td>Branch-per-developer with review before merge</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="5-component-design">5. Component Design</h2>
+<h3 id="5-1-frontend-structure">5.1 Frontend structure</h3>
+<pre class="code"><code>src/
+├── main.tsx                    entry, providers
+├── App.tsx                     route table
+├── lib/
+│   ├── supabase.ts             client singleton
+│   ├── database.types.ts       generated from schema
+│   └── money.ts                pesewa ↔ cedi formatting
+├── api/                        DATA ACCESS LAYER
+│   ├── farms.ts                getFarm, createFarm
+│   ├── seasons.ts              listSeasons, createSeason, completeSeason
+│   ├── costs.ts                listCosts, addCost, deleteCost
+│   ├── crops.ts                 getCrops
+│   ├── estimates.ts            generateEstimate, getReport
+│   └── ai.ts                   askFarmBot
+├── components/
+│   ├── layout/                 AppShell, Header, ProtectedRoute
+│   ├── ui/                     Button, Input, Select, Card, Table, Money
+│   ├── features/                WeeklyCatchUp, CostList
+│   └── domain/                 FarmBot, AddCostForm, GhanaMap
+├── pages/
+│   ├── SignIn.tsx
+│   ├── SignUp.tsx
+│   ├── FarmSetup.tsx
+│   ├── Dashboard.tsx
+│   ├── SeasonNew.tsx
+│   ├── SeasonDetail.tsx        cost entry lives here
+│   └── EstimateReport.tsx
+└── hooks/
+    ├── useAuth.ts
+    └── useFarm.ts</code></pre>
+<h3 id="5-2-component-responsibilities">5.2 Component responsibilities</h3>
+<table>
+<thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>ProtectedRoute</code></td><td>Redirects to sign-in when no session exists</td></tr>
+<tr><td><code>AppShell</code></td><td>Header, navigation, sign-out</td></tr>
+<tr><td><code>FarmSetup</code></td><td>One-time farm creation; blocks the dashboard until complete</td></tr>
+<tr><td><code>Dashboard</code></td><td>Lists seasons with status and total recorded so far</td></tr>
+<tr><td><code>SeasonNew</code></td><td>Crop, year, season_window, area planted</td></tr>
+<tr><td><code>SeasonDetail</code></td><td>Cost list plus the add-cost form; triggers estimate generation</td></tr>
+<tr><td><code>WeeklyCatchUp</code></td><td>Standing weekly prompt on the dashboard; asks per expected category across all active seasons, writes ordinary <code>season_costs</code> rows on answer</td></tr>
+<tr><td><code>EstimateReport</code></td><td>Total, per-category breakdown (Recorded/Predicted), flags, advice, potential saving; interactive checklist when there is nothing to show yet</td></tr>
+<tr><td><code>Money</code></td><td>Renders pesewas as <code>GHS 1,234.56</code>; the only place formatting occurs</td></tr>
+</tbody></table>
+<h3 id="5-3-the-money-rule">5.3 The money rule</h3>
+<p>Pesewas are integers everywhere — database, API layer, component props,</p>
+<p>and state. Conversion to cedis happens exclusively inside the <code>Money</code></p>
+<p>component at render time. No arithmetic is performed on a cedi value</p>
+<p>anywhere in the system.</p>
+<hr/>
+<h2 id="6-data-architecture">6. Data Architecture</h2>
+<h3 id="6-1-layer-model">6.1 Layer model</h3>
+<p>Twelve tables in three layers, plus three views. The layer determines</p>
+<p>write access, which makes the layer boundary the security boundary.</p>
+<table>
+<thead><tr><th>Layer</th><th>Tables</th><th>Written by</th></tr></thead>
+<tbody>
+<tr><td>Reference</td><td><code>app_settings</code>, <code>crops</code>, <code>cost_benchmarks</code>, <code>crop_input_norms</code>, <code>advice_rules</code>, <code>advice_translations</code></td><td>Developers, via migration (translations also written on first fetch)</td></tr>
+<tr><td>Farmer records</td><td><code>profiles</code>, <code>farms</code>, <code>seasons</code>, <code>season_costs</code></td><td>The authenticated farmer</td></tr>
+<tr><td>Output</td><td><code>estimates</code>, <code>estimate_lines</code></td><td><code>generate_estimate()</code></td></tr>
+</tbody></table>
+<p><strong>Views:</strong> <code>v_estimate_report</code> (report screen), <code>v_farm_summary</code> and</p>
+<p><code>v_crop_summary</code> (dashboard rollups).</p>
+<h3 id="6-2-entity-relationship-diagram">6.2 Entity relationship diagram</h3>
+<pre class="code"><code>                      ┌──────────────┐
+                      │  auth.users  │
+                      └──────┬───────┘
+                             │ 1
+                             │
+                             ▼ N
+                      ┌──────────────┐
+                      │    farms     │
+                      │──────────────│
+                      │ id           │
+                      │ user_id  FK  │
+                      │ name         │
+                      │ district     │
+                      │ total_area   │
+                      │ check_in_day │
+                      └──────┬───────┘
+                             │ 1
+                             ▼ N
+   ┌──────────┐       ┌──────────────┐       ┌──────────────────┐
+   │  crops   │──1──N▶│   seasons    │◀─1──N─│   season_costs   │
+   │──────────│       │──────────────│       │──────────────────│
+   │ id       │       │ id           │       │ id               │
+   │ name     │       │ farm_id  FK  │       │ season_id    FK  │
+   │ avg_yield│       │ crop_id  FK  │       │ category   ENUM  │
+   │ potential│       │ year         │       │ description      │
+   └────┬─────┘       │ season_window  ENUM │       │ quantity         │
+        │ 1           │ area_planted │       │ unit             │
+        │             │ harvest_qty  │       │ unit_cost_pesewas│
+        ▼ N           │ revenue      │       │ amount_pesewas   │
+   ┌──────────────┐   │ is_complete  │       │ date_incurred    │
+   │crop_input_   │   └──────┬───────┘       └──────────────────┘
+   │    norms     │          │ 1
+   │──────────────│          ▼ N
+   │ id           │   ┌──────────────┐
+   │ crop_id   FK │   │  estimates   │
+   │ benchmark_id │   │──────────────│
+   │ category     │   │ id           │
+   │ qty_per_acre │   │ season_id FK │
+   │ window       │   │ method  ENUM │
+   │ source       │   │ seasons_used │
+   └──────┬───────┘   │ area_acres   │
+          │ N         │ total_pesewas│
+          │           │ price_mult   │
+          ▼ 1         └──────┬───────┘
+   ┌──────────────┐          │ 1
+   │cost_         │          ▼ N
+   │  benchmarks  │   ┌────────────────────┐
+   │──────────────│   │  estimate_lines    │
+   │ id           │   │────────────────────│
+   │ input_name   │   │ id                 │
+   │ category     │   │ estimate_id    FK  │
+   │ unit         │   │ category     ENUM  │
+   │ year         │   │ estimated_pesewas  │
+   │ price_pesewas│   │ benchmark_pesewas  │
+   │ basis   ENUM │   │ variance_pct       │
+   │ source       │   │ is_flagged         │
+   └──────────────┘   │ advice             │
+                      │ potential_saving   │
+   ┌──────────────┐   └────────────────────┘
+   │ advice_rules │
+   │──────────────│   ┌──────────────┐
+   │ category  UQ │   │ app_settings │
+   │ message      │   │ price_mult   │
+   └──────────────┘   │ flag_thresh  │
+                      └──────────────┘</code></pre>
+<p><code>estimate_lines</code> also carries <code>is_actual boolean</code> (added in migration</p>
+<p>010, omitted from the diagram above for space): true when</p>
+<p><code>estimated_pesewas</code> is the farmer's own recorded <code>season_costs</code> sum for</p>
+<p>that category this season, false when it is still a prediction. See</p>
+<p>§9.2.</p>
+<h3 id="6-3-enumerated-types">6.3 Enumerated types</h3>
+<table>
+<thead><tr><th>Enum</th><th>Values</th></tr></thead>
+<tbody>
+<tr><td><code>cost_category</code></td><td>seeds, fertiliser, agrochem, land_prep, labour, transport, storage, other</td></tr>
+<tr><td><code>season_window</code></td><td>major, minor, dry</td></tr>
+<tr><td><code>price_basis</code></td><td>subsidised, open_market</td></tr>
+<tr><td><code>estimate_method</code></td><td>benchmark, blended, history</td></tr>
+</tbody></table>
+<h3 id="6-4-relationship-rules">6.4 Relationship rules</h3>
+<table>
+<thead><tr><th>Parent</th><th>Child</th><th>Cardinality</th><th>On delete</th></tr></thead>
+<tbody>
+<tr><td><code>auth.users</code></td><td><code>farms</code></td><td>1 : N</td><td>cascade</td></tr>
+<tr><td><code>farms</code></td><td><code>seasons</code></td><td>1 : N</td><td>cascade</td></tr>
+<tr><td><code>crops</code></td><td><code>seasons</code></td><td>1 : N</td><td>restrict</td></tr>
+<tr><td><code>seasons</code></td><td><code>season_costs</code></td><td>1 : N</td><td>cascade</td></tr>
+<tr><td><code>seasons</code></td><td><code>estimates</code></td><td>1 : N</td><td>cascade</td></tr>
+<tr><td><code>estimates</code></td><td><code>estimate_lines</code></td><td>1 : N</td><td>cascade</td></tr>
+<tr><td><code>crops</code></td><td><code>crop_input_norms</code></td><td>1 : N</td><td>cascade</td></tr>
+<tr><td><code>cost_benchmarks</code></td><td><code>crop_input_norms</code></td><td>1 : N</td><td>restrict</td></tr>
+</tbody></table>
+<p><code>restrict</code> protects reference data from deletion while it is in use.</p>
+<p><code>cascade</code> ensures no orphaned farmer records.</p>
+<h3 id="6-5-constraints-of-note">6.5 Constraints of note</h3>
+<table>
+<thead><tr><th>Constraint</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>seasons</code> unique (farm, crop, year, season_window)</td><td>A farmer may grow maize in both major and minor season of one year, but not twice in the same season_window</td></tr>
+<tr><td><code>area_planted_acres > 0</code></td><td>Division by area occurs in every comparison</td></tr>
+<tr><td><code>amount_pesewas >= 0</code>, NOT NULL</td><td>The only mandatory field on a cost entry</td></tr>
+<tr><td><code>app_settings</code> single-row check</td><td>Prevents multiple conflicting configurations</td></tr>
+<tr><td><code>cost_benchmarks</code> unique (name, unit, year, basis)</td><td>Allows the same input at subsidised and open-market prices</td></tr>
+<tr><td><code>crop_input_norms</code> two partial unique indexes: <code>(crop_id, benchmark_id, season_window) WHERE season_window IS NOT NULL</code>, and <code>(crop_id, benchmark_id) WHERE season_window IS NULL</code></td><td>Prevents duplicate norm rows. Originally a single <code>UNIQUE (crop_id, benchmark_id, season_window)</code> constraint — but Postgres never treats two <code>NULL</code>s as equal for uniqueness, and every seeded row has <code>season_window = NULL</code>, so the constraint silently allowed unlimited duplicates. Discovered when re-seeding had left five copies of every Maize input, 5×-inflating every benchmark figure in the app. Splitting into two partial indexes is the standard fix for "NULL should still count as a comparable value"</td></tr>
+</tbody></table>
+<h3 id="6-6-design-decisions">6.6 Design decisions</h3>
+<p><strong>Money as integer pesewas.</strong> Floating-point arithmetic accumulates</p>
+<p>rounding error across sums. Every monetary column is <code>integer</code> or</p>
+<p><code>bigint</code>.</p>
+<p><strong>Per acre as the comparison unit.</strong> Amounts are stored as entered;</p>
+<p>division by <code>area_planted_acres</code> occurs at query time. Farms of different</p>
+<p>sizes are only comparable per acre.</p>
+<p><strong><code>amount_pesewas</code> required, breakdown optional.</strong> A farmer may recall</p>
+<p>only that he spent GHS 400 on fertiliser. Requiring quantity and unit</p>
+<p>price would produce abandoned entries. Where the breakdown <em>is</em> supplied,</p>
+<p>it yields the farmer's actual usage rate and actual price — which is the</p>
+<p>richer data.</p>
+<p><strong>Fixed cost categories.</strong> An enum, not a user-extensible table. Every</p>
+<p>category must map to a benchmark; a farmer-invented category has no</p>
+<p>comparison and could never be flagged, making it invisible to the engine.</p>
+<p><strong>Outputs snapshotted, not derived.</strong> Benchmark prices change between</p>
+<p>seasons. A farmer must see what he was told at the time, so each estimate</p>
+<p>also stores the <code>price_multiplier</code> in force when it ran.</p>
+<p><strong>Price basis recorded.</strong> Government subsidy halves NPK and Urea. A</p>
+<p>farmer paying open-market rates may simply have missed the subsidy</p>
+<p>window — which is itself the most actionable recommendation available.</p>
+<h3 id="6-7-identity-the-profiles-table">6.7 Identity — the <code>profiles</code> table</h3>
+<p>Supabase phone auth requires OTP delivery through a paid SMS provider,</p>
+<p>which is out of scope. The design instead treats the phone number as an</p>
+<p>identifier handled at the application layer:</p>
+<pre class="code"><code>  farmer types    0241234567
+        │
+        ▼  normalisePhone()
+  normalised      0241234567
+        │
+        ▼  phoneToSyntheticEmail()
+  synthetic       0241234567@farmpilot.local
+        │
+        ▼  supabase.auth.signUp(email, password, { data: { phone } })
+  auth.users row created
+        │
+        ▼  trigger on_auth_user_created
+  profiles row written with the REAL phone number</code></pre>
+<p><code>profiles</code> holds <code>phone</code>, an optional linked <code>email</code>, <code>full_name</code>,</p>
+<p><code>preferred_language</code>, and <code>auth_method</code>. A CHECK constraint enforces the</p>
+<p>Ghana mobile format <code>^0[235][0-9]{8}$</code>. The trigger runs `security</p>
+<p>definer` so the profile row is created atomically with the user — the</p>
+<p>client never makes two calls that could half-fail.</p>
+<p>Enabling real SMS OTP later requires only switching on a provider; the</p>
+<p>numbers are already stored and normalised. See ADR-006.</p>
+<h3 id="6-8-sync-columns">6.8 Sync columns</h3>
+<p><code>seasons</code> and <code>season_costs</code> each carry <code>client_id uuid</code> with a partial</p>
+<p>unique index, and <code>updated_at</code> maintained by trigger.</p>
+<p><code>client_id</code> is generated on the device before a row is queued offline. If</p>
+<p>a flush is interrupted and retried, the replayed insert collides on the</p>
+<p>unique index and is treated as already applied rather than inserting</p>
+<p>again. Without it, a farmer who loses signal mid-save could record the</p>
+<p>same cost three times and his estimate would be silently wrong.</p>
+<p><code>updated_at</code> gives the client a cursor for pulling server-side changes</p>
+<p>since its last sync.</p>
+<h3 id="6-9-rollup-views">6.9 Rollup views</h3>
+<p>An estimate belongs to a season, because input norms are crop-specific —</p>
+<p>an acre of maize and an acre of cassava need entirely different inputs. A</p>
+<p>farm-wide estimate would have to average across crops and would describe</p>
+<p>no actual field.</p>
+<p>Farm-level and crop-level figures are therefore derived, not stored:</p>
+<table>
+<thead><tr><th>View</th><th>Answers</th></tr></thead>
+<tbody>
+<tr><td><code>v_farm_summary</code></td><td>What does my whole farm cost to run?</td></tr>
+<tr><td><code>v_crop_summary</code></td><td>What does each crop cost me per acre?</td></tr>
+</tbody></table>
+<p><code>v_farm_summary</code> uses a lateral join taking only the most recent estimate</p>
+<p>per season, so re-running an estimate cannot double the farm total. See</p>
+<p>ADR-007.</p>
+<hr/>
+<h2 id="7-data-access-layer">7. Data Access Layer</h2>
+<p>Every database interaction passes through a typed function in <code>src/api/</code>.</p>
+<p>No component calls <code>supabase</code> directly.</p>
+<h3 id="7-1-operations">7.1 Operations</h3>
+<table>
+<thead><tr><th>Function</th><th>Operation</th><th>Returns</th></tr></thead>
+<tbody>
+<tr><td><code>listCrops()</code></td><td>select from <code>crops</code></td><td><code>Crop[]</code></td></tr>
+<tr><td><code>getFarm()</code></td><td>select from <code>farms</code> where owner</td><td>`Farm \</td><td>null`</td></tr>
+<tr><td><code>createFarm(input)</code></td><td>insert into <code>farms</code></td><td><code>Farm</code></td></tr>
+<tr><td><code>listSeasons(farmId)</code></td><td>select with crop join and cost total</td><td><code>SeasonSummary[]</code></td></tr>
+<tr><td><code>createSeason(input)</code></td><td>insert into <code>seasons</code></td><td><code>Season</code></td></tr>
+<tr><td><code>completeSeason(id, harvest)</code></td><td>update <code>is_complete</code>, harvest fields</td><td><code>Season</code></td></tr>
+<tr><td><code>listCosts(seasonId)</code></td><td>select from <code>season_costs</code></td><td><code>Cost[]</code></td></tr>
+<tr><td><code>addCost(input)</code></td><td>insert into <code>season_costs</code></td><td><code>Cost</code></td></tr>
+<tr><td><code>deleteCost(id)</code></td><td>delete from <code>season_costs</code></td><td><code>void</code></td></tr>
+<tr><td><code>generateEstimate(seasonId)</code></td><td>rpc <code>generate_estimate</code></td><td><code>estimateId</code></td></tr>
+<tr><td><code>getReport(estimateId)</code></td><td>select from <code>v_estimate_report</code></td><td><code>ReportLine[]</code></td></tr>
+<tr><td><code>getCategoryBenchmarkPesewas(seasonId, category)</code></td><td>rpc <code>get_category_benchmark_pesewas</code></td><td><code>number</code> — the standard rate for one category, scaled to the season's acreage; 0 where no benchmark exists. Powers the add-cost form's "don't know this cost?" fill (FR-4.13). Reuses the exact same per-acre math as <code>generate_estimate()</code>, so the number offered always matches what the estimate would show</td></tr>
+<tr><td><code>getExpectedCategoriesForCrop(cropId)</code></td><td>select distinct category from <code>crop_input_norms</code></td><td><code>CostCategory[]</code> — drives both the season-detail checklist and the report's cold-start checklist (FR-9.10); falls back to <code>ESSENTIAL_CATEGORIES</code> client-side where a crop has no norms yet</td></tr>
+<tr><td><code>getFlaggedInsightsForFarm(farmId)</code></td><td>select from <code>v_estimate_report</code> where <code>farm_id</code> matches, keep each season's latest estimate, filter <code>is_flagged</code></td><td><code>FlaggedInsight[]</code> — feeds FarmBot's system prompt (FR-14.6) so it can name real, computed variance and advice instead of speaking generically</td></tr>
+<tr><td><code>getFarmSummary(farmId)</code></td><td>select from <code>v_farm_summary</code></td><td><code>FarmSummary</code></td></tr>
+<tr><td><code>getCropSummary(farmId)</code></td><td>select from <code>v_crop_summary</code></td><td><code>CropSummary[]</code></td></tr>
+<tr><td><code>signUpWithPhone(...)</code></td><td>normalise, synthesise email, <code>auth.signUp</code></td><td><code>Session</code></td></tr>
+<tr><td><code>signInWithPhone(...)</code></td><td>normalise, synthesise email, <code>auth.signIn</code></td><td><code>Session</code></td></tr>
+<tr><td><code>getProfile()</code></td><td>select from <code>profiles</code></td><td><code>Profile</code></td></tr>
+<tr><td><code>getAdvice(id, lang)</code></td><td>cache lookup, else Khaya, else English</td><td><code>string</code></td></tr>
+</tbody></table>
+<h3 id="7-2-contract-example">7.2 Contract example</h3>
+<pre class="code"><code>export async function generateEstimate(seasonId: number): Promise&lt;number&gt; {
+  const { data, error } = await supabase
+    .rpc('generate_estimate', { p_season_id: seasonId });
+  if (error) throw new Error(`Estimate failed: ${error.message}`);
+  return data as number;
+}</code></pre>
+<h3 id="7-3-type-generation">7.3 Type generation</h3>
+<p>Types are generated from the live schema:</p>
+<pre class="code"><code>supabase gen types typescript --project-id &lt;id&gt; &gt; src/lib/database.types.ts</code></pre>
+<p>Regenerated after every migration. A renamed column becomes a compile</p>
+<p>error rather than a runtime failure.</p>
+<hr/>
+<h2 id="8-security-architecture">8. Security Architecture</h2>
+<h3 id="8-1-authentication-flow">8.1 Authentication flow</h3>
+<pre class="code"><code>  Farmer submits email + password
+            │
+            ▼
+  GoTrue validates ──► issues JWT (sub = user id, exp = 1h)
+            │
+            ▼
+  supabase-js stores JWT, attaches as Bearer on every request
+            │
+            ▼
+  PostgREST sets request.jwt.claims for the connection
+            │
+            ▼
+  Postgres evaluates auth.uid() inside every RLS policy</code></pre>
+<h3 id="8-2-authorisation-matrix">8.2 Authorisation matrix</h3>
+<table>
+<thead><tr><th>Table</th><th>Anonymous</th><th>Authenticated read</th><th>Authenticated write</th></tr></thead>
+<tbody>
+<tr><td><code>crops</code></td><td>✗</td><td>all rows</td><td>✗</td></tr>
+<tr><td><code>cost_benchmarks</code></td><td>✗</td><td>all rows</td><td>✗</td></tr>
+<tr><td><code>crop_input_norms</code></td><td>✗</td><td>all rows</td><td>✗</td></tr>
+<tr><td><code>advice_rules</code></td><td>✗</td><td>all rows</td><td>✗</td></tr>
+<tr><td><code>app_settings</code></td><td>✗</td><td>all rows</td><td>✗</td></tr>
+<tr><td><code>advice_translations</code></td><td>✗</td><td>all rows</td><td>✗</td></tr>
+<tr><td><code>profiles</code></td><td>✗</td><td>own only</td><td>own only</td></tr>
+<tr><td><code>farms</code></td><td>✗</td><td>own only</td><td>own only</td></tr>
+<tr><td><code>seasons</code></td><td>✗</td><td>own farm only</td><td>own farm only</td></tr>
+<tr><td><code>season_costs</code></td><td>✗</td><td>own season only</td><td>own season only</td></tr>
+<tr><td><code>estimates</code></td><td>✗</td><td>own season only</td><td>via function</td></tr>
+<tr><td><code>estimate_lines</code></td><td>✗</td><td>own estimate only</td><td>via function</td></tr>
+</tbody></table>
+<h3 id="8-3-ownership-traversal">8.3 Ownership traversal</h3>
+<p>Ownership is established once, on <code>farms.user_id</code>, and traced through</p>
+<p>foreign keys for every descendant. Reaching a <code>season_costs</code> row requires</p>
+<p>owning the season, which requires owning the farm.</p>
+<pre class="code"><code>create policy season_costs_own on season_costs for all to authenticated
+  using (exists (
+    select 1 from seasons s join farms f on f.id = s.farm_id
+    where s.id = season_costs.season_id and f.user_id = auth.uid()));</code></pre>
+<h3 id="8-4-additional-measures">8.4 Additional measures</h3>
+<table>
+<thead><tr><th>Measure</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td>Key exposure</td><td>Only the anon key reaches the browser; it grants nothing without a valid JWT and passing RLS</td></tr>
+<tr><td>Service-role key</td><td>Never present in frontend code or environment</td></tr>
+<tr><td>Function context</td><td><code>generate_estimate</code> runs <code>security invoker</code>, so RLS still applies inside it</td></tr>
+<tr><td>Transport</td><td>HTTPS enforced by Vercel and Supabase</td></tr>
+<tr><td>Input validation</td><td>Zod on the client; CHECK constraints in the database as the authority</td></tr>
+<tr><td>Injection</td><td>Parameterised queries throughout PostgREST and supabase-js</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="9-the-estimation-engine">9. The Estimation Engine</h2>
+<h3 id="9-1-signature">9.1 Signature</h3>
+<pre class="code"><code>generate_estimate(p_season_id bigint) returns bigint</code></pre>
+<p>Returns the id of the estimate created.</p>
+<h3 id="9-2-algorithm">9.2 Algorithm</h3>
+<p><strong>Design history.</strong> The first implementation computed <code>estimated</code> and</p>
+<p><code>comparison</code> (the benchmark) from the exact same source whenever</p>
+<p><code>method = 'benchmark'</code> — so for any farmer's first season of a crop, the</p>
+<p>two were always identical by construction, variance was always 0%, and</p>
+<p>step 6 could never flag anything, no matter what the farmer actually</p>
+<p>recorded in <code>season_costs</code> that season. This silently defeated overspend</p>
+<p>detection (FR-7/FR-8, BR-6) for every first season — the common case.</p>
+<p>Live testing during the project confirmed it: a fertiliser cost recorded</p>
+<p>60% above benchmark produced <code>variance = 0%</code>, <code>flagged = false</code>. The</p>
+<p>algorithm below is the fix — it adds a third input, <code>actual</code>, drawn from</p>
+<p>the season being estimated itself, and lets a recorded cost override the</p>
+<p>prediction line-by-line.</p>
+<pre class="code"><code>INPUT   season_id
+
+1  LOAD season, LOAD app_settings
+2  COUNT prior completed seasons — same farm, same crop, with costs
+3  IF count &gt; 0  THEN method ← 'history'  ELSE method ← 'benchmark'
+
+4  COMPUTE benchmark_per_acre[category]:
+       Σ ( norm.quantity_per_acre
+           × benchmark.price_pesewas
+           × settings.price_multiplier )
+       WHERE norm.crop = season.crop
+         AND (norm.season_window IS NULL OR norm.season_window = season.season_window)
+       GROUP BY category
+
+5  COMPUTE history_per_acre[category]:
+       Σ(cost.amount) / Σ(season.area_planted_acres)
+       ACROSS prior completed seasons of same farm + crop (excludes this season)
+       GROUP BY category
+
+6  COMPUTE actual_total[category]:
+       Σ(cost.amount)
+       FROM season_costs WHERE season_costs.season_id = season_id   ← THIS season, live
+       GROUP BY category
+
+7  FOR EACH category present in benchmark, history, OR actual:
+       is_actual  ← actual_total[category] &gt; 0
+       predicted  ← (method = 'history' ? history : benchmark) × area
+       estimated  ← is_actual ? actual_total[category] : predicted
+       comparison ← benchmark × area
+       IF is_actual AND comparison &gt; 0:
+           variance ← (estimated − comparison) / comparison × 100
+           flagged  ← variance &gt; settings.flag_threshold_pct
+           advice   ← flagged ? advice_rules[category] : NULL
+           saving   ← MAX(estimated − comparison, 0)
+       ELSE:
+           variance ← NULL, flagged ← false, advice ← NULL, saving ← 0
+           (a still-predicted line has nothing real to compare yet)
+
+8  INSERT estimates (total = Σ estimated, method, seasons_used,
+                     area, price_multiplier)
+9  INSERT estimate_lines — one row per category, including is_actual
+
+OUTPUT  estimate_id</code></pre>
+<p><strong>What changed and why:</strong></p>
+<ul>
+<li>Step 6 is new. Without it the function never read the season it was</li>
+</ul>
+<p>  estimating at all — only <em>other</em> completed seasons (step 5) and fixed</p>
+<p>  reference data (step 4).</p>
+<ul>
+<li>Step 7's <code>estimated</code> now prefers the farmer's live recorded figure over</li>
+</ul>
+<p>  a prediction, category by category — WeeklyCatchUp and the normal</p>
+<p>  add-cost form both just insert rows into <code>season_costs</code>, so either one</p>
+<p>  flips a category from predicted to actual the moment a cost lands.</p>
+<ul>
+<li><code>method</code> (history vs. benchmark) still governs the <em>prediction</em> shown</li>
+</ul>
+<p>  for whatever the farmer has not recorded yet this season — it never</p>
+<p>  changes what a recorded category is compared against. Comparison is</p>
+<p>  always against the fixed benchmark, exactly as BR-6 always specified;</p>
+<p>  the bug was that the comparison operands could end up equal by</p>
+<p>  construction, not that the wrong thing was being compared.</p>
+<ul>
+<li>Flagging/advice/saving now require <code>is_actual</code> — a category still</li>
+</ul>
+<p>  showing a prediction is not "spending," so it cannot be over- or</p>
+<p>  under-spending yet.</p>
+<h3 id="9-3-worked-example">9.3 Worked example</h3>
+<p>Kwame farms 2 acres of maize, minor season 2026. He has no prior seasons</p>
+<p>recorded, so <code>method = 'benchmark'</code>.</p>
+<p><strong>Norms and prices for maize (per acre):</strong></p>
+<table>
+<thead><tr><th>Category</th><th>Input</th><th>Qty/acre</th><th>Unit price</th><th>Per acre</th></tr></thead>
+<tbody>
+<tr><td>seeds</td><td>Maize seed (OPV)</td><td>10 kg</td><td>GHS 15.00</td><td>GHS 150.00</td></tr>
+<tr><td>fertiliser</td><td>NPK 15-15-15</td><td>2 bags</td><td>GHS 400.00</td><td>GHS 800.00</td></tr>
+<tr><td>fertiliser</td><td>Urea</td><td>1 bag</td><td>GHS 380.00</td><td>GHS 380.00</td></tr>
+<tr><td>agrochem</td><td>Round Up</td><td>2 L</td><td>GHS 80.00</td><td>GHS 160.00</td></tr>
+<tr><td>land_prep</td><td>Tractor ploughing</td><td>1 acre</td><td>GHS 350.00</td><td>GHS 350.00</td></tr>
+<tr><td>labour</td><td>Farm labour</td><td>12 days</td><td>GHS 60.00</td><td>GHS 720.00</td></tr>
+<tr><td>storage</td><td>Jute sack</td><td>9</td><td>GHS 12.00</td><td>GHS 108.00</td></tr>
+</tbody></table>
+<p><strong>Per-acre totals by category:</strong> seeds 150 · fertiliser 1,180 ·</p>
+<p>agrochem 160 · land_prep 350 · labour 720 · storage 108</p>
+<p>→ <strong>GHS 2,668 per acre</strong></p>
+<p><strong>Scaled to 2 acres → estimate total GHS 5,336.</strong></p>
+<p>Kwame records the season. Next year he creates a second season and the</p>
+<p>method becomes <code>history</code>. His recorded fertiliser spend was GHS 3,600</p>
+<p>over 2 acres — GHS 1,800 per acre, because he bought at open market</p>
+<p>rather than subsidised price.</p>
+<table>
+<thead><tr><th>Category</th><th>Estimated (2 ac)</th><th>Benchmark (2 ac)</th><th>Variance</th><th>Flagged</th></tr></thead>
+<tbody>
+<tr><td>seeds</td><td>300</td><td>300</td><td>0.0%</td><td>no</td></tr>
+<tr><td>fertiliser</td><td>3,600</td><td>2,360</td><td><strong>+52.5%</strong></td><td><strong>yes</strong></td></tr>
+<tr><td>agrochem</td><td>320</td><td>320</td><td>0.0%</td><td>no</td></tr>
+<tr><td>land_prep</td><td>700</td><td>700</td><td>0.0%</td><td>no</td></tr>
+<tr><td>labour</td><td>1,500</td><td>1,440</td><td>+4.2%</td><td>no</td></tr>
+<tr><td>storage</td><td>216</td><td>216</td><td>0.0%</td><td>no</td></tr>
+</tbody></table>
+<p>Fertiliser exceeds the 30% threshold. The report shows a potential saving</p>
+<p>of GHS 1,240 and the fertiliser advice: check the district MoFA office</p>
+<p>for the subsidy window before buying at market price.</p>
+<p>Fertiliser is flagged here specifically because Kwame <em>recorded</em> it</p>
+<p>(<code>is_actual = true</code>) — its "Estimated (2 ac)" column is his own logged</p>
+<p>GHS 3,600, not a prediction, so there is something real to compare</p>
+<p>against the GHS 2,360 benchmark. A category he has not yet recorded this</p>
+<p>season — say storage — would show <code>is_actual = false</code>, its "estimated"</p>
+<p>figure would be the GHS 216 prediction itself, and it could not be</p>
+<p>flagged even if his eventual real storage spend turns out high, until he</p>
+<p>actually logs it.</p>
+<h3 id="9-4-configurable-parameters">9.4 Configurable parameters</h3>
+<table>
+<thead><tr><th>Parameter</th><th>Default</th><th>Held in</th></tr></thead>
+<tbody>
+<tr><td><code>flag_threshold_pct</code></td><td>30.00</td><td><code>app_settings</code></td></tr>
+<tr><td><code>price_multiplier</code></td><td>4.50</td><td><code>app_settings</code></td></tr>
+</tbody></table>
+<p>The threshold is a judgement, not a derived figure. Holding it in the</p>
+<p>database allows tuning after observing real data without redeployment.</p>
+<h3 id="9-5-reporting-view">9.5 Reporting view</h3>
+<p><code>v_estimate_report</code> joins estimate, lines, season, farm, and crop so the</p>
+<p>entire report screen is a single query.</p>
+<hr/>
+<h2 id="10-user-stories">10. User Stories</h2>
+<h3 id="epic-a-account-and-farm">Epic A — Account and farm</h3>
+<table>
+<thead><tr><th>ID</th><th>Story</th><th>Acceptance criteria</th></tr></thead>
+<tbody>
+<tr><td>A1</td><td>As a farmer, I want to create an account so my records are private to me</td><td>Email + password registers; duplicate email rejected with a clear message; session persists on reload</td></tr>
+<tr><td>A2</td><td>As a farmer, I want to sign in and out</td><td>Valid credentials reach the dashboard; invalid show an error; sign-out clears the session and blocks protected routes</td></tr>
+<tr><td>A3</td><td>As a farmer, I want to record my farm once</td><td>Name, district, total acres captured; area must be greater than zero; dashboard is unreachable until a farm exists</td></tr>
+</tbody></table>
+<h3 id="epic-b-recording">Epic B — Recording</h3>
+<table>
+<thead><tr><th>ID</th><th>Story</th><th>Acceptance criteria</th></tr></thead>
+<tbody>
+<tr><td>B1</td><td>As a farmer, I want to start a season so I can record against it</td><td>Crop, year, season_window, area planted captured; area cannot exceed farm total; duplicate (crop, year, season_window) rejected</td></tr>
+<tr><td>B2</td><td>As a farmer, I want to add a cost item</td><td>Category and amount required; quantity, unit, unit price optional; item appears in the list immediately</td></tr>
+<tr><td>B3</td><td>As a farmer, I want to enter quantity and rate rather than a total</td><td>Entering quantity and unit price computes the amount automatically</td></tr>
+<tr><td>B4</td><td>As a farmer, I want to remove a mistaken entry</td><td>Delete with confirmation; total updates immediately</td></tr>
+<tr><td>B5</td><td>As a farmer, I want to see my running total</td><td>Season total displayed on the dashboard card and on the season screen</td></tr>
+<tr><td>B6</td><td>As a farmer, I want to close a season with my harvest</td><td>Harvest quantity and unit captured; <code>is_complete</code> set; the season becomes available as history</td></tr>
+</tbody></table>
+<h3 id="epic-c-estimating-and-reducing">Epic C — Estimating and reducing</h3>
+<table>
+<thead><tr><th>ID</th><th>Story</th><th>Acceptance criteria</th></tr></thead>
+<tbody>
+<tr><td>C1</td><td>As a new farmer with no history, I want an estimate anyway</td><td>Estimate generated using benchmarks; report states it is based on standard rates</td></tr>
+<tr><td>C2</td><td>As a returning farmer, I want the estimate based on my own records</td><td>Where prior completed seasons exist, method is <code>history</code> and the count is displayed</td></tr>
+<tr><td>C3</td><td>As a farmer, I want to see the breakdown by category</td><td>Every category shown with amount and share of total</td></tr>
+<tr><td>C4</td><td>As a farmer, I want to see where I am spending too much</td><td>Categories above threshold are visually distinct and sorted first</td></tr>
+<tr><td>C5</td><td>As a farmer, I want to know what to do about it</td><td>Each flagged category displays a specific, actionable suggestion</td></tr>
+<tr><td>C6</td><td>As a farmer, I want to know how much I could save</td><td>Potential saving shown per flagged category and as a total</td></tr>
+</tbody></table>
+<h3 id="epic-d-non-functional">Epic D — Non-functional</h3>
+<table>
+<thead><tr><th>ID</th><th>Story</th><th>Acceptance criteria</th></tr></thead>
+<tbody>
+<tr><td>D1</td><td>As a farmer, I want the app usable on my phone</td><td>All screens function at 360px width</td></tr>
+<tr><td>D2</td><td>As a farmer, I want my data private</td><td>Another signed-in user cannot read or modify my records — verified by test</td></tr>
+<tr><td>D3</td><td>As a farmer, I want it to be quick</td><td>Report renders within 3 seconds on a 3G connection</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="11-use-cases">11. Use Cases</h2>
+<h3 id="uc-01-generate-estimate">UC-01 Generate estimate</h3>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Actor</strong></td><td>Farmer</td></tr>
+<tr><td><strong>Precondition</strong></td><td>Signed in; farm exists; season exists with at least one cost item</td></tr>
+<tr><td><strong>Trigger</strong></td><td>Farmer selects <em>Generate estimate</em> on the season screen</td></tr>
+<tr><td><strong>Main flow</strong></td><td>1. System validates the season has costs recorded<br>2. System calls <code>generate_estimate(season_id)</code><br>3. Function determines method from prior season count<br>4. Function computes per-category estimate and benchmark<br>5. Function flags categories above threshold and attaches advice<br>6. Function writes estimate and lines, returns id<br>7. Client navigates to the report and renders it</td></tr>
+<tr><td><strong>Postcondition</strong></td><td>Estimate and lines persisted; report displayed</td></tr>
+<tr><td><strong>Alternate A</strong></td><td>No prior seasons → method is <code>benchmark</code>; report notes standard rates were used</td></tr>
+<tr><td><strong>Exception E1</strong></td><td>No cost items → button disabled with explanatory text</td></tr>
+<tr><td><strong>Exception E2</strong></td><td>No norms for the selected crop → estimate returns only categories the farmer recorded; report warns the comparison is incomplete</td></tr>
+<tr><td><strong>Exception E3</strong></td><td>RPC failure → error surfaced, no partial write (function is transactional)</td></tr>
+</tbody></table>
+<h3 id="uc-02-record-a-cost-item">UC-02 Record a cost item</h3>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Actor</strong></td><td>Farmer</td></tr>
+<tr><td><strong>Precondition</strong></td><td>Signed in; season exists</td></tr>
+<tr><td><strong>Main flow</strong></td><td>1. Farmer opens the season<br>2. Farmer selects a category<br>3. Farmer enters either an amount, or a quantity and unit price<br>4. System computes amount where a breakdown was given<br>5. System validates and inserts<br>6. List and running total update</td></tr>
+<tr><td><strong>Exception</strong></td><td>Negative or non-numeric amount rejected client-side and by CHECK constraint</td></tr>
+</tbody></table>
+<h3 id="uc-03-close-a-season">UC-03 Close a season</h3>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Actor</strong></td><td>Farmer</td></tr>
+<tr><td><strong>Precondition</strong></td><td>Season exists with costs recorded</td></tr>
+<tr><td><strong>Main flow</strong></td><td>1. Farmer selects <em>Close season</em><br>2. Farmer enters harvest quantity and unit<br>3. System sets <code>is_complete = true</code><br>4. Season becomes available as history for future estimates</td></tr>
+<tr><td><strong>Postcondition</strong></td><td>Subsequent estimates for the same crop use <code>method = 'history'</code></td></tr>
+</tbody></table>
+<hr/>
+<h2 id="12-sequence-diagrams">12. Sequence Diagrams</h2>
+<h3 id="12-1-estimate-generation">12.1 Estimate generation</h3>
+<pre class="code"><code>Farmer      React        api/estimates    PostgREST     Postgres
+  │           │                │              │             │
+  │ click     │                │              │             │
+  ├──────────►│                │              │             │
+  │           │ generateEst()  │              │             │
+  │           ├───────────────►│              │             │
+  │           │                │ rpc + JWT    │             │
+  │           │                ├─────────────►│             │
+  │           │                │              │ set claims  │
+  │           │                │              ├────────────►│
+  │           │                │              │             │ BEGIN
+  │           │                │              │             │ read season (RLS)
+  │           │                │              │             │ read settings
+  │           │                │              │             │ count prior
+  │           │                │              │             │ compute benchmark
+  │           │                │              │             │ compute history
+  │           │                │              │             │ insert estimate
+  │           │                │              │             │ insert lines
+  │           │                │              │             │ COMMIT
+  │           │                │              │◄────────────┤ estimate_id
+  │           │                │◄─────────────┤             │
+  │           │◄───────────────┤              │             │
+  │           │ navigate /report/:id          │             │
+  │           │ getReport()    │              │             │
+  │           ├───────────────►├─────────────►├────────────►│ select view (RLS)
+  │           │◄───────────────┤◄─────────────┤◄────────────┤ rows
+  │◄──────────┤ render         │              │             │</code></pre>
+<h3 id="12-2-authentication">12.2 Authentication</h3>
+<pre class="code"><code>Farmer        React         GoTrue        PostgREST      Postgres
+  │             │              │              │              │
+  │ credentials │              │              │              │
+  ├────────────►│ signIn()     │              │              │
+  │             ├─────────────►│              │              │
+  │             │              │ verify       │              │
+  │             │◄─────────────┤ JWT          │              │
+  │             │ store session│              │              │
+  │             │              │              │              │
+  │             │ any query + Bearer JWT      │              │
+  │             ├────────────────────────────►│ set claims   │
+  │             │                             ├─────────────►│
+  │             │                             │              │ RLS: auth.uid()
+  │             │◄────────────────────────────┤◄─────────────┤ own rows only
+  │◄────────────┤                             │              │</code></pre>
+<hr/>
+<h2 id="13-screen-specifications">13. Screen Specifications</h2>
+<table>
+<thead><tr><th>#</th><th>Route</th><th>Screen</th><th>Contents</th><th>Primary action</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>/signup</code></td><td>Sign up</td><td>Email, password, confirm</td><td>Create account</td></tr>
+<tr><td>2</td><td><code>/signin</code></td><td>Sign in</td><td>Email, password</td><td>Sign in</td></tr>
+<tr><td>3</td><td><code>/setup</code></td><td>Farm setup</td><td>Name, district, region, total acres</td><td>Save farm</td></tr>
+<tr><td>4</td><td><code>/</code></td><td>Dashboard</td><td>Farm rollup (seasons, crops, planted acres, recorded, estimated, possible saving); per-crop table with cost per acre; season cards</td><td>New season</td></tr>
+<tr><td>5</td><td><code>/season/new</code></td><td>New season</td><td>Crop select, year, window select, area planted</td><td>Create</td></tr>
+<tr><td>6</td><td><code>/season/:id</code></td><td>Season detail</td><td>Cost list, add-cost form, running total, close-season control</td><td>Generate estimate</td></tr>
+<tr><td>7</td><td><code>/report/:id</code></td><td>Estimate report</td><td>Total, method note, category table with variance and flags, advice cards with optional audio, total potential saving</td><td>Back to season</td></tr>
+<tr><td>8</td><td><code>/settings</code></td><td>Settings</td><td>Preferred language; link an email to a phone account</td><td>Save</td></tr>
+</tbody></table>
+<h3 id="13-1-report-screen-layout">13.1 Report screen layout</h3>
+<pre class="code"><code>┌─────────────────────────────────────────────────────┐
+│  Maize · Minor 2026 · 2.0 acres                     │
+│                                                     │
+│  Estimated cost for this season                     │
+│  GHS 5,336.00                                       │
+│  Based on standard rates (no previous seasons yet)  │
+├─────────────────────────────────────────────────────┤
+│  WHERE YOUR MONEY GOES                              │
+│                                                     │
+│  Fertiliser   GHS 2,360   ████████████████  44%     │
+│  Labour       GHS 1,440   ██████████        27%     │
+│  Land prep    GHS   700   █████             13%     │
+│  Seeds        GHS   300   ██                 6%     │
+│  Agrochem     GHS   320   ██                 6%     │
+│  Storage      GHS   216   █                  4%     │
+├─────────────────────────────────────────────────────┤
+│  ⚠  WHERE YOU CAN SAVE                              │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │ FERTILISER            +52.5% above expected   │  │
+│  │ Possible saving: GHS 1,240                    │  │
+│  │                                               │  │
+│  │ Government subsidy cuts NPK and Urea by about │  │
+│  │ half. Check with your district MoFA office    │  │
+│  │ for the subsidy window before buying at       │  │
+│  │ market price.                                 │  │
+│  └───────────────────────────────────────────────┘  │
+│                                                     │
+│  Total possible saving: GHS 1,240                   │
+└─────────────────────────────────────────────────────┘</code></pre>
+<hr/>
+<h2 id="14-non-functional-requirements">14. Non-Functional Requirements</h2>
+<table>
+<thead><tr><th>ID</th><th>Requirement</th><th>Target</th><th>Verification</th></tr></thead>
+<tbody>
+<tr><td>NFR-1</td><td>Report generation time</td><td>< 2s for a season with 50 cost items</td><td>Timed test</td></tr>
+<tr><td>NFR-2</td><td>Mobile usability</td><td>Functional at 360px width</td><td>Device testing</td></tr>
+<tr><td>NFR-3</td><td>Data isolation</td><td>No cross-user access under any query</td><td>Two-account test</td></tr>
+<tr><td>NFR-4</td><td>Monetary accuracy</td><td>No rounding drift; integer pesewas throughout</td><td>Sum reconciliation test</td></tr>
+<tr><td>NFR-5</td><td>Availability</td><td>Dependent on Vercel and Supabase free tiers</td><td>Accepted</td></tr>
+<tr><td>NFR-6</td><td>Recoverability</td><td>Schema and seed reproducible from migration files</td><td>Fresh-project rebuild</td></tr>
+<tr><td>NFR-7</td><td>Traceability</td><td>Every benchmark row carries a source</td><td>Schema constraint (NOT NULL)</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="15-testing-strategy">15. Testing Strategy</h2>
+<h3 id="15-1-database">15.1 Database</h3>
+<table>
+<thead><tr><th>Test</th><th>Expected</th></tr></thead>
+<tbody>
+<tr><td>Fresh migration on empty project</td><td>No errors; 10 tables, 4 enums, 1 function, 1 view</td></tr>
+<tr><td>Seed load</td><td>Crops, benchmarks, norms, advice rules populated</td></tr>
+<tr><td>Estimate, no history</td><td><code>method = 'benchmark'</code>, total > 0, one line per category with norms</td></tr>
+<tr><td>Estimate, with history</td><td><code>method = 'history'</code>, <code>seasons_used</code> correct</td></tr>
+<tr><td>Flagging</td><td>A <em>recorded</em> category (<code>is_actual = true</code>) inflated 50% above benchmark is flagged; 10% is not; a category with no recorded cost yet is never flagged regardless of how its prediction compares to benchmark</td></tr>
+<tr><td>Actual-vs-benchmark regression</td><td>Recording a cost 60% above benchmark for a fresh season with no history produces <code>variance_pct = 60</code>, <code>is_flagged = true</code>, non-null advice — confirmed live after the 010 migration; before it, the same input produced <code>variance_pct = 0</code>, <code>is_flagged = false</code></td></tr>
+<tr><td>Norm de-duplication</td><td><code>crop_input_norms</code> has exactly one row per <code>(crop_id, benchmark_id, season_window)</code>, including where <code>season_window IS NULL</code>; re-running the seed insert does not add a second row</td></tr>
+<tr><td>Absurd-value test</td><td>Ploughing set to GHS 5/acre produces a visibly wrong total, confirming values flow through rather than being hardcoded</td></tr>
+<tr><td>RLS isolation</td><td>User B receives zero rows for every one of User A's tables</td></tr>
+<tr><td>Constraint enforcement</td><td>Duplicate (farm, crop, year, season_window) rejected; negative amount rejected; zero area rejected</td></tr>
+<tr><td>Phone format</td><td><code>0141234567</code> rejected by CHECK; <code>0241234567</code> accepted</td></tr>
+<tr><td>Profile trigger</td><td>Signing up creates exactly one <code>profiles</code> row with the real phone</td></tr>
+<tr><td>Rollup accuracy</td><td><code>v_farm_summary</code> total equals the sum of its seasons</td></tr>
+<tr><td>Rollup idempotence</td><td>Re-running an estimate does not change the farm total</td></tr>
+<tr><td>Sync idempotence</td><td>Inserting the same <code>client_id</code> twice yields one row, not two</td></tr>
+</tbody></table>
+<h3 id="15-2-application">15.2 Application</h3>
+<table>
+<thead><tr><th>Area</th><th>Tests</th></tr></thead>
+<tbody>
+<tr><td>Auth</td><td>Sign up, sign in, sign out, protected route redirect, session persistence</td></tr>
+<tr><td>Farm setup</td><td>Validation, one-time gating</td></tr>
+<tr><td>Season</td><td>Creation, duplicate rejection, area exceeding farm total</td></tr>
+<tr><td>Costs</td><td>Amount-only entry, quantity × rate entry, deletion, running total</td></tr>
+<tr><td>Estimate</td><td>Button disabled with no costs; report renders; flags visible</td></tr>
+<tr><td>Responsive</td><td>All screens at 360px</td></tr>
+</tbody></table>
+<h3 id="15-3-acceptance">15.3 Acceptance</h3>
+<p>Full path executed as a new user: sign up → farm → season → six cost</p>
+<p>items → estimate → report showing at least one flag with advice.</p>
+<hr/>
+<h2 id="16-deployment">16. Deployment</h2>
+<h3 id="16-1-environments">16.1 Environments</h3>
+<table>
+<thead><tr><th>Environment</th><th>Frontend</th><th>Database</th></tr></thead>
+<tbody>
+<tr><td>Local</td><td><code>vite dev</code> on :5173</td><td>Shared Supabase project</td></tr>
+<tr><td>Production</td><td>Vercel, auto-deploy from <code>main</code></td><td>Same Supabase project</td></tr>
+</tbody></table>
+<p>A single database is used for both, acceptable at this scope. Migrations</p>
+<p>are applied through the Supabase SQL editor and committed to the repo.</p>
+<h3 id="16-2-configuration">16.2 Configuration</h3>
+<pre class="code"><code>VITE_SUPABASE_URL=https://&lt;project&gt;.supabase.co
+VITE_SUPABASE_ANON_KEY=&lt;anon key&gt;</code></pre>
+<p>Both are safe in the client bundle; neither grants access without a valid</p>
+<p>JWT passing RLS. The service-role key is never used in this project.</p>
+<h3 id="16-3-repository">16.3 Repository</h3>
+<pre class="code"><code>farmpilot/
+├── supabase/migrations/
+│   ├── 001_schema.sql
+│   ├── 002_seed_benchmarks.sql             ← replaced with real data in week 2
+│   ├── 003_profiles_and_views.sql          phone identity, sync columns, rollup views
+│   ├── 004_notifications.sql
+│   ├── 005_guides.sql
+│   ├── 006_fix_profile_trigger.sql
+│   ├── 007_quick_fill_costs.sql            benchmark-based "fill every category" RPC
+│   ├── 008_delete_account_rpc.sql
+│   ├── 008_weekly_checkin.sql              farms.check_in_day
+│   ├── 009_fix_views_and_seed_crops.sql
+│   ├── 010_estimate_actual_vs_benchmark.sql    generate_estimate() actual-vs-benchmark fix, is_actual
+│   ├── 011_category_benchmark_estimate.sql     get_category_benchmark_pesewas() RPC
+│   └── 012_fix_crop_input_norms_duplicates.sql dedup + partial unique indexes (§6.5)
+├── src/
+├── .env.example
+└── README.md</code></pre>
+<p>Seed data is a separate migration precisely so it can be replaced without</p>
+<p>touching schema definitions. Migrations in this project have generally</p>
+<p>been applied directly against the shared Supabase project (via the SQL</p>
+<p>editor, or the Supabase CLI's <code>db query -f</code>) rather than through</p>
+<p><code>supabase db push</code>, which is why the CLI's own migration-history table</p>
+<p>does not reflect them — a known gap, not evidence the changes are</p>
+<p>missing from the live database.</p>
+<h3 id="16-4-branching">16.4 Branching</h3>
+<p>Branch per developer, pull request into <code>main</code>, one reviewer. No direct</p>
+<p>pushes to <code>main</code>.</p>
+<hr/>
+<h2 id="17-risks-and-mitigations">17. Risks and Mitigations</h2>
+<table>
+<thead><tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr></thead>
+<tbody>
+<tr><td>Benchmark data unavailable in time</td><td>Estimates not defensible</td><td>Placeholders isolated in two tables; system fully functional without them; swap is a single file</td></tr>
+<tr><td>Family farm figures reflect 100-acre scale</td><td>Smallholders flagged as overspending on everything</td><td>Documented in limitations; benchmark framed as an efficiency ceiling rather than a target</td></tr>
+<tr><td>Application rates unverified</td><td>Inaccurate benchmark</td><td><code>source</code> column records provenance on every row; unverified rows explicitly marked</td></tr>
+<tr><td>Fourteen-day timeline</td><td>Incomplete delivery</td><td>Scope cut to one crop, one farm per user, no modifiers; excluded items documented</td></tr>
+<tr><td>Concurrent development on one schema</td><td>Merge conflicts, integration failure</td><td>Schema frozen day 1; branch per developer; typed API layer as the contract between components</td></tr>
+<tr><td>MoFA prices are from 2018</td><td>Estimates materially wrong</td><td><code>price_multiplier</code> in <code>app_settings</code>; farmer-reported prices captured through quantity × rate entry</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="18-future-work">18. Future Work</h2>
+<table>
+<thead><tr><th>Extension</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Cost per bag harvested</td><td>The correct efficiency measure — a farmer spending more but harvesting proportionally more is not overspending</td></tr>
+<tr><td>Regional benchmark variation</td><td>Removes the false flags caused by a single national comparison</td></tr>
+<tr><td>Farm modifiers (soil, tenure, terrain, mechanisation)</td><td>Adjusts the benchmark to the individual farm</td></tr>
+<tr><td>Aggregator accounts</td><td>An extension officer or cooperative secretary records for many farmers; addresses the documented adoption barrier of farmer-side data entry</td></tr>
+<tr><td>SMS OTP verification</td><td>Confirms a farmer owns the number he registered</td></tr>
+<tr><td>Cost history as loan evidence</td><td>Several recorded seasons constitute a verifiable spending record for credit assessment</td></tr>
+<tr><td>Additional crops</td><td>Requires norms per crop; the schema already supports it</td></tr>
+<tr><td>Two-way offline sync</td><td>Current design queues writes only; pulling server-side changes while offline is not handled</td></tr>
+<tr><td>Native-speaker review of the generated Twi translations</td><td>§19 below — text and audio exist for all 8 categories, but every row is <code>reviewed = false</code> until a Twi speaker listens and confirms each one</td></tr>
+<tr><td>Additional languages (Ewe, Ga, Dagbani)</td><td>The schema (<code>advice_translations.language</code>) and the generation script both already support any of the four; only Twi has been generated so far</td></tr>
+<tr><td>Per-category "not yet recorded" reminder cadence</td><td>The check-in currently re-asks every expected category every week regardless of whether it is a one-time input (seeds, land prep) or a recurring one (labour); distinguishing the two would reduce repetitive "Nothing" answers</td></tr>
+</tbody></table>
+<hr/>
+<h2 id="19-localisation-twi-translation-and-audio-khaya-ai">19. Localisation — Twi Translation and Audio (Khaya AI)</h2>
+<h3 id="19-1-purpose">19.1 Purpose</h3>
+<p>The estimation engine's advice text (§9.2, <code>advice_rules</code>) is written in English. A farmer who is more comfortable in Twi cannot act on advice they cannot read. This feature adds a cached Twi translation of each of the 8 advice categories, with a matching spoken-audio clip, surfaced as an optional speaker button next to a flagged category's advice in the Estimate Report — without adding a live dependency on a third-party AI service to the running application.</p>
+<p>Two separate Khaya AI endpoints are involved, each doing a different job:</p>
+<ul>
+<li><strong>Translation API v2</strong> converts the advice text from English into Twi. "Government subsidy cuts NPK and Urea by about half..." becomes the equivalent sentence in Twi. This runs once, inside the generation script; the result is stored in <code>advice_translations.message</code>, and the app only ever reads it from there.</li>
+<li><strong>Text-to-Speech API v2</strong> takes that Twi text and turns it into audio a farmer can listen to. This also runs once; the audio file is stored in Supabase Storage, and the app plays it from the stored public URL.</li>
+</ul>
+<pre class="code"><code>English advice (advice_rules)
+        |
+        | Translation API   [runs once, inside scripts/generate_khaya.ts]
+        v
+Twi text (advice_translations.message)
+        |
+        | TTS API           [runs once, inside the same script]
+        v
+Audio file (Supabase Storage, public "audio" bucket)
+        |
+        | served from cache [at runtime — no Khaya API calls at all]
+        v
+Farmer taps the speaker icon and hears the advice in Twi</code></pre>
+<p>The two are kept as separate stored values, not collapsed into "just the audio," because they serve two different farmers: one who reads Twi comfortably gets the text on screen (and can read it silently, share a screenshot, or read along while the audio plays); one who reads it poorly or not at all still gets the same advice by listening. Both come from the same one-time generation run — the split costs nothing extra to store, and closes the P2 gap called out directly in §7.13 of the companion PRD ("if only one half is built, it should be the audio").</p>
+<h3 id="19-2-the-core-design-decision-generate-once-read-forever">19.2 The core design decision: generate once, read forever</h3>
+<p>The obvious approach — call a translation/text-to-speech API every time a farmer views a flagged category — was rejected outright. Ghana NLP's Khaya AI API is rate-limited to 100 calls/month on the tier this project uses, and advice text is fixed content: the same 8 categories' English messages (<code>advice_rules</code>, seeded once in migration 002) never change per-farmer or per-season. There is nothing to gain from calling the API more than once per category, ever, and doing so would exhaust the quota after roughly six page views.</p>
+<p>The system is therefore split into two halves that never share a code path:</p>
+<ul>
+<li><strong><code>scripts/generate_khaya.ts</code></strong> — a one-off, developer-run script, never imported by or bundled into the application. It calls Khaya's <code>/v2/translate</code> and <code>/tts/v2/synthesize</code> endpoints exactly once per category (skipping any category already fully cached), uploads the resulting audio to Supabase Storage, and writes the result to <code>advice_translations</code>.</li>
+<li><strong><code>src/lib/khaya.ts</code></strong> — the only Khaya-adjacent code that ships in the application bundle, and it never calls Khaya. <code>getTwiAdvice(category)</code> reads whatever the script has already cached; if nothing has been generated yet for that category, it falls back silently to the English <code>advice_rules.message</code> — no error, no loading spinner for a call that will never happen, no live dependency on Khaya's uptime for the app to function.</li>
+</ul>
+<p>This mirrors the same principle the benchmark layer already follows (§2.4): expensive or rate-limited work happens once, offline, and the running app only ever reads a cache.</p>
+<h3 id="19-3-what-step-1-verification-actually-found">19.3 What Step 1 verification actually found</h3>
+<p>Before writing any integration code, the API was called directly (curl, not assumed) to confirm both endpoints and learn their real shapes — three assumptions in the original design turned out to be wrong:</p>
+<table>
+<thead><tr><th>Assumption</th><th>Reality, confirmed live</th></tr></thead>
+<tbody>
+<tr><td>The Twi language code is <code>"tw"</code></td><td>There is no <code>"tw"</code>. Khaya distinguishes two real dialects: <code>"twi"</code> (Asante Twi) and <code>"atw"</code> (Akuapem Twi). <code>"twi"</code> is used because the seeded demonstration farmer (Appendix D of the main report) farms in Ejisu, Ashanti Region, where Asante Twi is spoken — a reasoned default, not a guess, but still subject to the review step below.</td></tr>
+<tr><td><code>/tts/v2/languages</code> returns a flat array of codes</td><td>It returns <code>{ "languages": { "<Display Name>": "<code>", ... } }</code> — a name-to-code map.</td></tr>
+<tr><td>Synthesized audio is MP3</td><td>It is WAV (RIFF/WAVE, mono, 16kHz), confirmed from the real response's <code>content-type: audio/wav</code> header and file signature. <code>scripts/generate_khaya.ts</code> stores <code>.wav</code> files with <code>contentType: 'audio/wav'</code> accordingly.</td></tr>
+</tbody></table>
+<p>Each of these would have caused a silent or confusing failure (an audio element that never plays; a script that can't find "tw" and can't explain why) had the original assumptions simply been coded against without checking. The lesson generalises: this project's practice throughout has been to verify a third-party contract against a live call before writing the integration around it (the same discipline behind Issue #4 and Issue #35 in the Development Log), not to trust documentation or a plausible-sounding parameter name.</p>
+<h3 id="19-4-data-model">19.4 Data model</h3>
+<p><code>advice_translations</code> (migration 003) already existed with <code>advice_id</code>, <code>language</code>, <code>message</code>, <code>source</code>, <code>reviewed</code>. Two migrations extend it for this feature:</p>
+<ul>
+<li><strong>018</strong> adds <code>audio_url text</code> (nullable — a translation can exist as text before or without audio).</li>
+<li><strong>020</strong> adds the table's first write policy. Migration 003 gave it a read policy only (<code>for select to authenticated using (true)</code>); nothing could ever insert into it. This is a deliberate, narrow exception to this schema's otherwise-universal rule that reference/benchmark tables (<code>crops</code>, <code>cost_benchmarks</code>, <code>crop_input_norms</code>, <code>guides</code>, <code>advice_rules</code>) are read-only to the app and written only directly by the project owner via a migration (§8.2's authorisation matrix). <code>advice_translations</code> differs because its own read policy already exposes every row to every signed-in farmer (it is shared advisory content, not farmer-owned data) and because a machine-generated row is never trusted as fact until <code>reviewed = true</code> — the integrity bar for who may write a <em>candidate</em> translation is lower than for data used as fact everywhere else in the system. If this is ever judged too permissive, the fix is a dedicated reviewer role rather than reopening it to every <code>authenticated</code> caller.</li>
+</ul>
+<p><strong>Storage.</strong> A new public-read <code>audio</code> bucket (migration 019) holds the generated clips at <code>advice/{category}/tw.wav</code>. Bucket creation and its <code>storage.objects</code> policies had to be applied via the CLI's owner-privileged <code>db query</code> path — the anon key cannot create a bucket or grant itself object policies, confirmed live (<code>403 new row violates row-level security policy</code>) rather than assumed. A second policy (migration 021) makes the bucket itself visible to <code>listBuckets()</code>/<code>getBucket()</code> under an authenticated session — <code>storage.buckets</code> and <code>storage.objects</code> are separate tables with independent RLS, and only the latter was covered by 019 at first; <code>generate_khaya.ts</code>'s own idempotency check surfaced the gap on its first real run.</p>
+<p>Storage writes require an authenticated session, consistent with the rest of this schema never granting the anonymous role write access anywhere. Since the generation script runs as a bare Node process with no farmer logged in, it signs in with a dedicated, low-privilege account (<code>khaya-generator@farmpilot.internal</code>) that owns no farm data of its own and exists solely to satisfy that check.</p>
+<h3 id="19-5-runtime-read-path">19.5 Runtime read path</h3>
+<p><code>getTwiAdvice(category: string)</code> looks up <code>advice_rules</code> by category to get its id, then <code>advice_translations</code> for a matching <code>language = 'tw'</code> row. <code>EstimateReport.tsx</code> fetches this for every currently-flagged category in one batched query (<code>Promise.all</code>, not one query per card) once the report itself has loaded, and:</p>
+<ul>
+<li>Shows the Twi text instead of English only when the signed-in farmer's <code>profiles.preferred_language = 'tw'</code> (Profile.tsx, Appendix — labelled "Twi (Akan)" in the selector, since farmers may know the language by a different name than the bare linguistic term). Changing this preference takes effect immediately across the app with no reload, because both Profile.tsx and EstimateReport.tsx read the same React Query cache key (<code>['profile', userId]</code>) and Profile's save mutation invalidates it on success.</li>
+<li>Shows the speaker button independently of that preference — a farmer reading English may still want to hear the Twi audio, or vice versa — and hides it entirely when no <code>audio_url</code> exists for that category yet, rather than rendering a button that does nothing.</li>
+<li>Never blocks the page render on Khaya: if the cache lookup itself fails or returns nothing, <code>getTwiAdvice</code> falls back to English silently, matching the CRITICAL RULE that a missing translation degrades gracefully rather than surfacing an error to the farmer.</li>
+</ul>
+<h3 id="19-6-what-is-verified-automatically-vs-what-still-needs-a-human">19.6 What is verified automatically vs. what still needs a human</h3>
+<p><code>src/lib/khaya.integration.test.ts</code> proves, against the live database, that all 8 categories have real cached text and a genuinely publicly-downloadable audio URL, and that the English-fallback path works correctly for an unknown category. What it cannot and does not claim to verify is <em>translation quality</em> — whether "Wo aduannuru a wode di dwuma no boro nea wɔhwɛ kwan no so..." is natural, correct Twi that a farmer would find clear rather than stilted or wrong. <code>reviewed</code> is <code>false</code> on every row the script writes and is never set to <code>true</code> by any code path in this project; a native Twi speaker must listen to each of the 8 clips and flip it by hand (directly in the database, or via a future review UI — not yet built) before this feature is presented as demo-ready rather than "generated but unverified."</p>
+<hr/>
+<p><em>End of document.</em></p>
+</body>
+</html>

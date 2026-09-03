@@ -513,6 +513,24 @@ translation and text-to-speech for Twi and Ewe. A farmer who reads English
 poorly can still listen. If only one half is built, it should be the
 audio. See ADR-009.
 
+**Implementation status (this pass).** FR-13.1 (language selector), 13.2
+(Twi advice text), 13.3 (Twi advice audio), 13.4 (generate-once caching),
+and 13.5 (silent English fallback) are built and verified for **Twi
+only** — see `FarmPilot_SDD.md` §19 for the full design and how the live
+API's real behaviour differed from what was assumed before it was
+actually called. Ewe, Ga, and Dagbani remain selectable in the language
+dropdown (the schema and the generation script both already support
+them) but have no generated content yet, so a farmer who picks one of
+those three correctly and silently sees English throughout, exactly as
+FR-13.5 requires — not a broken state, just an ungenerated one.
+FR-13.6 is **partially met**: `advice_translations.reviewed` exists,
+defaults to `false`, and is never set `true` by any code path (only a
+human can), so the distinction is fully tracked in the database — but
+nothing in the UI yet shows a farmer-facing "machine-translated,
+unreviewed" label. Until a native Twi speaker reviews the 8 generated
+clips and the rows are flipped to `reviewed = true`, this is the one
+requirement in this section not fully closed out.
+
 ### 7.14 AI Assistant (FarmBot)
 
 | ID | Requirement | Priority |

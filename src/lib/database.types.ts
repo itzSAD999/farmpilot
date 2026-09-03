@@ -35,6 +35,7 @@ export type Database = {
       advice_translations: {
         Row: {
           advice_id: number
+          audio_url: string | null
           created_at: string
           id: number
           language: string
@@ -44,6 +45,7 @@ export type Database = {
         }
         Insert: {
           advice_id: number
+          audio_url?: string | null
           created_at?: string
           id?: number
           language: string
@@ -53,6 +55,7 @@ export type Database = {
         }
         Update: {
           advice_id?: number
+          audio_url?: string | null
           created_at?: string
           id?: number
           language?: string

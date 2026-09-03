@@ -64,8 +64,8 @@
 </ol>
 <hr/>
 <h2 id="0-plain-language-summary-no-jargon">0. Plain-Language Summary — No Jargon</h2>
-<p>Section 4 below describes all 40 issues in full technical detail, for a</p>
-<p>technical reader. This section describes the same 40 issues in plain</p>
+<p>Section 4 below describes all 41 issues in full technical detail, for a</p>
+<p>technical reader. This section describes the same 41 issues in plain</p>
 <p>language — what was actually wrong, in everyday terms, and what was done</p>
 <p>about it — for anyone reading this who isn't a programmer. Each row here</p>
 <p>corresponds exactly to the same-numbered entry in §4, so "Issue #12"</p>
@@ -117,6 +117,7 @@
 <tr><td>38</td><td>While running the new automated checks repeatedly back-to-back, sign-ups started failing — not because of anything wrong in the app, but because the login service itself (a service the app relies on, run by Supabase) has its own built-in limit on how many new accounts can be created in a short window, as a security measure, and running the checks over and over in quick succession tripped it.</td><td>Confirmed with a standalone test that the app's own code wasn't at fault — the login service's own safety limit was. Changed how the automated checks run (one at a time instead of all at once, and reusing one test account instead of creating a new one for almost every check) so the checks ask for far fewer new accounts overall.</td></tr>
 <tr><td>39</td><td>A whole file of code, sitting quietly in the project, turned out to be completely unused by the actual running app — and it contained its own, separate copy of the list of cost categories that had quietly gone out of date compared to the real one actually used everywhere else (calling the same category two different names in two different places).</td><td>Confirmed nothing in the app used the file at all, then deleted it, rather than fix or keep testing something nobody ever calls.</td></tr>
 <tr><td>40</td><td>The single biggest finding of this whole testing effort: the app was supposed to let a farmer record a cost even with no phone signal, and save it for later automatically — all the actual machinery for that existed and was well-built — but nothing in the real "record a cost" screen was ever connected to it. A farmer who lost signal while saving a cost would just see an error and lose what they typed, not have it saved for later like the report and README both said it would.</td><td>Connected the recording form to the offline-saving system that already existed, so a cost recorded with no signal is now genuinely saved and automatically sent once signal returns — and proved it really works by checking it against the real database, including the specific case of the same saved item accidentally being sent twice (it correctly does not create a duplicate).</td></tr>
+<tr><td>41</td><td>Built the Twi-language feature that had been deliberately postponed until now ("only build this once everything else is done"): a farmer can now hear advice spoken aloud in Twi and read it in Twi instead of English. Before writing any of it, the real outside service was tested directly first — and it's a good thing that happened, because three things about it turned out different from what was assumed (the exact Twi dialect code, the shape of one response, and the audio file format), each of which would have caused a confusing failure if just guessed at instead of checked.</td><td>Built it properly: generated real Twi text and real spoken audio for all 8 advice categories, only ever calling the outside service once per category, ever (never while a farmer is actually using the app), with the app quietly falling back to English if anything is ever missing. Every generated translation is clearly marked "not yet checked by a person" in the database, since a machine translation of a farming term can come out wrong, and nothing in this project automatically marks one as trustworthy — only a real Twi speaker listening to it can do that.</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
@@ -1099,6 +1100,93 @@
 <p>Issue #38's rate limit while it was still cooling down) — 64/64 total</p>
 <p>across the whole suite, up from 62.</p>
 <hr/>
+<h3 id="issue-41-twi-translation-and-audio-khaya-ai-the-p2-localisation-feature-from-adr-009-built-and-verified-end-to-end">Issue #41 — Twi translation and audio (Khaya AI), the P2 localisation feature from ADR-009, built and verified end to end</h3>
+<p><strong>Severity:</strong> N/A (planned feature work, gated behind "phase 9 —</p>
+<p>hardening and deploy" being finished; ADR-009 itself was already marked</p>
+<p>"Proposed (P2 — last item, only if everything else is done)," and</p>
+<p>Issues #34–40 are exactly that hardening pass). Requested directly, with</p>
+<p>a full 5-step spec, and implemented in the same sitting the spec was</p>
+<p>given, including live API verification before any integration code was</p>
+<p>written — not assumed against documentation.</p>
+<p><strong>Fix — what was built.</strong></p>
+<ul>
+<li><code>supabase/migrations/018_advice_audio_url.sql</code> — <code>audio_url text</code> on</li>
+</ul>
+<p>  <code>advice_translations</code>.</p>
+<ul>
+<li><code>supabase/migrations/019_audio_storage_bucket.sql</code> — the <code>audio</code></li>
+</ul>
+<p>  Storage bucket (public read) and its <code>storage.objects</code> policies.</p>
+<ul>
+<li><code>supabase/migrations/020_advice_translations_write.sql</code> —</li>
+</ul>
+<p>  <code>advice_translations</code>' first-ever write policy (it had read-only RLS</p>
+<p>  since migration 003; nothing could previously insert into it at all).</p>
+<ul>
+<li><code>supabase/migrations/021_audio_bucket_listable.sql</code> — a second Storage</li>
+</ul>
+<p>  policy, on <code>storage.buckets</code> itself (separate from <code>storage.objects</code>),</p>
+<p>  found necessary only once the generation script's own idempotency</p>
+<p>  check revealed the bucket existed but was invisible to <code>listBuckets()</code>.</p>
+<ul>
+<li><code>scripts/generate_khaya.ts</code> — the one-off generation script (never</li>
+</ul>
+<p>  bundled into the app); signs in as a dedicated low-privilege account</p>
+<p>  rather than running fully anonymous, since this schema never grants</p>
+<p>  the anon role write access anywhere.</p>
+<ul>
+<li><code>src/lib/khaya.ts</code> — the only runtime-facing piece; reads the cache,</li>
+</ul>
+<p>  never calls Khaya, falls back to English silently.</p>
+<ul>
+<li><code>src/pages/EstimateReport.tsx</code> — a 44×44px speaker button on each</li>
+</ul>
+<p>  flagged category's advice card (hidden when no audio exists yet), a</p>
+<p>  loading state while playback starts, and the Twi text shown instead of</p>
+<p>  English only when <code>profiles.preferred_language = 'tw'</code>.</p>
+<ul>
+<li><code>src/pages/Profile.tsx</code> — the existing language selector (this already</li>
+</ul>
+<p>  existed, contrary to the spec's assumption of a new <code>Settings.tsx</code>)</p>
+<p>  relabelled "Twi (Akan)" for recognisability.</p>
+<p>**What Step 1's live verification actually caught, before any of the</p>
+<p>above was written:** the assumed Twi code <code>"tw"</code> does not exist — Khaya</p>
+<p>distinguishes <code>"twi"</code> (Asante) and <code>"atw"</code> (Akuapem); <code>"twi"</code> was chosen</p>
+<p>because the seeded demo farmer is in Ashanti Region, not by default.</p>
+<p><code>/tts/v2/languages</code> returns <code>{"languages": {name: code}}</code>, not a flat</p>
+<p>array. Synthesized audio is WAV, not MP3. All three were confirmed by</p>
+<p>calling the real endpoints with curl before writing <code>generate_khaya.ts</code>,</p>
+<p>exactly as the spec's own Step 1 required — this is why the script's</p>
+<p><code>resolveTwiLanguageCode()</code> and <code>uploadAudio()</code> look the way they do,</p>
+<p>not because those were the first guesses.</p>
+<p><strong>What actually ran:</strong> all 8 categories were generated for real —</p>
+<p>16 live API calls (well inside the 100/month quota, confirmed</p>
+<p>idempotent: a second full run made zero further calls, correctly</p>
+<p>skipping every already-cached row). Every generated row carries</p>
+<p><code>reviewed = false</code> and no code path anywhere sets it <code>true</code>; a native</p>
+<p>Twi speaker must listen to the 8 clips and flip that by hand before this</p>
+<p>is presented as verified rather than machine-generated. Live-verified in</p>
+<p>the browser (Puppeteer, signed in as the demo account) that the speaker</p>
+<p>button renders only on flagged categories with cached audio, shows a</p>
+<p>disabled/loading state immediately on tap, and that switching</p>
+<p><code>preferred_language</code> to <code>tw</code> swaps the advice text live — the demo</p>
+<p>account's language was reset to <code>en</code> afterward so its documented state</p>
+<p>(Appendix D of the main report) stays accurate.</p>
+<p><strong>Known gap, stated plainly rather than hidden:</strong> ADR-009's own original</p>
+<p>risk mitigation said "the UI marks unreviewed text" — this was not</p>
+<p>built. The <code>reviewed</code> flag is fully tracked in the database and</p>
+<p>respected by policy (never auto-set true), but nothing in the Estimate</p>
+<p>Report currently shows a farmer-facing "machine-translated, unreviewed"</p>
+<p>label. See <code>FarmPilot_SDD.md</code> §19.6 and <code>FarmPilot_PRD (1).md</code> §7.13.</p>
+<p><strong>Evidence.</strong> <code>npx tsc -b --noEmit</code> and <code>npm run build</code> both clean.</p>
+<p><code>src/lib/khaya.integration.test.ts</code> (4 tests) passes, confirming all 8</p>
+<p>categories have real cached text distinct from the English source and a</p>
+<p>genuinely publicly-downloadable audio URL. Direct SQL query against the</p>
+<p>live database confirms all 8 rows: <code>reviewed = false</code>, `source =</p>
+<p>'khaya_tts_v2'<code>, real Twi text, real Storage URLs. A direct </code>curl` fetch</p>
+<p>of one audio URL returns <code>200</code>, <code>content-type: audio/wav</code>, real WAV</p>
+<p>file-signature bytes.</p>
+<hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table — a summary of what</p>
 <p>was checked and whether it passed. This section gives the full, detailed</p>
@@ -1167,6 +1255,8 @@
 <tr><td><code>supabase/migrations/015_category_budgets.sql</code></td><td>Issue #26 (Category Budgets)</td></tr>
 <tr><td><code>supabase/migrations/016_crop_benchmark_lines.sql</code></td><td>Issue #30 (Cost Lab quantity-based redesign)</td></tr>
 <tr><td><code>supabase/migrations/017_drop_unused_benchmark_breakdown.sql</code></td><td>Issue #35</td></tr>
+<tr><td><code>supabase/migrations/018_advice_audio_url.sql</code> – <code>021_audio_bucket_listable.sql</code></td><td>Issue #41 (Twi localisation: audio_url column, Storage bucket + policies, advice_translations write policy, bucket-listing policy)</td></tr>
+<tr><td><code>scripts/generate_khaya.ts</code>, <code>src/lib/khaya.ts</code>, <code>src/lib/khaya.integration.test.ts</code></td><td>Issue #41</td></tr>
 <tr><td><code>src/api/estimates.integration.test.ts</code>, <code>src/lib/*.test.ts</code></td><td>Issue #34 (automated test suite)</td></tr>
 <tr><td><code>src/api/farms.integration.test.ts</code>, <code>seasons.integration.test.ts</code>, <code>costs.integration.test.ts</code></td><td>Issue #36 (CRUD, cascade deletion, cross-user RLS security)</td></tr>
 <tr><td><code>src/api/auth.integration.test.ts</code>, <code>budgets.integration.test.ts</code>, <code>compare.integration.test.ts</code>, <code>dashboard.integration.test.ts</code>, <code>guides.integration.test.ts</code>, <code>notifications.integration.test.ts</code>, the new describe block in <code>estimates.integration.test.ts</code>, plus <code>auth.test.ts</code>, <code>budgets.test.ts</code>, <code>dashboard.test.ts</code>, <code>estimates.test.ts</code>, <code>src/lib/districts.test.ts</code>, <code>src/components/domain/GhanaMap.test.ts</code></td><td>Issue #37 (remaining API modules, including the notification trigger)</td></tr>

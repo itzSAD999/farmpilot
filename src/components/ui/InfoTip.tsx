@@ -4,6 +4,18 @@ interface InfoTipProps {
   /** Short explanation shown in the popover — say what the number/section means and where it comes from. */
   text: string;
   className?: string;
+  /** A short heading shown above `text` in bold — mainly useful with `variant="card"`. */
+  title?: string;
+  /** A concrete, real-farm worked example, visually set apart from `text`. Only rendered in `variant="card"`. */
+  example?: string;
+  /**
+   * "default" — the small, single-line popover used throughout the app for
+   * "what does this number mean." "card" — a wider box with a heading and
+   * an optional worked example, for the rarer case where one line isn't
+   * enough to actually explain what a whole feature is for and how a
+   * farmer would really use it (currently just Cost Lab).
+   */
+  variant?: 'default' | 'card';
 }
 
 /**
@@ -12,7 +24,7 @@ interface InfoTipProps {
  * (e.g. "what does cost per acre mean here", "why is this crop excluded").
  * Click-to-toggle rather than hover-only so it works on touch devices.
  */
-export function InfoTip({ text, className = '' }: InfoTipProps) {
+export function InfoTip({ text, className = '', title, example, variant = 'default' }: InfoTipProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -24,6 +36,8 @@ export function InfoTip({ text, className = '' }: InfoTipProps) {
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [open]);
+
+  const isCard = variant === 'card';
 
   return (
     <span ref={ref} className={`relative inline-flex ${className}`}>
@@ -41,9 +55,26 @@ export function InfoTip({ text, className = '' }: InfoTipProps) {
         <div
           role="tooltip"
           onMouseLeave={() => setOpen(false)}
-          className="absolute z-50 top-6 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-gray-900 dark:bg-black text-white text-xs leading-relaxed font-medium shadow-xl border border-white/10 animate-fade-in"
+          className={
+            isCard
+              ? 'absolute z-50 top-6 left-1/2 -translate-x-1/2 w-80 sm:w-96 p-5 rounded-2xl bg-gray-900 dark:bg-black text-white shadow-xl border border-white/10 animate-fade-in'
+              : 'absolute z-50 top-6 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-gray-900 dark:bg-black text-white text-xs leading-relaxed font-medium shadow-xl border border-white/10 animate-fade-in'
+          }
         >
-          {text}
+          {isCard ? (
+            <>
+              {title && <p className="text-sm font-bold mb-2">{title}</p>}
+              <p className="text-xs leading-relaxed font-medium text-white/90">{text}</p>
+              {example && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-1">On a real farm</p>
+                  <p className="text-xs leading-relaxed text-white/80">{example}</p>
+                </div>
+              )}
+            </>
+          ) : (
+            text
+          )}
           <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900 dark:bg-black border-l border-t border-white/10 rotate-45" />
         </div>
       )}

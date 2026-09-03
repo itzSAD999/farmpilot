@@ -35,6 +35,7 @@ Department of Computer Science · Mini Project 2025/2026
 16. Deployment
 17. Risks and Mitigations
 18. Future Work
+19. Localisation — Twi Translation and Audio (Khaya AI)
 
 ---
 
@@ -1114,9 +1115,86 @@ pushes to `main`.
 | Cost history as loan evidence | Several recorded seasons constitute a verifiable spending record for credit assessment |
 | Additional crops | Requires norms per crop; the schema already supports it |
 | Two-way offline sync | Current design queues writes only; pulling server-side changes while offline is not handled |
-| Reviewed translations | Machine output checked by native speakers per language |
-| Weekly check-in split by acreage | Currently splits a shared category evenly across active seasons; splitting proportionally to `area_planted_acres` would remove the skew for farms growing differently-sized plots of different crops |
+| Native-speaker review of the generated Twi translations | §19 below — text and audio exist for all 8 categories, but every row is `reviewed = false` until a Twi speaker listens and confirms each one |
+| Additional languages (Ewe, Ga, Dagbani) | The schema (`advice_translations.language`) and the generation script both already support any of the four; only Twi has been generated so far |
 | Per-category "not yet recorded" reminder cadence | The check-in currently re-asks every expected category every week regardless of whether it is a one-time input (seeds, land prep) or a recurring one (labour); distinguishing the two would reduce repetitive "Nothing" answers |
+
+---
+
+## 19. Localisation — Twi Translation and Audio (Khaya AI)
+
+### 19.1 Purpose
+
+The estimation engine's advice text (§9.2, `advice_rules`) is written in English. A farmer who is more comfortable in Twi cannot act on advice they cannot read. This feature adds a cached Twi translation of each of the 8 advice categories, with a matching spoken-audio clip, surfaced as an optional speaker button next to a flagged category's advice in the Estimate Report — without adding a live dependency on a third-party AI service to the running application.
+
+Two separate Khaya AI endpoints are involved, each doing a different job:
+
+- **Translation API v2** converts the advice text from English into Twi. "Government subsidy cuts NPK and Urea by about half..." becomes the equivalent sentence in Twi. This runs once, inside the generation script; the result is stored in `advice_translations.message`, and the app only ever reads it from there.
+- **Text-to-Speech API v2** takes that Twi text and turns it into audio a farmer can listen to. This also runs once; the audio file is stored in Supabase Storage, and the app plays it from the stored public URL.
+
+```
+English advice (advice_rules)
+        |
+        | Translation API   [runs once, inside scripts/generate_khaya.ts]
+        v
+Twi text (advice_translations.message)
+        |
+        | TTS API           [runs once, inside the same script]
+        v
+Audio file (Supabase Storage, public "audio" bucket)
+        |
+        | served from cache [at runtime — no Khaya API calls at all]
+        v
+Farmer taps the speaker icon and hears the advice in Twi
+```
+
+The two are kept as separate stored values, not collapsed into "just the audio," because they serve two different farmers: one who reads Twi comfortably gets the text on screen (and can read it silently, share a screenshot, or read along while the audio plays); one who reads it poorly or not at all still gets the same advice by listening. Both come from the same one-time generation run — the split costs nothing extra to store, and closes the P2 gap called out directly in §7.13 of the companion PRD ("if only one half is built, it should be the audio").
+
+### 19.2 The core design decision: generate once, read forever
+
+The obvious approach — call a translation/text-to-speech API every time a farmer views a flagged category — was rejected outright. Ghana NLP's Khaya AI API is rate-limited to 100 calls/month on the tier this project uses, and advice text is fixed content: the same 8 categories' English messages (`advice_rules`, seeded once in migration 002) never change per-farmer or per-season. There is nothing to gain from calling the API more than once per category, ever, and doing so would exhaust the quota after roughly six page views.
+
+The system is therefore split into two halves that never share a code path:
+
+- **`scripts/generate_khaya.ts`** — a one-off, developer-run script, never imported by or bundled into the application. It calls Khaya's `/v2/translate` and `/tts/v2/synthesize` endpoints exactly once per category (skipping any category already fully cached), uploads the resulting audio to Supabase Storage, and writes the result to `advice_translations`.
+- **`src/lib/khaya.ts`** — the only Khaya-adjacent code that ships in the application bundle, and it never calls Khaya. `getTwiAdvice(category)` reads whatever the script has already cached; if nothing has been generated yet for that category, it falls back silently to the English `advice_rules.message` — no error, no loading spinner for a call that will never happen, no live dependency on Khaya's uptime for the app to function.
+
+This mirrors the same principle the benchmark layer already follows (§2.4): expensive or rate-limited work happens once, offline, and the running app only ever reads a cache.
+
+### 19.3 What Step 1 verification actually found
+
+Before writing any integration code, the API was called directly (curl, not assumed) to confirm both endpoints and learn their real shapes — three assumptions in the original design turned out to be wrong:
+
+| Assumption | Reality, confirmed live |
+|---|---|
+| The Twi language code is `"tw"` | There is no `"tw"`. Khaya distinguishes two real dialects: `"twi"` (Asante Twi) and `"atw"` (Akuapem Twi). `"twi"` is used because the seeded demonstration farmer (Appendix D of the main report) farms in Ejisu, Ashanti Region, where Asante Twi is spoken — a reasoned default, not a guess, but still subject to the review step below. |
+| `/tts/v2/languages` returns a flat array of codes | It returns `{ "languages": { "<Display Name>": "<code>", ... } }` — a name-to-code map. |
+| Synthesized audio is MP3 | It is WAV (RIFF/WAVE, mono, 16kHz), confirmed from the real response's `content-type: audio/wav` header and file signature. `scripts/generate_khaya.ts` stores `.wav` files with `contentType: 'audio/wav'` accordingly. |
+
+Each of these would have caused a silent or confusing failure (an audio element that never plays; a script that can't find "tw" and can't explain why) had the original assumptions simply been coded against without checking. The lesson generalises: this project's practice throughout has been to verify a third-party contract against a live call before writing the integration around it (the same discipline behind Issue #4 and Issue #35 in the Development Log), not to trust documentation or a plausible-sounding parameter name.
+
+### 19.4 Data model
+
+`advice_translations` (migration 003) already existed with `advice_id`, `language`, `message`, `source`, `reviewed`. Two migrations extend it for this feature:
+
+- **018** adds `audio_url text` (nullable — a translation can exist as text before or without audio).
+- **020** adds the table's first write policy. Migration 003 gave it a read policy only (`for select to authenticated using (true)`); nothing could ever insert into it. This is a deliberate, narrow exception to this schema's otherwise-universal rule that reference/benchmark tables (`crops`, `cost_benchmarks`, `crop_input_norms`, `guides`, `advice_rules`) are read-only to the app and written only directly by the project owner via a migration (§8.2's authorisation matrix). `advice_translations` differs because its own read policy already exposes every row to every signed-in farmer (it is shared advisory content, not farmer-owned data) and because a machine-generated row is never trusted as fact until `reviewed = true` — the integrity bar for who may write a *candidate* translation is lower than for data used as fact everywhere else in the system. If this is ever judged too permissive, the fix is a dedicated reviewer role rather than reopening it to every `authenticated` caller.
+
+**Storage.** A new public-read `audio` bucket (migration 019) holds the generated clips at `advice/{category}/tw.wav`. Bucket creation and its `storage.objects` policies had to be applied via the CLI's owner-privileged `db query` path — the anon key cannot create a bucket or grant itself object policies, confirmed live (`403 new row violates row-level security policy`) rather than assumed. A second policy (migration 021) makes the bucket itself visible to `listBuckets()`/`getBucket()` under an authenticated session — `storage.buckets` and `storage.objects` are separate tables with independent RLS, and only the latter was covered by 019 at first; `generate_khaya.ts`'s own idempotency check surfaced the gap on its first real run.
+
+Storage writes require an authenticated session, consistent with the rest of this schema never granting the anonymous role write access anywhere. Since the generation script runs as a bare Node process with no farmer logged in, it signs in with a dedicated, low-privilege account (`khaya-generator@farmpilot.internal`) that owns no farm data of its own and exists solely to satisfy that check.
+
+### 19.5 Runtime read path
+
+`getTwiAdvice(category: string)` looks up `advice_rules` by category to get its id, then `advice_translations` for a matching `language = 'tw'` row. `EstimateReport.tsx` fetches this for every currently-flagged category in one batched query (`Promise.all`, not one query per card) once the report itself has loaded, and:
+
+- Shows the Twi text instead of English only when the signed-in farmer's `profiles.preferred_language = 'tw'` (Profile.tsx, Appendix — labelled "Twi (Akan)" in the selector, since farmers may know the language by a different name than the bare linguistic term). Changing this preference takes effect immediately across the app with no reload, because both Profile.tsx and EstimateReport.tsx read the same React Query cache key (`['profile', userId]`) and Profile's save mutation invalidates it on success.
+- Shows the speaker button independently of that preference — a farmer reading English may still want to hear the Twi audio, or vice versa — and hides it entirely when no `audio_url` exists for that category yet, rather than rendering a button that does nothing.
+- Never blocks the page render on Khaya: if the cache lookup itself fails or returns nothing, `getTwiAdvice` falls back to English silently, matching the CRITICAL RULE that a missing translation degrades gracefully rather than surfacing an error to the farmer.
+
+### 19.6 What is verified automatically vs. what still needs a human
+
+`src/lib/khaya.integration.test.ts` proves, against the live database, that all 8 categories have real cached text and a genuinely publicly-downloadable audio URL, and that the English-fallback path works correctly for an unknown category. What it cannot and does not claim to verify is *translation quality* — whether "Wo aduannuru a wode di dwuma no boro nea wɔhwɛ kwan no so..." is natural, correct Twi that a farmer would find clear rather than stilted or wrong. `reviewed` is `false` on every row the script writes and is never set to `true` by any code path in this project; a native Twi speaker must listen to each of the 8 clips and flip it by hand (directly in the database, or via a future review UI — not yet built) before this feature is presented as demo-ready rather than "generated but unverified."
 
 ---
 

@@ -185,6 +185,123 @@ describe('generate_estimate() and benchmark RPCs — live integration', () => {
   });
 });
 
+describe('Estimate listing, insights, and manual line edits — live integration', () => {
+  let farmId: number;
+  let maizeCropId: number;
+
+  beforeAll(async () => {
+    const phone = randomTestPhone();
+    await signUpWithPhone(phone, 'IntegrationTest123!', 'Integration Test Farmer 3');
+
+    const farm = await farmsApi.createFarm({
+      name: 'Integration Test Farm 3',
+      total_area_acres: 6,
+      region: 'Western',
+      district: 'Sekondi-Takoradi',
+    });
+    farmId = farm.id as number;
+
+    const crops = await cropsApi.getCrops();
+    maizeCropId = crops.find((c) => c.name === 'Maize')!.id;
+  });
+
+  afterAll(async () => {
+    if (farmId) await supabase.from('farms').delete().eq('id', farmId);
+  });
+
+  it('listEstimates(), getLatestEstimate(), and getEstimateById() agree after two estimates on the same season', async () => {
+    const season = await seasonsApi.createSeason({
+      farm_id: farmId,
+      crop_id: maizeCropId,
+      year: 2090,
+      season_window: 'major',
+      area_planted_acres: 1,
+    });
+
+    const firstId = await estimatesApi.generateEstimate(season.id);
+    await costsApi.addCost({ season_id: season.id, category: 'seeds', amount_pesewas: 5000 });
+    const secondId = await estimatesApi.generateEstimate(season.id);
+
+    const all = await estimatesApi.listEstimates(season.id);
+    expect(all.map((e) => e.id).sort()).toEqual([firstId, secondId].sort());
+
+    const latest = await estimatesApi.getLatestEstimate(season.id);
+    expect(latest!.id).toBe(secondId);
+
+    const byId = await estimatesApi.getEstimateById(firstId);
+    expect(byId!.id).toBe(firstId);
+    expect(byId!.season_id).toBe(season.id);
+  });
+
+  it('getLatestEstimate() returns null for a season with no estimate yet', async () => {
+    const season = await seasonsApi.createSeason({
+      farm_id: farmId,
+      crop_id: maizeCropId,
+      year: 2091,
+      season_window: 'major',
+      area_planted_acres: 1,
+    });
+    const latest = await estimatesApi.getLatestEstimate(season.id);
+    expect(latest).toBeNull();
+  });
+
+  it('getFlaggedInsightsForFarm() surfaces a flagged category from the season\'s most recent estimate only', async () => {
+    const season = await seasonsApi.createSeason({
+      farm_id: farmId,
+      crop_id: maizeCropId,
+      year: 2092,
+      season_window: 'major',
+      area_planted_acres: 1,
+    });
+    const benchmarkPesewas = await costsApi.getCategoryBenchmarkPesewas(season.id, 'agrochem');
+    await costsApi.addCost({
+      season_id: season.id,
+      category: 'agrochem',
+      amount_pesewas: Math.round(benchmarkPesewas * 2),
+      description: 'Deliberately overspent for the insights test',
+    });
+    await estimatesApi.generateEstimate(season.id);
+
+    const insights = await estimatesApi.getFlaggedInsightsForFarm(farmId);
+    const match = insights.find((i) => i.season_id === season.id && i.category === 'agrochem');
+    expect(match).toBeDefined();
+    expect(match!.variance_pct).toBeGreaterThan(30);
+  });
+
+  it('updateEstimateLine() changes one line and recalculates the estimate total', async () => {
+    const season = await seasonsApi.createSeason({
+      farm_id: farmId,
+      crop_id: maizeCropId,
+      year: 2093,
+      season_window: 'major',
+      area_planted_acres: 1,
+    });
+    const estimateId = await estimatesApi.generateEstimate(season.id);
+    const before = await estimatesApi.getReport(estimateId);
+    const seedsLine = before.find((l) => l.category === 'seeds')!;
+    const beforeTotal = before[0].total_pesewas;
+
+    const newValue = seedsLine.estimated_pesewas + 100000;
+    await estimatesApi.updateEstimateLine(estimateId, 'seeds', newValue);
+
+    const after = await estimatesApi.getReport(estimateId);
+    expect(after.find((l) => l.category === 'seeds')!.estimated_pesewas).toBe(newValue);
+    expect(after[0].total_pesewas).toBe(beforeTotal + 100000);
+  });
+
+  it('checkProvisionalBenchmarks() is false for Maize, whose benchmark data is not a placeholder', async () => {
+    const season = await seasonsApi.createSeason({
+      farm_id: farmId,
+      crop_id: maizeCropId,
+      year: 2094,
+      season_window: 'major',
+      area_planted_acres: 1,
+    });
+    const isProvisional = await estimatesApi.checkProvisionalBenchmarks(season.id);
+    expect(isProvisional).toBe(false);
+  });
+});
+
 describe('Category Budgets — live integration', () => {
   let farmId: number;
   let seasonId: number;

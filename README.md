@@ -115,10 +115,10 @@ npm run test:watch    # same, in watch mode
 npm run test:integration   # hits the real, linked Supabase project — needs .env
 ```
 
-Unit tests (`vitest.config.ts`, 63 tests) cover pesewa/cedi conversion,
+Unit tests (`vitest.config.ts`, 67 tests) cover pesewa/cedi conversion,
 category-list and Ghana-region/district consistency, every API module's
 error-message mapping, and the Weekly Check-in's proportional-by-acreage
-split rule. Integration tests (`vitest.integration.config.ts`, 57 tests,
+split rule. Integration tests (`vitest.integration.config.ts`, 62 tests,
 run one file at a time — see Issue #38 on why) exercise every
 `src/api/*.ts` module directly against the linked database — recording,
 `generate_estimate()` and the benchmark RPCs, comparisons, budgets,

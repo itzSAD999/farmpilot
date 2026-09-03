@@ -41,7 +41,7 @@ export interface EstimateSummary {
 
 // ── Error handling ─────────────────────────────────────────────
 
-function handleEstimateError(error: any): Error {
+export function handleEstimateError(error: any): Error {
   const msg = error.message || String(error);
 
   if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')) {

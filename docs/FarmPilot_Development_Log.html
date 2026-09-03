@@ -931,7 +931,12 @@
 <p><code>src/api/*.ts</code> modules still had no dedicated test at all: <code>auth.ts</code>,</p>
 <p><code>budgets.ts</code> (beyond the spent/remaining arithmetic Issue #36 already</p>
 <p>covered), <code>compare.ts</code>, <code>dashboard.ts</code>, <code>guides.ts</code>, and <code>notifications.ts</code></p>
-<p>— including a piece of logic that lives entirely in the database and had</p>
+<p>— and a seventh, <code>estimates.ts</code>, had only its two headline functions</p>
+<p>(<code>generateEstimate</code>, <code>getReport</code>) covered by Issue #34; everything else</p>
+<p>in it — listing past estimates, the "most recent estimate per season"</p>
+<p>lookup FarmBot depends on for real overspend figures, and manually</p>
+<p>editing one line of an existing estimate — had none. Also missing was</p>
+<p>a piece of logic that lives entirely in the database and had</p>
 <p>never been exercised by anything: the <code>on_estimate_flag_trigger</code> (migration</p>
 <p>004) that writes an "Overspend Alert" notification automatically the</p>
 <p>instant an estimate line is flagged, with no application code involved.</p>
@@ -941,14 +946,20 @@
 <ul>
 <li><strong>Pure error-mapping functions</strong> (<code>handleAuthError</code>, and — newly</li>
 </ul>
-<p>  exported for this purpose — <code>handleBudgetError</code>, <code>handleDashboardError</code>)</p>
-<p>  now have direct unit tests (<code>auth.test.ts</code>, <code>budgets.test.ts</code>,</p>
-<p>  <code>dashboard.test.ts</code>) covering every branch: network failure, duplicate</p>
-<p>  registration, wrong password, weak password, expired session, and the</p>
-<p>  no-raw-error-leaks fallback case.</p>
+<p>  exported for this purpose — <code>handleBudgetError</code>, <code>handleDashboardError</code>,</p>
+<p>  <code>handleEstimateError</code>) now have direct unit tests (<code>auth.test.ts</code>,</p>
+<p>  <code>budgets.test.ts</code>, <code>dashboard.test.ts</code>, <code>estimates.test.ts</code>) covering</p>
+<p>  every branch: network failure, duplicate registration, wrong password,</p>
+<p>  weak password, expired session, and the no-raw-error-leaks fallback case.</p>
 <ul>
-<li><strong>Six new integration files</strong> against the live database:</li>
+<li><strong>Six new integration files</strong>, plus a new describe block appended to</li>
 </ul>
+<p>  the existing <code>estimates.integration.test.ts</code> covering <code>listEstimates()</code>,</p>
+<p>  <code>getLatestEstimate()</code>, <code>getEstimateById()</code>, <code>getFlaggedInsightsForFarm()</code></p>
+<p>  (proving it returns only each season's <em>most recent</em> estimate's flagged</p>
+<p>  lines, not every estimate ever generated), <code>updateEstimateLine()</code></p>
+<p>  (recalculates the estimate total correctly after a manual edit), and</p>
+<p>  <code>checkProvisionalBenchmarks()</code> — against the live database:</p>
 <p>  <code>auth.integration.test.ts</code> (sign-up, duplicate-phone rejection, sign-in,</p>
 <p>  wrong-password rejection, <code>linkEmail()</code>, <code>updateLanguage()</code>,</p>
 <p>  <code>updateProfile()</code>, sign-out); <code>budgets.integration.test.ts</code></p>
@@ -971,12 +982,14 @@
 <p>error) is now exported and unit-tested against every real region name;</p>
 <p>and a new <code>districts.test.ts</code> checks <code>GHANA_DISTRICTS</code> itself — all 16</p>
 <p>regions present, none with zero districts, no duplicate district names.</p>
-<p><strong>Evidence.</strong> <code>npm test</code>: 63/63 passed (up from 39 — 24 new unit tests).</p>
-<p><code>npm run test:integration</code>: 57/57 passed (up from 28 — 29 new integration</p>
+<p><strong>Evidence.</strong> <code>npm test</code>: 67/67 passed (up from 39 — 28 new unit tests).</p>
+<p><code>npm run test:integration</code>: 62/62 passed (up from 28 — 34 new integration</p>
 <p>tests), including the trigger-created notification actually appearing</p>
 <p>with <code>type: 'limit_reached'</code> and <code>is_read: false</code> immediately after</p>
-<p><code>generate_estimate()</code> flags a category, and a companion test confirming</p>
-<p>an <em>under</em>-benchmark category creates no notification at all. `npx tsc -b</p>
+<p><code>generate_estimate()</code> flags a category, a companion test confirming an</p>
+<p><em>under</em>-benchmark category creates no notification at all, and</p>
+<p><code>getFlaggedInsightsForFarm()</code> correctly excluding an older, superseded</p>
+<p>estimate's flags once a season has been re-estimated. `npx tsc -b</p>
 <p>--noEmit` clean.</p>
 <hr/>
 <h3 id="issue-38-running-the-integration-suite-repeatedly-in-quick-succession-trips-supabase-s-own-sign-up-rate-limit">Issue #38 — Running the integration suite repeatedly in quick succession trips Supabase's own sign-up rate limit</h3>
@@ -1080,7 +1093,7 @@
 <tr><td><code>supabase/migrations/017_drop_unused_benchmark_breakdown.sql</code></td><td>Issue #35</td></tr>
 <tr><td><code>src/api/estimates.integration.test.ts</code>, <code>src/lib/*.test.ts</code></td><td>Issue #34 (automated test suite)</td></tr>
 <tr><td><code>src/api/farms.integration.test.ts</code>, <code>seasons.integration.test.ts</code>, <code>costs.integration.test.ts</code></td><td>Issue #36 (CRUD, cascade deletion, cross-user RLS security)</td></tr>
-<tr><td><code>src/api/auth.integration.test.ts</code>, <code>budgets.integration.test.ts</code>, <code>compare.integration.test.ts</code>, <code>dashboard.integration.test.ts</code>, <code>guides.integration.test.ts</code>, <code>notifications.integration.test.ts</code>, plus <code>auth.test.ts</code>, <code>budgets.test.ts</code>, <code>dashboard.test.ts</code>, <code>src/lib/districts.test.ts</code>, <code>src/components/domain/GhanaMap.test.ts</code></td><td>Issue #37 (remaining API modules, including the notification trigger)</td></tr>
+<tr><td><code>src/api/auth.integration.test.ts</code>, <code>budgets.integration.test.ts</code>, <code>compare.integration.test.ts</code>, <code>dashboard.integration.test.ts</code>, <code>guides.integration.test.ts</code>, <code>notifications.integration.test.ts</code>, the new describe block in <code>estimates.integration.test.ts</code>, plus <code>auth.test.ts</code>, <code>budgets.test.ts</code>, <code>dashboard.test.ts</code>, <code>estimates.test.ts</code>, <code>src/lib/districts.test.ts</code>, <code>src/components/domain/GhanaMap.test.ts</code></td><td>Issue #37 (remaining API modules, including the notification trigger)</td></tr>
 <tr><td><code>vitest.integration.config.ts</code> (<code>fileParallelism: false</code>)</td><td>Issue #38 (Supabase Auth sign-up rate limit)</td></tr>
 <tr><td><code>supabase/demo_seed.sql</code></td><td>Reproducible demonstration account (see main report, Appendix D)</td></tr>
 <tr><td><code>docs/CHANGELOG.md</code></td><td>Raw, PR-by-PR change history</td></tr>

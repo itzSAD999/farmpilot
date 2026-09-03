@@ -1042,7 +1042,12 @@ covered farms/seasons/costs CRUD and cross-user security. Six other
 `src/api/*.ts` modules still had no dedicated test at all: `auth.ts`,
 `budgets.ts` (beyond the spent/remaining arithmetic Issue #36 already
 covered), `compare.ts`, `dashboard.ts`, `guides.ts`, and `notifications.ts`
-— including a piece of logic that lives entirely in the database and had
+— and a seventh, `estimates.ts`, had only its two headline functions
+(`generateEstimate`, `getReport`) covered by Issue #34; everything else
+in it — listing past estimates, the "most recent estimate per season"
+lookup FarmBot depends on for real overspend figures, and manually
+editing one line of an existing estimate — had none. Also missing was
+a piece of logic that lives entirely in the database and had
 never been exercised by anything: the `on_estimate_flag_trigger` (migration
 004) that writes an "Overspend Alert" notification automatically the
 instant an estimate line is flagged, with no application code involved.
@@ -1051,12 +1056,18 @@ exactly the kind of silent failure this hardening pass exists to catch.
 
 **Fix.** Two kinds of gap closed:
 - **Pure error-mapping functions** (`handleAuthError`, and — newly
-  exported for this purpose — `handleBudgetError`, `handleDashboardError`)
-  now have direct unit tests (`auth.test.ts`, `budgets.test.ts`,
-  `dashboard.test.ts`) covering every branch: network failure, duplicate
-  registration, wrong password, weak password, expired session, and the
-  no-raw-error-leaks fallback case.
-- **Six new integration files** against the live database:
+  exported for this purpose — `handleBudgetError`, `handleDashboardError`,
+  `handleEstimateError`) now have direct unit tests (`auth.test.ts`,
+  `budgets.test.ts`, `dashboard.test.ts`, `estimates.test.ts`) covering
+  every branch: network failure, duplicate registration, wrong password,
+  weak password, expired session, and the no-raw-error-leaks fallback case.
+- **Six new integration files**, plus a new describe block appended to
+  the existing `estimates.integration.test.ts` covering `listEstimates()`,
+  `getLatestEstimate()`, `getEstimateById()`, `getFlaggedInsightsForFarm()`
+  (proving it returns only each season's *most recent* estimate's flagged
+  lines, not every estimate ever generated), `updateEstimateLine()`
+  (recalculates the estimate total correctly after a manual edit), and
+  `checkProvisionalBenchmarks()` — against the live database:
   `auth.integration.test.ts` (sign-up, duplicate-phone rejection, sign-in,
   wrong-password rejection, `linkEmail()`, `updateLanguage()`,
   `updateProfile()`, sign-out); `budgets.integration.test.ts`
@@ -1081,12 +1092,14 @@ error) is now exported and unit-tested against every real region name;
 and a new `districts.test.ts` checks `GHANA_DISTRICTS` itself — all 16
 regions present, none with zero districts, no duplicate district names.
 
-**Evidence.** `npm test`: 63/63 passed (up from 39 — 24 new unit tests).
-`npm run test:integration`: 57/57 passed (up from 28 — 29 new integration
+**Evidence.** `npm test`: 67/67 passed (up from 39 — 28 new unit tests).
+`npm run test:integration`: 62/62 passed (up from 28 — 34 new integration
 tests), including the trigger-created notification actually appearing
 with `type: 'limit_reached'` and `is_read: false` immediately after
-`generate_estimate()` flags a category, and a companion test confirming
-an *under*-benchmark category creates no notification at all. `npx tsc -b
+`generate_estimate()` flags a category, a companion test confirming an
+*under*-benchmark category creates no notification at all, and
+`getFlaggedInsightsForFarm()` correctly excluding an older, superseded
+estimate's flags once a season has been re-estimated. `npx tsc -b
 --noEmit` clean.
 
 ---
@@ -1201,7 +1214,7 @@ that are lower priority than what shipped in this pass:
 | `supabase/migrations/017_drop_unused_benchmark_breakdown.sql` | Issue #35 |
 | `src/api/estimates.integration.test.ts`, `src/lib/*.test.ts` | Issue #34 (automated test suite) |
 | `src/api/farms.integration.test.ts`, `seasons.integration.test.ts`, `costs.integration.test.ts` | Issue #36 (CRUD, cascade deletion, cross-user RLS security) |
-| `src/api/auth.integration.test.ts`, `budgets.integration.test.ts`, `compare.integration.test.ts`, `dashboard.integration.test.ts`, `guides.integration.test.ts`, `notifications.integration.test.ts`, plus `auth.test.ts`, `budgets.test.ts`, `dashboard.test.ts`, `src/lib/districts.test.ts`, `src/components/domain/GhanaMap.test.ts` | Issue #37 (remaining API modules, including the notification trigger) |
+| `src/api/auth.integration.test.ts`, `budgets.integration.test.ts`, `compare.integration.test.ts`, `dashboard.integration.test.ts`, `guides.integration.test.ts`, `notifications.integration.test.ts`, the new describe block in `estimates.integration.test.ts`, plus `auth.test.ts`, `budgets.test.ts`, `dashboard.test.ts`, `estimates.test.ts`, `src/lib/districts.test.ts`, `src/components/domain/GhanaMap.test.ts` | Issue #37 (remaining API modules, including the notification trigger) |
 | `vitest.integration.config.ts` (`fileParallelism: false`) | Issue #38 (Supabase Auth sign-up rate limit) |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |

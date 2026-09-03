@@ -301,8 +301,9 @@ export function Profile() {
             </SettingRow>
 
             <SettingRow
-              label="Language"
+              label="Advice Language"
               value={getLanguageName(profile?.preferred_language || "en")}
+              description="Only affects the advice text and audio on your Estimate Report — menus, buttons, and the rest of the app stay in English."
               isEditing={editingField === "language"}
               onEdit={() => setEditingField("language")}
               onCancel={() => setEditingField(null)}
@@ -319,9 +320,9 @@ export function Profile() {
               >
                 <option value="en">English</option>
                 <option value="tw">Twi (Akan)</option>
-                <option value="ee">Ewe</option>
-                <option value="gaa">Ga</option>
-                <option value="dag">Dagbani</option>
+                <option value="ee">Ewe (coming soon — shows English for now)</option>
+                <option value="gaa">Ga (coming soon — shows English for now)</option>
+                <option value="dag">Dagbani (coming soon — shows English for now)</option>
               </select>
             </SettingRow>
 
@@ -984,6 +985,7 @@ export function Profile() {
 function SettingRow({
   label,
   value,
+  description,
   isEditing,
   onEdit,
   onCancel,
@@ -1002,6 +1004,9 @@ function SettingRow({
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">
               {label}
             </label>
+            {description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-3 leading-relaxed">{description}</p>
+            )}
             {children}
           </div>
           <div className="flex gap-3">
@@ -1030,6 +1035,9 @@ function SettingRow({
             <p className="text-base font-medium text-gray-900 dark:text-gray-100">
               {value}
             </p>
+            {description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1 leading-relaxed">{description}</p>
+            )}
           </div>
           <button
             onClick={onEdit}

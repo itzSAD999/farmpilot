@@ -1257,7 +1257,16 @@ written — not assumed against documentation.
   English only when `profiles.preferred_language = 'tw'`.
 - `src/pages/Profile.tsx` — the existing language selector (this already
   existed, contrary to the spec's assumption of a new `Settings.tsx`)
-  relabelled "Twi (Akan)" for recognisability.
+  relabelled from generic **"Language"** to **"Advice Language,"** with a
+  one-line description added under it ("Only affects the advice text and
+  audio on your Estimate Report — menus, buttons, and the rest of the app
+  stay in English"). Flagged directly on review: a plain "Language"
+  setting reads as a full app-locale switch; this feature is scoped to
+  one screen's advice content only, and the control now says so rather
+  than implying more than it does. The Twi option itself stays "Twi
+  (Akan)" for recognisability; the three ungenerated languages are
+  labelled "(coming soon — shows English for now)" in the dropdown so
+  picking one isn't a silent dead end.
 
 **What Step 1's live verification actually caught, before any of the
 above was written:** the assumed Twi code `"tw"` does not exist — Khaya

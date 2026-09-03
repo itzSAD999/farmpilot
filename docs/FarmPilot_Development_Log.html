@@ -1148,7 +1148,16 @@
 <li><code>src/pages/Profile.tsx</code> — the existing language selector (this already</li>
 </ul>
 <p>  existed, contrary to the spec's assumption of a new <code>Settings.tsx</code>)</p>
-<p>  relabelled "Twi (Akan)" for recognisability.</p>
+<p>  relabelled from generic <strong>"Language"</strong> to <strong>"Advice Language,"</strong> with a</p>
+<p>  one-line description added under it ("Only affects the advice text and</p>
+<p>  audio on your Estimate Report — menus, buttons, and the rest of the app</p>
+<p>  stay in English"). Flagged directly on review: a plain "Language"</p>
+<p>  setting reads as a full app-locale switch; this feature is scoped to</p>
+<p>  one screen's advice content only, and the control now says so rather</p>
+<p>  than implying more than it does. The Twi option itself stays "Twi</p>
+<p>  (Akan)" for recognisability; the three ungenerated languages are</p>
+<p>  labelled "(coming soon — shows English for now)" in the dropdown so</p>
+<p>  picking one isn't a silent dead end.</p>
 <p>**What Step 1's live verification actually caught, before any of the</p>
 <p>above was written:** the assumed Twi code <code>"tw"</code> does not exist — Khaya</p>
 <p>distinguishes <code>"twi"</code> (Asante) and <code>"atw"</code> (Akuapem); <code>"twi"</code> was chosen</p>

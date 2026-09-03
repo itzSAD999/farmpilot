@@ -74,6 +74,7 @@ means the same thing in both places.
 | 33 | A file containing real GitHub account-recovery codes had accidentally been saved and uploaded to the project's public code repository. | Immediately told the person responsible to regenerate those codes (since anyone who'd seen the file could otherwise use them), removed the file from the project, and — once given the go-ahead — permanently erased every trace of it from the project's entire saved history, not just the current version. |
 | 34 | Every single check that the app worked correctly had been done by hand — a person clicking through the app and reading the results themselves. There was no way to automatically re-check things after a future change. | Built a proper set of automated checks that re-run the app's core money calculations by themselves, on command, without anyone needing to click through anything. |
 | 35 | The very first time the new automated checks ran, they caught a real, previously-unnoticed inconsistency: two pieces of behind-the-scenes logic that were supposed to always agree on a price were actually off by a tiny amount. | Traced it to one of the two no longer being used anywhere in the app, and removed it rather than patching around the mismatch. |
+| 36 | The first set of automated checks (#34) only covered the money-calculation logic — it didn't check ordinary things like creating/editing/deleting a farm, or the single most important safety rule: that one farmer can never see or change another farmer's data. That safety rule had only ever been checked by a person manually signing in as two different accounts. | Added many more automated checks covering farms, seasons, and costs being created/edited/deleted correctly, and — most importantly — a check using two genuinely separate accounts confirming one farmer truly cannot read, change, or delete another farmer's farm, no matter how they try. |
 
 ---
 
@@ -968,6 +969,42 @@ per-unit rate untouched (a market price is not a function of farm size).
 `npm run test:integration`: 6/6 passed after the fix. `npx tsc -b
 --noEmit` and `npm run build` both stayed clean after removing the
 dead function and its wrapper from `src/api/lab.ts`.
+
+---
+
+### Issue #36 — Test suite widened to CRUD, cascade deletion, and cross-user security
+**Severity:** N/A (coverage expansion, requested directly: "everything
+has been tested — all features, functional requirements, use cases and
+scenarios"). Issue #34's suite proved the estimation engine and pure
+utility functions; it did not yet cover ordinary create/read/update/
+delete operations, what happens to a season's costs when the season
+itself is deleted, or — the most important gap — whether Row Level
+Security actually stops one farmer from reading or changing another
+farmer's data. That last one is Objective #6 of the whole project and,
+until now, had only ever been checked by hand (sign in as two accounts,
+try to see the other one's farm).
+
+**Fix.** Three new integration files:
+- `farms.integration.test.ts` — create/read/update a farm, the
+  zero-area rejection from Issue #28's hardening, and a dedicated
+  cross-user security block using **two independent Supabase clients**
+  (Farmer A on the shared client, Farmer B on a second one created
+  directly in the test — the same as two separate browsers, not one
+  session signing in and out) proving Farmer B's own queries cannot
+  read, update, or delete Farmer A's farm, and that Farmer A's farm is
+  provably untouched afterward.
+- `seasons.integration.test.ts` — live and back-filled (historical)
+  season creation, `completeSeason()`, and confirming that deleting a
+  season cascades and removes its costs rather than leaving orphaned
+  rows.
+- `costs.integration.test.ts` — both cost-entry paths (total-only and
+  quantity × rate), update/delete, `quickFillCosts()`, and a check that
+  **all ten seeded crops**, not just Maize, have the four essential
+  benchmark categories covered — directly re-verifying Issue #17 as a
+  standing test rather than a one-time fix.
+
+**Evidence.** `npm run test:integration`: 28/28 passed (up from 6).
+`npm test`: 39/39 unit tests still passed. `npx tsc -b --noEmit` clean.
 
 ---
 

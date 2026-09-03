@@ -108,6 +108,7 @@
 <tr><td>33</td><td>A file containing real GitHub account-recovery codes had accidentally been saved and uploaded to the project's public code repository.</td><td>Immediately told the person responsible to regenerate those codes (since anyone who'd seen the file could otherwise use them), removed the file from the project, and — once given the go-ahead — permanently erased every trace of it from the project's entire saved history, not just the current version.</td></tr>
 <tr><td>34</td><td>Every single check that the app worked correctly had been done by hand — a person clicking through the app and reading the results themselves. There was no way to automatically re-check things after a future change.</td><td>Built a proper set of automated checks that re-run the app's core money calculations by themselves, on command, without anyone needing to click through anything.</td></tr>
 <tr><td>35</td><td>The very first time the new automated checks ran, they caught a real, previously-unnoticed inconsistency: two pieces of behind-the-scenes logic that were supposed to always agree on a price were actually off by a tiny amount.</td><td>Traced it to one of the two no longer being used anywhere in the app, and removed it rather than patching around the mismatch.</td></tr>
+<tr><td>36</td><td>The first set of automated checks (#34) only covered the money-calculation logic — it didn't check ordinary things like creating/editing/deleting a farm, or the single most important safety rule: that one farmer can never see or change another farmer's data. That safety rule had only ever been checked by a person manually signing in as two different accounts.</td><td>Added many more automated checks covering farms, seasons, and costs being created/edited/deleted correctly, and — most importantly — a check using two genuinely separate accounts confirming one farmer truly cannot read, change, or delete another farmer's farm, no matter how they try.</td></tr>
 </tbody></table>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
@@ -858,6 +859,44 @@
 <p><code>npm run test:integration</code>: 6/6 passed after the fix. `npx tsc -b</p>
 <p>--noEmit<code> and </code>npm run build` both stayed clean after removing the</p>
 <p>dead function and its wrapper from <code>src/api/lab.ts</code>.</p>
+<hr/>
+<h3 id="issue-36-test-suite-widened-to-crud-cascade-deletion-and-cross-user-security">Issue #36 — Test suite widened to CRUD, cascade deletion, and cross-user security</h3>
+<p><strong>Severity:</strong> N/A (coverage expansion, requested directly: "everything</p>
+<p>has been tested — all features, functional requirements, use cases and</p>
+<p>scenarios"). Issue #34's suite proved the estimation engine and pure</p>
+<p>utility functions; it did not yet cover ordinary create/read/update/</p>
+<p>delete operations, what happens to a season's costs when the season</p>
+<p>itself is deleted, or — the most important gap — whether Row Level</p>
+<p>Security actually stops one farmer from reading or changing another</p>
+<p>farmer's data. That last one is Objective #6 of the whole project and,</p>
+<p>until now, had only ever been checked by hand (sign in as two accounts,</p>
+<p>try to see the other one's farm).</p>
+<p><strong>Fix.</strong> Three new integration files:</p>
+<ul>
+<li><code>farms.integration.test.ts</code> — create/read/update a farm, the</li>
+</ul>
+<p>  zero-area rejection from Issue #28's hardening, and a dedicated</p>
+<p>  cross-user security block using <strong>two independent Supabase clients</strong></p>
+<p>  (Farmer A on the shared client, Farmer B on a second one created</p>
+<p>  directly in the test — the same as two separate browsers, not one</p>
+<p>  session signing in and out) proving Farmer B's own queries cannot</p>
+<p>  read, update, or delete Farmer A's farm, and that Farmer A's farm is</p>
+<p>  provably untouched afterward.</p>
+<ul>
+<li><code>seasons.integration.test.ts</code> — live and back-filled (historical)</li>
+</ul>
+<p>  season creation, <code>completeSeason()</code>, and confirming that deleting a</p>
+<p>  season cascades and removes its costs rather than leaving orphaned</p>
+<p>  rows.</p>
+<ul>
+<li><code>costs.integration.test.ts</code> — both cost-entry paths (total-only and</li>
+</ul>
+<p>  quantity × rate), update/delete, <code>quickFillCosts()</code>, and a check that</p>
+<p>  <strong>all ten seeded crops</strong>, not just Maize, have the four essential</p>
+<p>  benchmark categories covered — directly re-verifying Issue #17 as a</p>
+<p>  standing test rather than a one-time fix.</p>
+<p><strong>Evidence.</strong> <code>npm run test:integration</code>: 28/28 passed (up from 6).</p>
+<p><code>npm test</code>: 39/39 unit tests still passed. <code>npx tsc -b --noEmit</code> clean.</p>
 <hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
 <p>The main report (§4.3) carries the primary test table. Full evidence for</p>

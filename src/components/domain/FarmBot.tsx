@@ -10,6 +10,8 @@ import { getFlaggedInsightsForFarm } from '../../api/estimates';
 import { compareCrops } from '../../api/compare';
 import { getProfile } from '../../api/auth';
 import { getHelpKnowledgeForFarmBot } from '../../pages/Help';
+import { getFarmBudget, listFarmCategoryBudgets } from '../../api/farmBudgets';
+import { listCropBudgets } from '../../api/cropBudgets';
 
 const SUGGESTED_PROMPTS = [
   'Am I overspending anywhere?',
@@ -71,6 +73,25 @@ export function FarmBot() {
     enabled: !!farm?.id,
   });
 
+  // The farmer's own spending caps — separate from the benchmark above
+  // (migrations 015, 022, 023) — so FarmBot can answer "am I within
+  // budget" using the real numbers instead of only benchmark variance.
+  const { data: farmBudget } = useQuery({
+    queryKey: ['farmBudget', farm?.id],
+    queryFn: () => getFarmBudget(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+  const { data: farmCategoryBudgets } = useQuery({
+    queryKey: ['farmCategoryBudgets', farm?.id],
+    queryFn: () => listFarmCategoryBudgets(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+  const { data: cropBudgets } = useQuery({
+    queryKey: ['cropBudgets', farm?.id],
+    queryFn: () => listCropBudgets(farm!.id as number),
+    enabled: !!farm?.id,
+  });
+
   // Construct system prompt when context loads
   const systemPrompt = React.useMemo(() => {
     let prompt = `You are FarmBot, an expert agronomist AI assistant for FarmPilot. You advise Ghanaian smallholder farmers on how to reduce costs and improve yields.\n\n`;
@@ -122,11 +143,32 @@ export function FarmBot() {
       });
     }
 
+    const hasBudgets = !!farmBudget || (farmCategoryBudgets && farmCategoryBudgets.length > 0) || (cropBudgets && cropBudgets.length > 0);
+    if (hasBudgets) {
+      prompt += `\nBudgets (the farmer's own spending caps, set at /budgets — separate from the benchmark comparisons above; a category or crop can be within benchmark and still over the farmer's own budget, or vice versa):\n`;
+      if (farmBudget) {
+        prompt += `- Farm Budget (whole farm, every season/crop/category combined): GHS ${(farmBudget.spent_pesewas / 100).toFixed(2)} spent of GHS ${(farmBudget.limit_pesewas / 100).toFixed(2)}${farmBudget.is_over_budget ? ' — OVER BUDGET' : ` (${farmBudget.pct_used ?? 0}% used)`}\n`;
+      }
+      if (farmCategoryBudgets && farmCategoryBudgets.length > 0) {
+        prompt += `- By category (farm-wide, across every season):\n`;
+        farmCategoryBudgets.forEach((b) => {
+          prompt += `  - ${b.category}: GHS ${(b.spent_pesewas / 100).toFixed(2)} spent of GHS ${(b.limit_pesewas / 100).toFixed(2)}${b.is_over_budget ? ' — OVER BUDGET' : ` (${b.pct_used ?? 0}% used)`}\n`;
+        });
+      }
+      if (cropBudgets && cropBudgets.length > 0) {
+        prompt += `- By crop (across every season of that crop):\n`;
+        cropBudgets.forEach((b) => {
+          prompt += `  - ${b.crop_name}: GHS ${(b.spent_pesewas / 100).toFixed(2)} spent of GHS ${(b.limit_pesewas / 100).toFixed(2)}${b.is_over_budget ? ' — OVER BUDGET' : ` (${b.pct_used ?? 0}% used)`}\n`;
+        });
+      }
+    }
+
     prompt += `\nOther things you can point the farmer to inside FarmPilot, if relevant to what they ask:
 - "Cost Lab" (/lab): a sandbox to try different cost assumptions for a crop and acreage before recording anything for real — nothing there is saved.
 - Recording cost history: when starting a new season (Start New Season), after picking a crop there's a "Have you grown this before?" toggle to back-fill up to 3 previous years' costs, so estimates use real history from day one instead of only the benchmark.
 - The Weekly Check-in prompt on the Dashboard for quickly logging shared costs across active seasons, split by planted acreage.
 - The Compare page (season vs season, crop vs crop, me vs standard benchmark) for the underlying numbers behind whatever you tell them.
+- The Budgets page (/budgets) to set or change a Farm Budget, a per-category budget, or a per-crop budget — that's also where the numbers in the "Budgets" section above come from.
 - The Help page (/help) has this same reference in one place if they want to browse it themselves.
 
 Reference — how FarmPilot's own features actually work, so you can answer "how does X work" or "what does X mean" questions accurately instead of guessing (this is the same content as the in-app Help page):
@@ -138,12 +180,13 @@ Guidelines for your responses:
 - Speak in plain English, avoiding overly technical jargon.
 - If they ask about costs or where they are overspending, lead with the 'Overspend Flags' above — those are real, computed comparisons against the benchmark, not a guess. Use their exact numbers and categories. If there are no flags, say their recorded spending looks on track rather than inventing a concern.
 - If they ask which crop costs more, use 'Crop vs Crop' above rather than estimating from the itemized list.
+- If they ask about a budget, or whether they're within budget, use the 'Budgets' section above — it's the farmer's own cap, not the benchmark, so answer that question separately from an 'Overspend Flags' question even if both are true at once. If no budgets are set, say so and mention the Budgets page rather than guessing a number.
 - Read 'Detailed Expense History' for anything not covered by a flag.
 - Mention Ghanaian agricultural context (e.g., MoFA subsidy, two seasons, specific local practices).
 - Format using simple markdown for readability.`;
 
     return prompt;
-  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison, profile]);
+  }, [farm, summary, seasons, detailedCosts, flaggedInsights, cropComparison, profile, farmBudget, farmCategoryBudgets, cropBudgets]);
 
   // Initialize with greeting
   useEffect(() => {

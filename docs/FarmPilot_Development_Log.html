@@ -64,12 +64,16 @@
 </ol>
 <hr/>
 <h2 id="0-plain-language-summary-no-jargon">0. Plain-Language Summary — No Jargon</h2>
-<p>Section 4 below describes all 35 issues in full technical detail, for a</p>
-<p>technical reader. This section describes the same 35 issues in plain</p>
+<p>Section 4 below describes all 36 issues in full technical detail, for a</p>
+<p>technical reader. This section describes the same 36 issues in plain</p>
 <p>language — what was actually wrong, in everyday terms, and what was done</p>
 <p>about it — for anyone reading this who isn't a programmer. Each row here</p>
 <p>corresponds exactly to the same-numbered entry in §4, so "Issue #12"</p>
-<p>means the same thing in both places.</p>
+<p>means the same thing in both places. If you only read one section of this</p>
+<p>whole document, read this one — everything past this point (§1 onward)</p>
+<p>is written for a more technical reader and uses the vocabulary of software</p>
+<p>development (database, function, API, and similar terms) without stopping</p>
+<p>to define each one.</p>
 <table>
 <thead><tr><th>#</th><th>What was actually wrong</th><th>What we did about it</th></tr></thead>
 <tbody>
@@ -112,12 +116,15 @@
 </tbody></table>
 <hr/>
 <h2 id="1-from-proposal-to-delivered-system">1. From Proposal to Delivered System</h2>
-<p>The project began from a six-week proposal specifying a React + Supabase</p>
-<p>frontend, a <strong>Python/FastAPI service for cost calculations</strong>, and a</p>
-<p>two-question scope: estimate what a season should cost, and suggest how to</p>
-<p>reduce it. Both the technology choice and the timeline changed before the</p>
-<p>build started, and both changes are deliberate, documented decisions —</p>
-<p>not scope creep discovered here.</p>
+<p>The project began from a six-week proposal. The original plan was to build</p>
+<p>the website itself in React (as it was eventually built), but to run the</p>
+<p>cost-calculation logic as a <strong>separate Python program</strong> talking to the</p>
+<p>database over the network. The scope was two questions: estimate what a</p>
+<p>season should cost, and suggest how to reduce it. Before building actually</p>
+<p>started, two things changed from that plan — how long the build would take,</p>
+<p>and where the calculation logic would live. Both changes were deliberate</p>
+<p>decisions made and written down at the time (in the ADRs referenced below),</p>
+<p>not scope creep discovered after the fact while writing this document.</p>
 <table>
 <thead><tr><th>Proposal commitment</th><th>What was actually built</th><th>Where decided</th></tr></thead>
 <tbody>
@@ -128,18 +135,23 @@
 <tr><td>Find overspend, suggest reduction</td><td>Built — one estimate per season (not one per farm), rolled up via views</td><td>ADR-007</td></tr>
 <tr><td>Show estimate and suggestions on one screen</td><td>Built (<code>EstimateReport.tsx</code>)</td><td>§4</td></tr>
 </tbody></table>
-<p>The proposal's own aim statement — <em>"using the farmer's own records"</em> — is</p>
-<p>exactly the design problem that produced ADR-003 and, later, the most</p>
-<p>consequential defect in this log (Issue #3): a system that only ever</p>
-<p>compares a farmer to himself can never detect overspend. The proposal's</p>
-<p>plain-language framing was right; making it actually true required an</p>
-<p>independent benchmark, which is the single idea the whole data model is</p>
-<p>organised around.</p>
+<p>The original proposal's own goal — <em>"using the farmer's own records"</em> — is</p>
+<p>exactly what led to the single most important design decision in the whole</p>
+<p>project (recorded as ADR-003), and, later, to the most serious bug found in</p>
+<p>this log (Issue #3): if a system only ever compares a farmer's spending</p>
+<p>against that same farmer's own past records, it can never actually catch</p>
+<p>overspending — there is nothing independent to measure against, so the</p>
+<p>comparison always comes out even. The original goal was the right one; making</p>
+<p>it actually work required comparing spending against something <em>outside</em></p>
+<p>the farmer's own numbers — an independent, published price benchmark — and</p>
+<p>that one idea is what the entire data model is built around.</p>
 <hr/>
 <h2 id="2-development-timeline-changelog-expanded">2. Development Timeline (Changelog, expanded)</h2>
-<p>Full raw entries are kept in <code>CHANGELOG.md</code>, updated on every merge per the</p>
-<p>team's own rule ("a PR with no changelog entry is not merged"). Summarised</p>
-<p>here as a build narrative:</p>
+<p>This section is a version-by-version build log — a technical record of</p>
+<p>what was added at each stage, in the order it happened. Full raw entries</p>
+<p>are kept in <code>CHANGELOG.md</code>, updated on every merge per the team's own rule</p>
+<p>("a PR with no changelog entry is not merged"). Summarised here as a build</p>
+<p>narrative:</p>
 <table>
 <thead><tr><th>Stage</th><th>Version</th><th>What shipped</th></tr></thead>
 <tbody>
@@ -157,9 +169,12 @@
 <p>issue list, the same way the earlier phases are, not a rewrite of history.</p>
 <hr/>
 <h2 id="3-architecture-decisions-index">3. Architecture Decisions — Index</h2>
-<p>Twelve ADRs govern the system; full text is in <code>DECISIONS.md</code>. Listed here</p>
-<p>for cross-reference against the issues in §4, several of which either test</p>
-<p>an ADR's guarantee directly or extend a decision already on record.</p>
+<p>An "ADR" (Architecture Decision Record) is just a short written note</p>
+<p>explaining one deliberate design choice and why it was made — kept so that,</p>
+<p>months later, nobody has to guess whether something was an oversight or a</p>
+<p>decision. Twelve of them govern this system; full text is in <code>DECISIONS.md</code>.</p>
+<p>Listed here for cross-reference against the issues in §4, several of which</p>
+<p>either test one of these decisions directly or build on one already made.</p>
 <table>
 <thead><tr><th>ADR</th><th>Decision</th><th>Tested/extended by</th></tr></thead>
 <tbody>
@@ -176,9 +191,17 @@
 </tbody></table>
 <hr/>
 <h2 id="4-issue-register-post-build-hardening-pass">4. Issue Register — Post-Build Hardening Pass</h2>
-<p>Severity: <strong>Critical</strong> (core feature silently produced wrong output),</p>
-<p><strong>High</strong> (feature completely non-functional), <strong>Medium</strong> (real but bounded</p>
-<p>impact), <strong>Low</strong> (cosmetic/consistency).</p>
+<p>This is the detailed, technical version of what §0 already summarised in</p>
+<p>plain language — the same 36 problems, but here with the exact code-level</p>
+<p>cause, the exact fix, and the exact evidence that the fix actually worked</p>
+<p>(a command that was run, or a test that was checked, not just a claim).</p>
+<p>A non-technical reader who wants the same information without the code</p>
+<p>detail should read §0 instead; this section is for verifying the work.</p>
+<p>Each entry is rated by severity: <strong>Critical</strong> (a core feature silently gave</p>
+<p>a wrong answer — the most serious kind of bug, because nothing on screen</p>
+<p>told anyone it was wrong), <strong>High</strong> (a feature was completely broken and</p>
+<p>unusable), <strong>Medium</strong> (a real problem, but a contained one), <strong>Low</strong></p>
+<p>(cosmetic or a minor inconsistency).</p>
 <h3 id="issue-1-system-clock-skew-amplified-into-an-auth-request-storm">Issue #1 — System clock skew amplified into an auth request storm</h3>
 <p><strong>Severity:</strong> Critical · <strong>Reported as:</strong> "something went wrong" on farm</p>
 <p>setup; separately, "too many requests" during farm setup step 2.</p>
@@ -899,8 +922,9 @@
 <p><code>npm test</code>: 39/39 unit tests still passed. <code>npx tsc -b --noEmit</code> clean.</p>
 <hr/>
 <h2 id="5-testing-record">5. Testing Record</h2>
-<p>The main report (§4.3) carries the primary test table. Full evidence for</p>
-<p>each row:</p>
+<p>The main report (§4.3) carries the primary test table — a summary of what</p>
+<p>was checked and whether it passed. This section gives the full, detailed</p>
+<p>evidence behind each row of that table:</p>
 <table>
 <thead><tr><th>#</th><th>Test</th><th>Before</th><th>After</th><th>Verified via</th></tr></thead>
 <tbody>

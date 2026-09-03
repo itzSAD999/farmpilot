@@ -30,12 +30,16 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 35 issues in full technical detail, for a
-technical reader. This section describes the same 35 issues in plain
+Section 4 below describes all 36 issues in full technical detail, for a
+technical reader. This section describes the same 36 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
-means the same thing in both places.
+means the same thing in both places. If you only read one section of this
+whole document, read this one — everything past this point (§1 onward)
+is written for a more technical reader and uses the vocabulary of software
+development (database, function, API, and similar terms) without stopping
+to define each one.
 
 | # | What was actually wrong | What we did about it |
 |---|---|---|
@@ -80,12 +84,15 @@ means the same thing in both places.
 
 ## 1. From Proposal to Delivered System
 
-The project began from a six-week proposal specifying a React + Supabase
-frontend, a **Python/FastAPI service for cost calculations**, and a
-two-question scope: estimate what a season should cost, and suggest how to
-reduce it. Both the technology choice and the timeline changed before the
-build started, and both changes are deliberate, documented decisions —
-not scope creep discovered here.
+The project began from a six-week proposal. The original plan was to build
+the website itself in React (as it was eventually built), but to run the
+cost-calculation logic as a **separate Python program** talking to the
+database over the network. The scope was two questions: estimate what a
+season should cost, and suggest how to reduce it. Before building actually
+started, two things changed from that plan — how long the build would take,
+and where the calculation logic would live. Both changes were deliberate
+decisions made and written down at the time (in the ADRs referenced below),
+not scope creep discovered after the fact while writing this document.
 
 | Proposal commitment | What was actually built | Where decided |
 |---|---|---|
@@ -96,21 +103,26 @@ not scope creep discovered here.
 | Find overspend, suggest reduction | Built — one estimate per season (not one per farm), rolled up via views | ADR-007 |
 | Show estimate and suggestions on one screen | Built (`EstimateReport.tsx`) | §4 |
 
-The proposal's own aim statement — *"using the farmer's own records"* — is
-exactly the design problem that produced ADR-003 and, later, the most
-consequential defect in this log (Issue #3): a system that only ever
-compares a farmer to himself can never detect overspend. The proposal's
-plain-language framing was right; making it actually true required an
-independent benchmark, which is the single idea the whole data model is
-organised around.
+The original proposal's own goal — *"using the farmer's own records"* — is
+exactly what led to the single most important design decision in the whole
+project (recorded as ADR-003), and, later, to the most serious bug found in
+this log (Issue #3): if a system only ever compares a farmer's spending
+against that same farmer's own past records, it can never actually catch
+overspending — there is nothing independent to measure against, so the
+comparison always comes out even. The original goal was the right one; making
+it actually work required comparing spending against something *outside*
+the farmer's own numbers — an independent, published price benchmark — and
+that one idea is what the entire data model is built around.
 
 ---
 
 ## 2. Development Timeline (Changelog, expanded)
 
-Full raw entries are kept in `CHANGELOG.md`, updated on every merge per the
-team's own rule ("a PR with no changelog entry is not merged"). Summarised
-here as a build narrative:
+This section is a version-by-version build log — a technical record of
+what was added at each stage, in the order it happened. Full raw entries
+are kept in `CHANGELOG.md`, updated on every merge per the team's own rule
+("a PR with no changelog entry is not merged"). Summarised here as a build
+narrative:
 
 | Stage | Version | What shipped |
 |---|---|---|
@@ -131,9 +143,12 @@ issue list, the same way the earlier phases are, not a rewrite of history.
 
 ## 3. Architecture Decisions — Index
 
-Twelve ADRs govern the system; full text is in `DECISIONS.md`. Listed here
-for cross-reference against the issues in §4, several of which either test
-an ADR's guarantee directly or extend a decision already on record.
+An "ADR" (Architecture Decision Record) is just a short written note
+explaining one deliberate design choice and why it was made — kept so that,
+months later, nobody has to guess whether something was an oversight or a
+decision. Twelve of them govern this system; full text is in `DECISIONS.md`.
+Listed here for cross-reference against the issues in §4, several of which
+either test one of these decisions directly or build on one already made.
 
 | ADR | Decision | Tested/extended by |
 |---|---|---|
@@ -152,9 +167,18 @@ an ADR's guarantee directly or extend a decision already on record.
 
 ## 4. Issue Register — Post-Build Hardening Pass
 
-Severity: **Critical** (core feature silently produced wrong output),
-**High** (feature completely non-functional), **Medium** (real but bounded
-impact), **Low** (cosmetic/consistency).
+This is the detailed, technical version of what §0 already summarised in
+plain language — the same 36 problems, but here with the exact code-level
+cause, the exact fix, and the exact evidence that the fix actually worked
+(a command that was run, or a test that was checked, not just a claim).
+A non-technical reader who wants the same information without the code
+detail should read §0 instead; this section is for verifying the work.
+
+Each entry is rated by severity: **Critical** (a core feature silently gave
+a wrong answer — the most serious kind of bug, because nothing on screen
+told anyone it was wrong), **High** (a feature was completely broken and
+unusable), **Medium** (a real problem, but a contained one), **Low**
+(cosmetic or a minor inconsistency).
 
 ### Issue #1 — System clock skew amplified into an auth request storm
 **Severity:** Critical · **Reported as:** "something went wrong" on farm
@@ -1010,8 +1034,9 @@ try to see the other one's farm).
 
 ## 5. Testing Record
 
-The main report (§4.3) carries the primary test table. Full evidence for
-each row:
+The main report (§4.3) carries the primary test table — a summary of what
+was checked and whether it passed. This section gives the full, detailed
+evidence behind each row of that table:
 
 | # | Test | Before | After | Verified via |
 |---|---|---|---|---|

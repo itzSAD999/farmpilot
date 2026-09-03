@@ -71,6 +71,38 @@ export async function playAdviceAudio(audioUrl: string): Promise<boolean> {
   }
 }
 
+/**
+ * Speaks English text aloud using the browser's own built-in
+ * text-to-speech (the Web Speech API) — NOT Khaya. There is no
+ * pre-generated English clip anywhere in this project, and there doesn't
+ * need to be: unlike Twi, English speech synthesis is a standard browser
+ * capability, free and available with no API call and no quota. This is
+ * what makes the advice speaker button work symmetrically for a farmer
+ * reading English, not just one reading Twi. Resolves to false (instead
+ * of throwing) if the browser has no speech synthesis support at all —
+ * rare, but real on some older or embedded browsers — so callers can
+ * fail quietly the same way playAdviceAudio() does.
+ */
+export function speakEnglish(text: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) {
+      resolve(false);
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel(); // don't stack overlapping reads
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-GB';
+      utterance.onend = () => resolve(true);
+      utterance.onerror = () => resolve(false);
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('[khaya] Speech synthesis failed:', err);
+      resolve(false);
+    }
+  });
+}
+
 // ── Review support ──────────────────────────────────────────────
 //
 // The generation script (and every function above) can only ever set

@@ -30,8 +30,8 @@ summarised in each entry's Evidence line.
 
 ## 0. Plain-Language Summary — No Jargon
 
-Section 4 below describes all 46 issues in full technical detail, for a
-technical reader. This section describes the same 46 issues in plain
+Section 4 below describes all 47 issues in full technical detail, for a
+technical reader. This section describes the same 47 issues in plain
 language — what was actually wrong, in everyday terms, and what was done
 about it — for anyone reading this who isn't a programmer. Each row here
 corresponds exactly to the same-numbered entry in §4, so "Issue #12"
@@ -89,6 +89,7 @@ to define each one.
 | 44 | The "Crop vs Crop" comparison couldn't be narrowed to specific crops or a specific season — it always showed everything, and only ever gave one lump number per crop with no way to see where the money within that number actually goes. | Added the ability to choose exactly which crops (up to 4) and which specific seasons to compare — e.g. one crop's minor season last year against another crop's major season this year. Also added a second way to view the comparison: a spider-web-shaped chart with one point per cost category, so you can see the shape of each crop's spending, not just its total. |
 | 45 | A handful of rough edges in the new Twi feature, found only once it was actually being used: the setting was labeled just "Language," which made it sound like the whole app would switch, not just the advice; the AI assistant didn't actually speak Twi even when that language was chosen; and there was still no real way for a person to confirm a translation was accurate — the honest gap flagged in the previous entry. Also found: a technical naming mistake meant the secret key for the translation service was stored in a way that, by convention, signals "safe to expose in the browser," which it is not. | Relabeled the setting "Advice Language" with a clear one-line explanation, and made it a simple two-button choice instead of a dropdown. Made the AI assistant genuinely reply in Twi when that's selected. Built a proper page where a real Twi speaker can listen to each clip and confirm it with one tap — confirmed the tool works correctly, then left every clip exactly as "not yet confirmed," since nobody claimed to actually be that reviewer. Fixed the naming mistake so the secret key can no longer be mistaken for one that's safe to expose. Also added: a full notification history page, and a proper in-app Help page that the AI assistant now also reads from, so it can correctly answer "how does this work" questions instead of guessing. |
 | 46 | On the website's homepage, the demo showing off the Twi feature had a speaker icon that looked exactly like the real one in the app — but it didn't actually play anything when you tapped it, it was just a picture of a speaker. | Made it a real button that plays the actual pre-generated Twi recording, the same one a real farmer would hear, confirmed to work even for a visitor who isn't signed in at all. |
+| 47 | The speaker button only ever worked if you'd switched to Twi — a farmer reading in English got no "listen to this" option at all, even though the whole point of adding audio in the first place was to help farmers who read poorly listen instead. | Made the speaker button work for English too, using the phone or computer's own built-in reading-aloud feature (free, built into every modern browser) rather than needing anything special generated for it — only Twi ever needed that. |
 
 ---
 
@@ -1530,6 +1531,38 @@ zero session — exactly the audience this page is for.
 
 ---
 
+### Issue #47 — The speaker button only ever worked for Twi; an English reader got nothing
+**Severity:** Low (a real usability gap, requested directly: "can you
+also do so it speaks the English itself"). Both the Landing page's Twi
+demo and the real Estimate Report only showed a speaker button, and only
+played anything, when Twi audio existed for that category. A farmer
+reading English — or one who hadn't switched their Advice Language —
+had no way to have advice read aloud at all, despite the PRD's own
+stated reasoning for the whole feature (§7.13: "a farmer who reads
+English poorly can still listen").
+
+**Fix.** Added `speakEnglish(text)` to `src/lib/khaya.ts` — deliberately
+**not** a Khaya API call. It uses the browser's own built-in Web Speech
+API (`SpeechSynthesisUtterance`), which is free, has no quota, and needs
+no pre-generation, unlike Twi (for which no browser has native support,
+which is the actual reason Khaya's TTS exists in this project at all).
+`EstimateReport.tsx`'s speaker button now always renders for a flagged
+category (previously hidden unless Twi audio existed) and plays the real
+Twi clip only when Twi text is currently showing and cached audio exists
+for it; otherwise it reads the English advice aloud. The Landing page's
+Twi demo follows the same rule for its own toggle. Both surfaces resolve
+`false` rather than throwing if the browser has no speech synthesis
+support at all (rare, but real on some embedded browsers), matching the
+same fail-quietly contract `playAdviceAudio()` already had.
+
+**Evidence.** `npx tsc -b --noEmit`, `npm test` (67/67), and
+`npm run build` all clean. Live Puppeteer on `/report/74`: an
+`aria-label="Read this advice aloud"` speaker button is now present and
+clickable with no error even in English mode, where previously no button
+rendered at all for that state.
+
+---
+
 ## 5. Testing Record
 
 The main report (§4.3) carries the primary test table — a summary of what
@@ -1615,6 +1648,7 @@ that are lower priority than what shipped in this pass:
 | `src/api/compare.ts`, `src/api/seasons.ts` (`getSeasonFilterOptions`), `src/pages/Compare.tsx` | Issue #44 (crop/season selection, radar chart) |
 | `src/pages/ReviewTranslations.tsx`, `src/pages/Notifications.tsx`, `src/pages/Help.tsx` | Issue #45 |
 | `src/pages/Landing.tsx` (working speaker button in the Twi demo) | Issue #46 |
+| `src/lib/khaya.ts` (`speakEnglish`), `src/pages/EstimateReport.tsx`, `src/pages/Landing.tsx` | Issue #47 (speaker button works for English too) |
 | `supabase/demo_seed.sql` | Reproducible demonstration account (see main report, Appendix D) |
 | `docs/CHANGELOG.md` | Raw, PR-by-PR change history |
 | `docs/DECISIONS.md` | Full ADR text |

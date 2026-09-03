@@ -13,7 +13,7 @@ import { AddCostForm } from '../components/domain/AddCostForm';
 import { InfoTip } from '../components/ui/InfoTip';
 import { useAuth } from '../hooks/useAuth';
 import { getProfile } from '../api/auth';
-import { getTwiAdvice, playAdviceAudio, type AdviceTranslation } from '../lib/khaya';
+import { getTwiAdvice, playAdviceAudio, speakEnglish, type AdviceTranslation } from '../lib/khaya';
 
 export function EstimateReport() {
   const { estimateId } = useParams<{ estimateId: string }>();
@@ -88,9 +88,19 @@ export function EstimateReport() {
     enabled: flaggedCategoriesForAdvice.length > 0,
   });
 
-  const handlePlayAdvice = async (category: string, audioUrl: string) => {
+  // Plays the real, pre-generated Twi clip when Twi text is showing and
+  // one exists; otherwise reads the currently-displayed English advice
+  // aloud using the browser's own text-to-speech — free, no API call, no
+  // quota, and it's what makes this button useful to an English reader
+  // too, not just a Twi one.
+  const handlePlayAdvice = async (category: string, englishText: string) => {
     setLoadingAudioCategory(category);
-    await playAdviceAudio(audioUrl);
+    const twiAudioUrl = twiAdviceByCategory?.[category]?.audioUrl;
+    if (showTwiText && twiAudioUrl) {
+      await playAdviceAudio(twiAudioUrl);
+    } else {
+      await speakEnglish(englishText);
+    }
     setLoadingAudioCategory(null);
   };
 
@@ -546,7 +556,9 @@ export function EstimateReport() {
               {flaggedLines.map((line) => {
                 const readableCategory = CATEGORIES[line.category as CostCategory]?.label || line.category;
                 const guide = matchedGuides?.find((g: any) => g.category === line.category);
-                
+                const canPlayTwi = showTwiText && !!twiAdviceByCategory?.[line.category]?.audioUrl;
+                const speakerButtonLabel = canPlayTwi ? 'Play this advice in Twi' : 'Read this advice aloud';
+
                 const cardContent = (
                   <div className="relative z-10">
                     <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
@@ -578,31 +590,29 @@ export function EstimateReport() {
                             ? twiAdviceByCategory[line.category].text
                             : line.advice}
                         </p>
-                        {twiAdviceByCategory?.[line.category]?.audioUrl && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handlePlayAdvice(line.category, twiAdviceByCategory[line.category].audioUrl!);
-                            }}
-                            disabled={loadingAudioCategory === line.category}
-                            aria-label="Play this advice in Twi"
-                            title="Play this advice in Twi"
-                            className="flex-shrink-0 w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-800/60 flex items-center justify-center text-orange-700 dark:text-orange-300 transition-colors print:hidden disabled:opacity-60"
-                          >
-                            {loadingAudioCategory === line.category ? (
-                              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                              </svg>
-                            )}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handlePlayAdvice(line.category, line.advice!);
+                          }}
+                          disabled={loadingAudioCategory === line.category}
+                          aria-label={speakerButtonLabel}
+                          title={speakerButtonLabel}
+                          className="flex-shrink-0 w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-800/60 flex items-center justify-center text-orange-700 dark:text-orange-300 transition-colors print:hidden disabled:opacity-60"
+                        >
+                          {loadingAudioCategory === line.category ? (
+                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            </svg>
+                          )}
+                        </button>
                       </div>
                     )}
 

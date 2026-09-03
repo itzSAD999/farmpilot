@@ -1,7 +1,7 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { playAdviceAudio } from '../lib/khaya';
+import { playAdviceAudio, speakEnglish } from '../lib/khaya';
 
 function useScrollReveal() {
   useEffect(() => {
@@ -112,10 +112,19 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
   // advice_rules/advice_translations requires a signed-in session, but
   // the Storage object itself is public, so playing it directly is fine).
   const TWI_DEMO_AUDIO_URL = 'https://ifbtitocbwmlqvpowmuu.supabase.co/storage/v1/object/public/audio/advice/fertiliser/tw.wav';
+  const ENGLISH_DEMO_TEXT = 'Your fertiliser spend is above the expected level. Government subsidy cuts NPK and Urea by about half — check with your district MoFA office for the subsidy window before you buy at market price.';
 
   const handlePlayTwiDemo = async () => {
     setTwiAudioPlaying(true);
-    await playAdviceAudio(TWI_DEMO_AUDIO_URL);
+    if (twiLang === 'tw') {
+      // The real, pre-generated Twi clip.
+      await playAdviceAudio(TWI_DEMO_AUDIO_URL);
+    } else {
+      // No pre-generated English clip exists anywhere — none is needed.
+      // English speech is a free, built-in browser capability; only Twi
+      // requires Khaya at all.
+      await speakEnglish(ENGLISH_DEMO_TEXT);
+    }
     setTwiAudioPlaying(false);
   };
 
@@ -635,7 +644,7 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
                 type="button"
                 onClick={handlePlayTwiDemo}
                 disabled={twiAudioPlaying}
-                title="Hear this advice spoken in Twi"
+                title={twiLang === 'tw' ? 'Hear this advice spoken in Twi' : 'Hear this advice read aloud'}
                 className="shrink-0 w-9 h-9 rounded-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300 transition-colors disabled:opacity-60"
               >
                 {twiAudioPlaying ? (
@@ -658,7 +667,7 @@ function InteractiveModal({ feature, onClose }: { feature: string; onClose: () =
               </p>
             )}
           </div>
-          <p className="text-white/40 text-sm mt-4">Tap the speaker icon above — that's the real, pre-generated Twi audio clip, not a mockup. FarmBot chats in Twi too, the moment you switch — no separate setting.</p>
+          <p className="text-white/40 text-sm mt-4">Tap the speaker icon above to hear it — the real, pre-generated Twi audio clip when Twi is selected, or your browser reading the English aloud when it isn't. FarmBot chats in Twi too, the moment you switch — no separate setting.</p>
         </div>
       </div>
     );
